@@ -1,0 +1,25 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300;1,400;1,500&display=swap');
+
+@font-face {
+    font-family: UncutSans;
+    src: url('/fonts/UncutSans-Variable.woff2') format('woff2-variations');
+    font-weight: 100 900;
+    font-style: normal;
+    font-display: swap;
+}
+
+:root {
+    --vp-c-black: #0A0A0A;
+    --vp-c-brand-1: #E85D2C;
+    --vp-c-brand-2: #E85D2C;
+    --vp-c-brand-3: #E85D2C;
+
+    --vp-home-hero-name-color: var(--vp-c-brand-1);
+
+    --vp-font-family-base: UncutSans, -apple-system, sans-serif, "Segoe UI";
+    --vp-font-family-mono: "DM Mono", monospace;
+}
+
+.dark {
+    --vp-c-bg: var(--vp-c-black)
+}

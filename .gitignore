@@ -17,3 +17,6 @@ credentials.json
 # Logs
 *.log
 **/*.log
+
+docs/.vitepress/dist/
+docs/.vitepress/cache/

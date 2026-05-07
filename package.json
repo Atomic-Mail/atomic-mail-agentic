@@ -1,0 +1,28 @@
+{
+  "name": "agentic-docs",
+  "version": "1.0.0",
+  "description": "VitePress documentation for Atomic Mail Agentic ",
+  "homepage": "https://github.com/Atomic-Mail/agentic-clients#readme",
+  "bugs": {
+    "url": "https://github.com/Atomic-Mail/agentic-clients/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Atomic-Mail/agentic-clients.git"
+  },
+  "license": "MIT",
+  "author": "",
+  "type": "commonjs",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "docs:dev": "vitepress dev docs",
+    "docs:build": "vitepress build docs",
+    "docs:preview": "vitepress preview docs"
+  },
+  "devDependencies": {
+    "vitepress": "^2.0.0-alpha.17"
+  }
+}

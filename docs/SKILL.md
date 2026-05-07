@@ -1,8 +1,6 @@
 ---
 name: atomicmail
 description: Read and write email through the Atomic Mail ESP from an AI agent. Handles proof-of-work authentication and JMAP so the agent thinks in JMAP method calls. Use when the user asks to register an email inbox, list mailboxes, fetch or send email.
-license: MIT
-compatibility: Requires Deno 2.0+ to run scripts directly, or Node 20+ / Bun 1.1+ via `npx @atomicmail/agent-skill` after publishing. Needs network access to the configured auth-service and api-service.
 ---
 
 # Atomic Mail
@@ -19,16 +17,9 @@ rotation. This skill ships a single CLI entrypoint with three commands:
 
 ## Commands
 
-All invocations use `scripts/cli.ts` or the published binary **`atomicmail`**:
-
 ```bash
-# Deno (repo)
-deno run -A scripts/cli.ts register --username alice
-deno run -A scripts/cli.ts jmap_request --ops-file x.json
-deno run -A scripts/cli.ts help --topic presets
+npx --package=@atomicmail/agent-skill atomicmail register --username "myagent"
 
-# Node / Bun (after publish)
-npx --package=@atomicmail/agent-skill atomicmail register --username "myagent" ...
 npx --package=@atomicmail/agent-skill atomicmail jmap_request --ops-file list_inbox.json --vars '{"COUNT":"10"}'
 ```
 
@@ -45,7 +36,7 @@ Run **`atomicmail --help`** or **`atomicmail <command> --help`** for flags.
 ### 1. Register (new account)
 
 ```bash
-deno run -A scripts/cli.ts register \
+npx --package=@atomicmail/agent-skill atomicmail register \
   --username "alice"
 ```
 
@@ -55,14 +46,14 @@ including `inbox` and `accountId`.
 ### 2. Register (existing API key, in case losing the credentials file)
 
 ```bash
-deno run -A scripts/cli.ts register \
+npx --package=@atomicmail/agent-skill atomicmail register \
   --api-key "..."
 ```
 
 ### 3. JMAP request
 
 ```bash
-deno run -A scripts/cli.ts jmap_request \
+npx --package=@atomicmail/agent-skill atomicmail jmap_request \
   --ops '[["Mailbox/get", {"accountId": "$ACCOUNT_ID"}, "m0"]]'
 ```
 
@@ -73,14 +64,14 @@ strings (same substitution applies to `--ops` and `--ops-file`).
 Preset file:
 
 ```bash
-deno run -A scripts/cli.ts jmap_request \
+npx --package=@atomicmail/agent-skill atomicmail jmap_request \
   --ops-file fetch_last_100.json
 ```
 
 With custom placeholders:
 
 ```bash
-deno run -A scripts/cli.ts jmap_request \
+npx --package=@atomicmail/agent-skill atomicmail jmap_request \
   --ops-file send_mail.json \
   --vars '{"TO":"alice@example.com","SUBJECT":"Hello","BODY":"Hi there"}'
 ```
@@ -94,21 +85,9 @@ Bundled presets (no local file creation required):
 ### 4. Help
 
 ```bash
-deno run -A scripts/cli.ts help
-deno run -A scripts/cli.ts help --topic jmap_cheatsheet
+npx --package=@atomicmail/agent-skill atomicmail help
+npx --package=@atomicmail/agent-skill atomicmail help --topic jmap_cheatsheet
 ```
-
-## npm package
-
-From the `skill/` directory:
-
-```bash
-deno task build:npm
-cd npm && npm publish --access public
-```
-
-The published **`atomicmail`** binary exposes `register`, `jmap_request`, and
-`help`.
 
 ## Security
 
@@ -121,8 +100,3 @@ The published **`atomicmail`** binary exposes `register`, `jmap_request`, and
   `ATOMIC_MAIL_API_URL`
 - Credentials path: `--credentials-dir` or `ATOMIC_MAIL_CREDENTIALS_DIR`
 - PoW salt: `--scrypt-salt` or `ATOMIC_MAIL_SCRYPT_SALT`
-
-## Building
-
-See repository [`AGENTS.md`](../AGENTS.md) for formatting (`deno fmt`) and
-conventions.

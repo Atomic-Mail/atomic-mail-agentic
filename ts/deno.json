@@ -1,0 +1,23 @@
+{
+  "tasks": {
+  },
+  "fmt": {
+    "indentWidth": 2,
+    "useTabs": false,
+    "lineWidth": 80
+  },
+  "lint": {
+    "rules": {
+      "tags": ["recommended"]
+    }
+  },
+  "imports": {
+    "@std/assert": "jsr:@std/assert@1",
+    "@deno/dnt": "jsr:@deno/dnt@^0.42.3",
+    "@modelcontextprotocol/sdk/": "npm:/@modelcontextprotocol/sdk@^1.29.0/",
+    "zod": "npm:zod@^4.3.6"
+  },
+  "compilerOptions": {
+    "lib": ["deno.ns", "dom"]
+  }
+}

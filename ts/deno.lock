@@ -1,0 +1,69 @@
+{
+  "version": "5",
+  "specifiers": {
+    "jsr:@david/code-block-writer@^13.0.3": "13.0.3",
+    "jsr:@deno/dnt@~0.42.3": "0.42.3",
+    "jsr:@std/fmt@1": "1.0.10",
+    "jsr:@std/fs@1": "1.0.23",
+    "jsr:@std/internal@^1.0.12": "1.0.12",
+    "jsr:@std/path@1": "1.1.4",
+    "jsr:@std/path@^1.1.4": "1.1.4",
+    "jsr:@ts-morph/bootstrap@0.27": "0.27.0",
+    "jsr:@ts-morph/common@0.27": "0.27.0"
+  },
+  "jsr": {
+    "@david/code-block-writer@13.0.3": {
+      "integrity": "f98c77d320f5957899a61bfb7a9bead7c6d83ad1515daee92dbacc861e13bb7f"
+    },
+    "@deno/dnt@0.42.3": {
+      "integrity": "62a917a0492f3c8af002dce90605bb0d41f7d29debc06aca40dba72ab65d8ae3",
+      "dependencies": [
+        "jsr:@david/code-block-writer",
+        "jsr:@std/fmt",
+        "jsr:@std/fs",
+        "jsr:@std/path@1",
+        "jsr:@ts-morph/bootstrap"
+      ]
+    },
+    "@std/fmt@1.0.10": {
+      "integrity": "90dfba288802ac6de82fb31d0917eb9e4450b9925b954d5e51fc29ac07419db5"
+    },
+    "@std/fs@1.0.23": {
+      "integrity": "3ecbae4ce4fee03b180fa710caff36bb5adb66631c46a6460aaad49515565a37",
+      "dependencies": [
+        "jsr:@std/internal",
+        "jsr:@std/path@^1.1.4"
+      ]
+    },
+    "@std/internal@1.0.12": {
+      "integrity": "972a634fd5bc34b242024402972cd5143eac68d8dffaca5eaa4dba30ce17b027"
+    },
+    "@std/path@1.1.4": {
+      "integrity": "1d2d43f39efb1b42f0b1882a25486647cb851481862dc7313390b2bb044314b5",
+      "dependencies": [
+        "jsr:@std/internal"
+      ]
+    },
+    "@ts-morph/bootstrap@0.27.0": {
+      "integrity": "b8d7bc8f7942ce853dde4161b28f9aa96769cef3d8eebafb379a81800b9e2448",
+      "dependencies": [
+        "jsr:@ts-morph/common"
+      ]
+    },
+    "@ts-morph/common@0.27.0": {
+      "integrity": "c7b73592d78ce8479b356fd4f3d6ec3c460d77753a8680ff196effea7a939052",
+      "dependencies": [
+        "jsr:@std/fs",
+        "jsr:@std/path@1"
+      ]
+    }
+  },
+  "workspace": {
+    "dependencies": [
+      "jsr:@deno/dnt@~0.42.3",
+      "jsr:@std/assert@1",
+      "npm:@modelcontextprotocol/sdk@^1.29.0",
+      "npm:zod@^4.3.6"
+    ]
+  }
+}

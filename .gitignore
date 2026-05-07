@@ -1,0 +1,19 @@
+# dnt build output
+*_npm/
+**/*_npm/
+
+# Node leftovers (legacy tsc build)
+node_modules/
+**/node_modules/
+dist/
+**/dist/
+
+# Local credential files (never commit secrets)
+credentials.json
+**/credentials.json
+*.jwt
+**/*.jwt
+
+# Logs
+*.log
+**/*.log

@@ -17,9 +17,10 @@ Three operations only:
 2. **jmap_request** — Send a JMAP method-call batch. Auth and JWT rotation are
    automatic. Pass inline \`ops\` JSON or an \`ops_file\` preset path (same
    substitution applies to both). Uppercase tokens like \`$ACCOUNT_ID\`,
-   \`$INBOX\`, \`$TO\`, \`$SUBJECT\` are replaced before the request is sent.
-   \`$ACCOUNT_ID\` / \`$INBOX\` come from the JMAP session and credentials; pass
-   any other names via MCP \`vars\` or skill \`--vars\`.
+   \`$INBOX\`, \`$UPLOAD_URL\`, \`$DOWNLOAD_URL\`, \`$TO\`, \`$SUBJECT\` are
+   replaced before the request is sent. \`$ACCOUNT_ID\` / \`$INBOX\` /
+   \`$UPLOAD_URL\` / \`$DOWNLOAD_URL\` come from the JMAP session and
+   credentials; pass any other names via MCP \`vars\` or skill \`--vars\`.
 3. **help** — This documentation (optional \`topic\` / \`--topic\`).
 
 ## Typical workflow
@@ -100,7 +101,7 @@ JWTs are rotated before expiry and written back to disk.
 
 ## Credential files (mode 0600)
 
-\`credentials.json\` — \`{ apiKey, inboxId, authUrl, apiUrl, scryptSalt }\`  
+\`credentials.json\` — \`{ apiKey, inboxId, authUrl, apiUrl, scryptSalt, uploadUrl, downloadUrl }\`  
 \`session.jwt\` — session token  
 \`capability.jwt\` — capability token
 
@@ -123,7 +124,8 @@ JWTs are rotated before expiry and written back to disk.
 
 ## Examples
 
-Use \`$ACCOUNT_ID\` and \`$INBOX\` for session fields; use \`$TO\`, \`$SUBJECT\`,
+Use \`$ACCOUNT_ID\`, \`$INBOX\`, \`$UPLOAD_URL\`, and \`$DOWNLOAD_URL\` for
+session fields; use \`$TO\`, \`$SUBJECT\`,
 etc., and supply values via MCP \`vars\` or \`--vars\` (JSON object of strings).
 
 ### Mailboxes
@@ -205,11 +207,14 @@ keywords like \`$draft\` stay untouched).
 - \`$ACCOUNT_ID\` — primary mail account id (from \`GET /.well-known/jmap\` when
   referenced).
 - \`$INBOX\` — inbox email address from credentials.
+- \`$UPLOAD_URL\` — RFC 8620 upload URL template from JMAP session.
+- \`$DOWNLOAD_URL\` — RFC 8620 download URL template from JMAP session.
 - Any other \`$FOO\` — must appear in MCP \`vars\` or skill \`--vars\` as
   \`"FOO": "..."\` (string values only; JSON escaping in the preset body is your
   responsibility).
 
-You may override \`ACCOUNT_ID\` / \`INBOX\` via \`vars\` / \`--vars\` if needed.`,
+You may override \`ACCOUNT_ID\` / \`INBOX\` / \`UPLOAD_URL\` / \`DOWNLOAD_URL\`
+via \`vars\` / \`--vars\` if needed.`,
 
   troubleshooting: `\
 # Troubleshooting

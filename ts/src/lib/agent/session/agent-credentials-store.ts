@@ -10,6 +10,8 @@ export interface Credentials {
   authUrl: string;
   apiUrl: string;
   scryptSalt: string;
+  uploadUrl: string;
+  downloadUrl: string;
 }
 
 export interface SkillFiles {
@@ -63,6 +65,8 @@ export async function readCredentials(path: string): Promise<Credentials> {
     "authUrl",
     "apiUrl",
     "scryptSalt",
+    "uploadUrl",
+    "downloadUrl",
   ] as const;
   for (const k of required) {
     if (typeof obj[k] !== "string" || (obj[k] as string).length === 0) {

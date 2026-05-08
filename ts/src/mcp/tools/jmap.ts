@@ -21,8 +21,9 @@ export function registerJmapTool(
         "Provide exactly one of: `ops` (JSON string — methodCalls array or full " +
         "envelope) or `ops_file` (preset path; relative paths resolve against " +
         "the credential directory). Tokens `$VAR_NAME` (uppercase `$FOO_BAR`) in " +
-        "either input are replaced: `$ACCOUNT_ID` and `$INBOX` come from the JMAP " +
-        "session; pass other names via `vars`.",
+        "either input are replaced: `$ACCOUNT_ID`, `$INBOX`, `$UPLOAD_URL`, and " +
+        "`$DOWNLOAD_URL` come from the JMAP session/credentials; pass other names " +
+        "via `vars`.",
       inputSchema: z.object({
         using: z
           .array(z.string())
@@ -53,7 +54,7 @@ export function registerJmapTool(
           .describe(
             "Map of placeholder names (no `$`) to string values, e.g. " +
               '{ "TO": "a@b.com", "SUBJECT": "Hi" } for `$TO` and `$SUBJECT` in ' +
-              "ops or ops_file. Overrides session values for `ACCOUNT_ID` / `INBOX` if set.",
+              "ops or ops_file. Overrides session values for `ACCOUNT_ID`, `INBOX`, `UPLOAD_URL`, or `DOWNLOAD_URL` if set.",
           ),
       }),
     },

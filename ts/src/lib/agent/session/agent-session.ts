@@ -16,6 +16,7 @@ import {
   SESSION_SAFETY_MARGIN_MS,
 } from "../auth/agent-jwt.ts";
 import {
+  extractBlobEndpoints,
   extractPrimaryMailAccountId,
   fetchJmapWellKnown,
 } from "../jmap/agent-jmap.ts";
@@ -63,6 +64,8 @@ export class AgentSession {
   private sessionJWT: string | undefined;
   private capabilityJWT: string | undefined;
   private cachedMailAccountId: string | undefined;
+  private cachedUploadUrl: string | undefined;
+  private cachedDownloadUrl: string | undefined;
 
   constructor(cfg: AgentSessionConfig) {
     this.authUrl = cfg.authUrl.replace(/\/+$/, "");
@@ -88,6 +91,14 @@ export class AgentSession {
     return this.inboxId;
   }
 
+  get currentUploadUrl(): string | undefined {
+    return this.cachedUploadUrl;
+  }
+
+  get currentDownloadUrl(): string | undefined {
+    return this.cachedDownloadUrl;
+  }
+
   private async loadFromDisk(): Promise<void> {
     this.sessionJWT = await tryReadJwtFile(this.files.sessionFile);
     this.capabilityJWT = await tryReadJwtFile(this.files.capabilityFile);
@@ -95,6 +106,8 @@ export class AgentSession {
     if (disk) {
       this.apiKey = this.apiKey ?? disk.apiKey;
       this.inboxId = this.inboxId ?? disk.inboxId;
+      this.cachedUploadUrl = disk.uploadUrl;
+      this.cachedDownloadUrl = disk.downloadUrl;
     }
   }
 
@@ -102,16 +115,33 @@ export class AgentSession {
    * Primary JMAP mail accountId from GET /.well-known/jmap (cached).
    */
   async getPrimaryMailAccountId(): Promise<string> {
-    if (this.cachedMailAccountId) return this.cachedMailAccountId;
-    const cap = await this.getCapabilityToken();
-    const session = await fetchJmapWellKnown(this.apiUrl, cap);
-    const id = extractPrimaryMailAccountId(session);
-    this.cachedMailAccountId = id;
-    return id;
+    if (
+      this.cachedMailAccountId &&
+      this.cachedUploadUrl &&
+      this.cachedDownloadUrl
+    ) {
+      return this.cachedMailAccountId;
+    }
+    await this.refreshJmapSessionData();
+    if (!this.cachedMailAccountId) {
+      throw new Error("JMAP session missing primary mail account id.");
+    }
+    return this.cachedMailAccountId;
   }
 
   invalidateJmapSessionCache(): void {
     this.cachedMailAccountId = undefined;
+    this.cachedUploadUrl = undefined;
+    this.cachedDownloadUrl = undefined;
+  }
+
+  private async refreshJmapSessionData(): Promise<void> {
+    const cap = await this.getCapabilityToken();
+    const session = await fetchJmapWellKnown(this.apiUrl, cap);
+    this.cachedMailAccountId = extractPrimaryMailAccountId(session);
+    const blobs = extractBlobEndpoints(session);
+    this.cachedUploadUrl = blobs.uploadUrl;
+    this.cachedDownloadUrl = blobs.downloadUrl;
   }
 
   /**
@@ -170,6 +200,13 @@ export class AgentSession {
     }
     this.inboxId = claims.inboxId;
     this.cachedMailAccountId = undefined;
+    this.cachedUploadUrl = undefined;
+    this.cachedDownloadUrl = undefined;
+
+    const accountId = await this.getPrimaryMailAccountId();
+    if (!this.cachedUploadUrl || !this.cachedDownloadUrl) {
+      throw new Error("JMAP session did not provide upload/download URLs.");
+    }
 
     const creds: Credentials = {
       apiKey: this.apiKey,
@@ -177,10 +214,10 @@ export class AgentSession {
       authUrl: this.authUrl,
       apiUrl: this.apiUrl,
       scryptSalt: this.scryptSalt,
+      uploadUrl: this.cachedUploadUrl,
+      downloadUrl: this.cachedDownloadUrl,
     };
     await writeCredentials(this.files.credentialsFile, creds);
-
-    const accountId = await this.getPrimaryMailAccountId();
 
     return {
       inbox: this.inboxId,
@@ -239,6 +276,8 @@ export class AgentSession {
     this.sessionJWT = result.sessionJWT;
     this.capabilityJWT = undefined;
     this.cachedMailAccountId = undefined;
+    this.cachedUploadUrl = undefined;
+    this.cachedDownloadUrl = undefined;
     await writeJwtFile(this.files.sessionFile, this.sessionJWT);
   }
 
@@ -274,12 +313,16 @@ export async function persistLoginWithApiKey(
   if (typeof inboxId !== "string" || inboxId.length === 0) {
     throw new Error("Capability JWT did not contain an inboxId claim.");
   }
+  const jmapSession = await fetchJmapWellKnown(apiUrl, capabilityJWT);
+  const blobs = extractBlobEndpoints(jmapSession);
   await writeCredentials(input.files.credentialsFile, {
     apiKey: input.apiKey,
     inboxId,
     authUrl,
     apiUrl,
     scryptSalt: input.scryptSalt,
+    uploadUrl: blobs.uploadUrl,
+    downloadUrl: blobs.downloadUrl,
   });
   await writeJwtFile(input.files.sessionFile, session.sessionJWT);
   await writeJwtFile(input.files.capabilityFile, capabilityJWT);

@@ -57,7 +57,8 @@ npx --package=@atomicmail/agent-skill atomicmail jmap_request \
   --ops '[["Mailbox/get", {"accountId": "$ACCOUNT_ID"}, "m0"]]'
 ```
 
-`$ACCOUNT_ID` and `$INBOX` resolve from the session/credentials. Other
+`$ACCOUNT_ID`, `$INBOX`, `$UPLOAD_URL`, and `$DOWNLOAD_URL` resolve from the
+session/credentials. Other
 placeholders such as `$TO` or `$SUBJECT` require `--vars` with a JSON object of
 strings (same substitution applies to `--ops` and `--ops-file`).
 
@@ -93,6 +94,42 @@ npx --package=@atomicmail/agent-skill atomicmail help --topic jmap_cheatsheet
 
 - `credentials.json` holds the API key (mode `0600`). Do not commit it.
 - JWT files are bearer secrets — do not log them.
+
+## Attachments and blobs
+
+### Inline blobs in JMAP (RFC 9404)
+
+Use `Blob/upload` and `Blob/get` through `jmap_request` by adding
+`urn:ietf:params:jmap:blob` to `using`.
+
+```bash
+npx --package=@atomicmail/agent-skill atomicmail jmap_request \
+  --ops '{
+    "using":[
+      "urn:ietf:params:jmap:core",
+      "urn:ietf:params:jmap:mail",
+      "urn:ietf:params:jmap:submission",
+      "urn:ietf:params:jmap:blob"
+    ],
+    "methodCalls":[
+      ["Blob/upload",{
+        "accountId":"$ACCOUNT_ID",
+        "create":{"b1":{"data:asText":"Hello attachment","type":"text/plain"}}
+      },"b0"]
+    ]
+  }'
+```
+
+### Separate upload/download templates (RFC 8620)
+
+`credentials.json` stores `uploadUrl` and `downloadUrl` from
+`GET /.well-known/jmap`.
+
+- `$UPLOAD_URL` is the RFC 8620 upload template.
+- `$DOWNLOAD_URL` is the RFC 8620 download template.
+
+Use these placeholders when building out-of-band blob transfer steps and attach
+the resulting `blobId` in follow-up JMAP calls.
 
 ## Overriding defaults
 

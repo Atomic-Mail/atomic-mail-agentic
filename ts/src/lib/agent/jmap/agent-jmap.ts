@@ -141,6 +141,25 @@ export function extractPrimaryMailAccountId(
   return id;
 }
 
+export interface JmapBlobEndpoints {
+  uploadUrl: string;
+  downloadUrl: string;
+}
+
+export function extractBlobEndpoints(
+  session: Record<string, unknown>,
+): JmapBlobEndpoints {
+  const uploadUrl = session["uploadUrl"];
+  const downloadUrl = session["downloadUrl"];
+  if (typeof uploadUrl !== "string" || uploadUrl.length === 0) {
+    throw new Error("JMAP session missing uploadUrl.");
+  }
+  if (typeof downloadUrl !== "string" || downloadUrl.length === 0) {
+    throw new Error("JMAP session missing downloadUrl.");
+  }
+  return { uploadUrl, downloadUrl };
+}
+
 export async function fetchJmapWellKnown(
   apiUrl: string,
   capabilityJwt: string,
@@ -167,6 +186,8 @@ export interface JmapSessionPort {
   getPrimaryMailAccountId(): Promise<string>;
   getCapabilityToken(): Promise<string>;
   readonly currentInboxId?: string;
+  readonly currentUploadUrl?: string;
+  readonly currentDownloadUrl?: string;
 }
 
 export interface RunJmapRequestInput {
@@ -196,6 +217,13 @@ export async function runJmapRequest(
       INBOX: async () =>
         input.session.currentInboxId ??
           (await readCredentials(input.session.files.credentialsFile)).inboxId,
+      UPLOAD_URL: async () =>
+        input.session.currentUploadUrl ??
+          (await readCredentials(input.session.files.credentialsFile)).uploadUrl,
+      DOWNLOAD_URL: async () =>
+        input.session.currentDownloadUrl ??
+          (await readCredentials(input.session.files.credentialsFile))
+            .downloadUrl,
     },
   });
 

@@ -15,7 +15,7 @@ For full protocol details, see [`REST authentication flow`](/rest-auth) and
 
 1. Request PoW challenge from auth service.
 2. Solve PoW (`scrypt`, dynamic difficulty).
-3. Register inbox (first time) or create session JWT with existing `apiKey`.
+3. Create session JWT at `POST /api/v1/session` (signup with `username` or login with `apiKey`).
 4. Exchange session JWT for short-lived capability JWT.
 5. Call JMAP session endpoint, extract `accountId`.
 6. Call JMAP `Email/*` methods.
@@ -28,7 +28,9 @@ This script demonstrates challenge solving and token acquisition, then reads the
 latest messages from the inbox.
 
 ```python
+import base64
 import hashlib
+import json
 import requests
 
 AUTH_BASE = "https://auth.atomicmail.ai"
@@ -36,7 +38,21 @@ API_BASE = "https://api.atomicmail.ai"
 USERNAME = "myagent"
 
 
-def solve_pow(challenge: str, salt_hex: str, difficulty: int) -> int:
+SALT_HEX = "<pow_scrypt_salt_hex>"
+
+
+def decode_challenge_jwt(challenge_jwt: str) -> tuple[str, int]:
+    parts = challenge_jwt.split(".")
+    if len(parts) < 2:
+        raise RuntimeError("Malformed challenge JWT")
+    payload_b64 = parts[1]
+    pad_len = (4 - len(payload_b64) % 4) % 4
+    payload_json = base64.urlsafe_b64decode(payload_b64 + ("=" * pad_len)).decode()
+    payload = json.loads(payload_json)
+    return payload["jti"], int(payload["difficulty"])
+
+
+def solve_pow(challenge: str, salt_hex: str, difficulty: int) -> tuple[int, str]:
     """
     Find nonce such that scrypt(challenge:nonce) has required leading zero bits.
     """
@@ -49,39 +65,56 @@ def solve_pow(challenge: str, salt_hex: str, difficulty: int) -> int:
         digest = hashlib.scrypt(data, salt=salt, n=16384, r=8, p=1, dklen=32)
         bits = bin(int.from_bytes(digest, "big"))[2:].zfill(256)
         if bits.startswith(target_bits):
-            return nonce
+            return nonce, digest.hex()
         nonce += 1
+
+
+def parse_bearer_token(header_value: str) -> str:
+    if not header_value:
+        raise RuntimeError("Missing Authorization header")
+    parts = header_value.split(" ", 1)
+    if len(parts) != 2 or parts[0].lower() != "bearer" or not parts[1].strip():
+        raise RuntimeError(f"Malformed Authorization header: {header_value}")
+    return parts[1].strip()
 
 
 def get_challenge():
     r = requests.post(f"{AUTH_BASE}/api/v1/challenge")
     r.raise_for_status()
-    return r.json()
+    return parse_bearer_token(r.headers.get("Authorization"))
 
 
-def register_if_needed(challenge: str, nonce: int, username: str):
+def register_if_needed(challenge_jwt: str, nonce: int, pow_hex: str, username: str):
     """
     First-time flow. Save returned apiKey securely for future sessions.
     """
     payload = {
-        "challenge": challenge,
+        "powHex": pow_hex,
         "nonce": str(nonce),
         "username": username,
     }
-    r = requests.post(f"{AUTH_BASE}/api/v1/register", json=payload)
+    r = requests.post(
+        f"{AUTH_BASE}/api/v1/session",
+        headers={"Authorization": f"Bearer {challenge_jwt}"},
+        json=payload,
+    )
     r.raise_for_status()
     return r.json()
 
 
-def create_session(challenge: str, nonce: int, api_key: str):
+def create_session(challenge_jwt: str, nonce: int, pow_hex: str, api_key: str):
     payload = {
-        "challenge": challenge,
+        "powHex": pow_hex,
         "nonce": str(nonce),
         "apiKey": api_key,
     }
-    r = requests.post(f"{AUTH_BASE}/api/v1/session", json=payload)
+    r = requests.post(
+        f"{AUTH_BASE}/api/v1/session",
+        headers={"Authorization": f"Bearer {challenge_jwt}"},
+        json=payload,
+    )
     r.raise_for_status()
-    return r.json()["sessionJwt"]
+    return parse_bearer_token(r.headers.get("Authorization"))
 
 
 def create_capability(session_jwt: str):
@@ -90,7 +123,7 @@ def create_capability(session_jwt: str):
         headers={"Authorization": f"Bearer {session_jwt}"},
     )
     r.raise_for_status()
-    return r.json()["capabilityJwt"]
+    return parse_bearer_token(r.headers.get("Authorization"))
 
 
 def discover_account_id(capability_jwt: str):
@@ -140,18 +173,20 @@ def read_latest_emails(capability_jwt: str, account_id: str):
 
 if __name__ == "__main__":
     # 1) challenge + PoW
-    ch = get_challenge()
-    nonce = solve_pow(ch["challenge"], ch["salt"], ch["difficulty"])
+    challenge_jwt = get_challenge()
+    challenge, difficulty = decode_challenge_jwt(challenge_jwt)
+    nonce, pow_hex = solve_pow(challenge, SALT_HEX, difficulty)
 
     # 2) register once, then keep apiKey secure
-    reg = register_if_needed(ch["challenge"], nonce, USERNAME)
+    reg = register_if_needed(challenge_jwt, nonce, pow_hex, USERNAME)
     api_key = reg["apiKey"]
     print("Inbox:", reg["inbox"])
 
     # 3) session -> capability
-    ch2 = get_challenge()
-    nonce2 = solve_pow(ch2["challenge"], ch2["salt"], ch2["difficulty"])
-    session_jwt = create_session(ch2["challenge"], nonce2, api_key)
+    challenge_jwt2 = get_challenge()
+    challenge2, difficulty2 = decode_challenge_jwt(challenge_jwt2)
+    nonce2, pow_hex2 = solve_pow(challenge2, SALT_HEX, difficulty2)
+    session_jwt = create_session(challenge_jwt2, nonce2, pow_hex2, api_key)
     capability_jwt = create_capability(session_jwt)
 
     # 4) discover accountId and read inbox
@@ -253,19 +288,27 @@ sendEmail("user@example.com", "Hello from Atomic Mail", "This was sent via JMAP.
 # 1) challenge
 curl -X POST https://auth.atomicmail.ai/api/v1/challenge
 
-# 2) register (first time)
-curl -X POST https://auth.atomicmail.ai/api/v1/register \
+# 2) session JWT for signup (first time)
+curl -X POST https://auth.atomicmail.ai/api/v1/session \
+  -H "Authorization: Bearer <challengeJWT>" \
   -H "Content-Type: application/json" \
-  -d '{"challenge":"<challenge>","nonce":"<nonce>","username":"myagent"}'
+  -d '{"powHex":"<powHex>","nonce":"<nonce>","username":"myagent"}'
+# Read session JWT from response header:
+# Authorization: Bearer <sessionJWT>
 
 # 3) session JWT
 curl -X POST https://auth.atomicmail.ai/api/v1/session \
+  -H "Authorization: Bearer <challengeJWT>" \
   -H "Content-Type: application/json" \
-  -d '{"challenge":"<challenge>","nonce":"<nonce>","apiKey":"<apiKey>"}'
+  -d '{"powHex":"<powHex>","nonce":"<nonce>","apiKey":"<apiKey>"}'
+# Read session JWT from response header:
+# Authorization: Bearer <sessionJWT>
 
 # 4) capability JWT
 curl -X POST https://auth.atomicmail.ai/api/v1/capability \
   -H "Authorization: Bearer <sessionJwt>"
+# Read capability JWT from response header:
+# Authorization: Bearer <capabilityJWT>
 ```
 
-Use the returned `capabilityJwt` as bearer token for JMAP requests.
+Use the returned `capabilityJWT` as bearer token for JMAP requests.

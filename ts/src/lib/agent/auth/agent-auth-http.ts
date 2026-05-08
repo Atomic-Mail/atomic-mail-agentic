@@ -3,48 +3,26 @@
 import { decodeJwtPayload } from "./agent-jwt.ts";
 import { solvePow } from "./agent-pow.ts";
 
-async function postJson(
-  url: string,
-  body: Record<string, unknown> | undefined,
-  headers: Record<string, string> = {},
-): Promise<Record<string, unknown>> {
-  const res = await fetch(url, {
-    method: "POST",
-    headers: {
-      ...(body ? { "Content-Type": "application/json" } : {}),
-      ...headers,
-    },
-    body: body ? JSON.stringify(body) : undefined,
-  });
-  const text = await res.text();
-  const path = (() => {
-    try {
-      return new URL(url).pathname;
-    } catch {
-      return url;
-    }
-  })();
-  if (!res.ok) {
-    throw new Error(`auth-service ${path} returned ${res.status}: ${text}`);
-  }
-  try {
-    return JSON.parse(text) as Record<string, unknown>;
-  } catch {
-    throw new Error(`auth-service ${path} returned non-JSON body: ${text}`);
-  }
-}
-
 export async function fetchChallenge(authUrl: string): Promise<{
   challengeJWT: string;
   challenge: string;
   difficulty: number;
 }> {
-  const data = await postJson(`${authUrl}/api/v1/challenge`, undefined);
-  if (typeof data.challengeJWT !== "string") {
-    throw new Error("Challenge response missing challengeJWT.");
+  const res = await fetch(`${authUrl}/api/v1/challenge`, {
+    method: "POST",
+  });
+  const text = await res.text();
+  if (!res.ok) {
+    throw new Error(
+      `auth-service /api/v1/challenge returned ${res.status}: ${text}`,
+    );
   }
+  const challengeJWT = readBearerToken(
+    res.headers.get("Authorization"),
+    "Challenge response missing Authorization bearer token.",
+  );
   const payload = decodeJwtPayload<{ jti?: string; difficulty?: number }>(
-    data.challengeJWT,
+    challengeJWT,
   );
   if (
     typeof payload.jti !== "string" ||
@@ -55,7 +33,7 @@ export async function fetchChallenge(authUrl: string): Promise<{
     );
   }
   return {
-    challengeJWT: data.challengeJWT,
+    challengeJWT,
     challenge: payload.jti,
     difficulty: payload.difficulty,
   };
@@ -76,12 +54,33 @@ export async function exchangeSession(
     username?: string;
   },
 ): Promise<SessionResponse> {
-  const data = await postJson(`${authUrl}/api/v1/session`, { ...body });
-  if (typeof data.sessionJWT !== "string") {
-    throw new Error("Session response missing sessionJWT.");
+  const { challengeJWT, ...payload } = body;
+  const res = await fetch(`${authUrl}/api/v1/session`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${challengeJWT}`,
+    },
+    body: JSON.stringify(payload),
+  });
+  const text = await res.text();
+  if (!res.ok) {
+    throw new Error(`auth-service /api/v1/session returned ${res.status}: ${text}`);
+  }
+  const sessionJWT = readBearerToken(
+    res.headers.get("Authorization"),
+    "Session response missing Authorization bearer token.",
+  );
+  let data: Record<string, unknown> = {};
+  if (text.trim().length > 0) {
+    try {
+      data = JSON.parse(text) as Record<string, unknown>;
+    } catch {
+      throw new Error("auth-service /api/v1/session returned non-JSON body.");
+    }
   }
   return {
-    sessionJWT: data.sessionJWT,
+    sessionJWT,
     apiKey: typeof data.apiKey === "string" ? data.apiKey : undefined,
   };
 }
@@ -90,15 +89,20 @@ export async function fetchCapability(
   authUrl: string,
   sessionJWT: string,
 ): Promise<string> {
-  const data = await postJson(
-    `${authUrl}/api/v1/capability`,
-    undefined,
-    { Authorization: `Bearer ${sessionJWT}` },
-  );
-  if (typeof data.capabilityJWT !== "string") {
-    throw new Error("Capability response missing capabilityJWT.");
+  const res = await fetch(`${authUrl}/api/v1/capability`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${sessionJWT}` },
+  });
+  const text = await res.text();
+  if (!res.ok) {
+    throw new Error(
+      `auth-service /api/v1/capability returned ${res.status}: ${text}`,
+    );
   }
-  return data.capabilityJWT;
+  return readBearerToken(
+    res.headers.get("Authorization"),
+    "Capability response missing Authorization bearer token.",
+  );
 }
 
 export interface PerformPoWInput {
@@ -127,4 +131,18 @@ export async function performPoWAndSession(
     apiKey: input.apiKey,
     username: input.username,
   });
+}
+
+function readBearerToken(
+  headerValue: string | null,
+  missingError: string,
+): string {
+  if (!headerValue) {
+    throw new Error(missingError);
+  }
+  const match = /^\s*Bearer\s+(.+?)\s*$/i.exec(headerValue);
+  if (!match || !match[1]) {
+    throw new Error("Authorization header must use Bearer scheme.");
+  }
+  return match[1];
 }

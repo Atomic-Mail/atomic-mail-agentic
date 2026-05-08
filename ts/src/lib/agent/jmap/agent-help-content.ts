@@ -90,12 +90,16 @@ See each package README for details.`,
 Auth is automatic after \`register\` (or when \`credentials.json\` + API key
 exist).
 
-1. **Challenge** — \`POST /api/v1/challenge\`
+1. **Challenge** — \`POST /api/v1/challenge\`, read challenge JWT from
+   \`Authorization: Bearer <challengeJWT>\`
 2. **Proof-of-work** — scrypt until difficulty satisfied
-3. **Session JWT** — \`POST /api/v1/session\` (1h TTL); signup returns a
-   one-time \`apiKey\`
-4. **Capability JWT** — \`POST /api/v1/capability\` (2 min TTL) used as the
-   JMAP bearer
+3. **Session JWT** — \`POST /api/v1/session\` with challenge JWT in
+   \`Authorization: Bearer ...\` and PoW fields (\`powHex\`, \`nonce\`) in JSON
+   body; read session JWT from response \`Authorization: Bearer ...\` (1h TTL);
+   signup returns \`apiKey\` once
+4. **Capability JWT** — \`POST /api/v1/capability\` with session JWT in
+   \`Authorization: Bearer ...\`; read capability JWT from response
+   \`Authorization: Bearer ...\` (2 min TTL) used as the JMAP bearer
 
 JWTs are rotated before expiry and written back to disk.
 

@@ -78,24 +78,25 @@ export class AuthClient {
     const { challengeJWT, challenge, difficulty } = await this.fetchChallenge();
     const { powHex, nonce } = await this.solvePoW(challenge, difficulty);
 
-    const data = await this.postSession({
+    const { sessionJWT, data } = await this.postSession(
       challengeJWT,
-      powHex,
-      nonce: nonce.toString(),
-      username,
-    });
+      {
+        powHex,
+        nonce: nonce.toString(),
+        username,
+      },
+    );
 
     if (
-      typeof data.apiKey !== "string" ||
-      typeof data.sessionJWT !== "string"
+      typeof data.apiKey !== "string"
     ) {
       throw new AuthClientError(
         200,
         JSON.stringify(data),
-        "Signup response missing apiKey or sessionJWT.",
+        "Signup response missing apiKey.",
       );
     }
-    return { apiKey: data.apiKey, sessionJWT: data.sessionJWT };
+    return { apiKey: data.apiKey, sessionJWT };
   }
 
   /** Exchange an existing API key for a fresh session JWT. */
@@ -103,21 +104,16 @@ export class AuthClient {
     const { challengeJWT, challenge, difficulty } = await this.fetchChallenge();
     const { powHex, nonce } = await this.solvePoW(challenge, difficulty);
 
-    const data = await this.postSession({
+    const { sessionJWT } = await this.postSession(
       challengeJWT,
-      powHex,
-      nonce: nonce.toString(),
-      apiKey,
-    });
+      {
+        powHex,
+        nonce: nonce.toString(),
+        apiKey,
+      },
+    );
 
-    if (typeof data.sessionJWT !== "string") {
-      throw new AuthClientError(
-        200,
-        JSON.stringify(data),
-        "Login response missing sessionJWT.",
-      );
-    }
-    return { sessionJWT: data.sessionJWT };
+    return { sessionJWT };
   }
 
   /**
@@ -129,15 +125,19 @@ export class AuthClient {
       method: "POST",
       headers: { Authorization: `Bearer ${sessionJWT}` },
     });
-    const data = await this.parseJsonOrThrow(res, "capability");
-    if (typeof data.capabilityJWT !== "string") {
+    const text = await res.text();
+    if (!res.ok) {
       throw new AuthClientError(
         res.status,
-        JSON.stringify(data),
-        "Capability response missing capabilityJWT.",
+        text,
+        `auth-service capability returned ${res.status}: ${text}`,
       );
     }
-    return { capabilityJWT: data.capabilityJWT };
+    const capabilityJWT = readBearerToken(
+      res.headers.get("Authorization"),
+      "Capability response missing Authorization bearer token.",
+    );
+    return { capabilityJWT };
   }
 
   private async fetchChallenge(): Promise<{
@@ -148,45 +148,75 @@ export class AuthClient {
     const res = await fetch(`${this.baseUrl}/api/v1/challenge`, {
       method: "POST",
     });
-    const data = await this.parseJsonOrThrow(res, "challenge");
-    if (typeof data.challengeJWT !== "string") {
+    const text = await res.text();
+    if (!res.ok) {
       throw new AuthClientError(
         res.status,
-        JSON.stringify(data),
-        "Challenge response missing challengeJWT.",
+        text,
+        `auth-service challenge returned ${res.status}: ${text}`,
       );
     }
-    const payload = decodeJwtPayload<ChallengePayload>(data.challengeJWT);
+    const challengeJWT = readBearerToken(
+      res.headers.get("Authorization"),
+      "Challenge response missing Authorization bearer token.",
+    );
+    const payload = decodeJwtPayload<ChallengePayload>(challengeJWT);
     if (
       typeof payload.jti !== "string" ||
       typeof payload.difficulty !== "number"
     ) {
       throw new AuthClientError(
         res.status,
-        data.challengeJWT,
+        challengeJWT,
         "Challenge JWT payload is malformed (missing jti or difficulty).",
       );
     }
     return {
-      challengeJWT: data.challengeJWT,
+      challengeJWT,
       challenge: payload.jti,
       difficulty: payload.difficulty,
     };
   }
 
-  private async postSession(body: {
-    challengeJWT: string;
+  private async postSession(challengeJWT: string, body: {
     powHex: string;
     nonce: string;
     username?: string;
     apiKey?: string;
-  }): Promise<Record<string, unknown>> {
+  }): Promise<{ sessionJWT: string; data: Record<string, unknown> }> {
     const res = await fetch(`${this.baseUrl}/api/v1/session`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${challengeJWT}`,
+      },
       body: JSON.stringify(body),
     });
-    return await this.parseJsonOrThrow(res, "session");
+    const text = await res.text();
+    if (!res.ok) {
+      throw new AuthClientError(
+        res.status,
+        text,
+        `auth-service session returned ${res.status}: ${text}`,
+      );
+    }
+    const sessionJWT = readBearerToken(
+      res.headers.get("Authorization"),
+      "Session response missing Authorization bearer token.",
+    );
+    let data: Record<string, unknown> = {};
+    if (text.trim().length > 0) {
+      try {
+        data = JSON.parse(text) as Record<string, unknown>;
+      } catch {
+        throw new AuthClientError(
+          res.status,
+          text,
+          "auth-service session returned non-JSON body.",
+        );
+      }
+    }
+    return { sessionJWT, data };
   }
 
   private async parseJsonOrThrow(
@@ -284,4 +314,18 @@ function decodeJwtPayload<T>(jwt: string): T {
     .replace(/_/g, "/")
     .padEnd(payloadB64Url.length + padLen, "=");
   return JSON.parse(atob(base64)) as T;
+}
+
+function readBearerToken(
+  headerValue: string | null,
+  missingError: string,
+): string {
+  if (!headerValue) {
+    throw new Error(missingError);
+  }
+  const match = /^\s*Bearer\s+(.+?)\s*$/i.exec(headerValue);
+  if (!match || !match[1]) {
+    throw new Error("Authorization header must use Bearer scheme.");
+  }
+  return match[1];
 }

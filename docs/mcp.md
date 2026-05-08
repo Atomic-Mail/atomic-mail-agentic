@@ -96,6 +96,13 @@ Mode `0600`:
 These files are created and rotated automatically by MCP tool calls. AgentSkill
 CLI uses the same files.
 
+During PoW auth, the challenge JWT is exchanged via `Authorization: Bearer ...`
+for both `POST /api/v1/challenge` (response header) and `POST /api/v1/session`
+(request header), and session JWT is read from the `POST /api/v1/session`
+response header. `POST /api/v1/capability` accepts session JWT via bearer
+header and returns capability JWT in the response bearer header. PoW values
+(`powHex`, `nonce`) remain in the JSON body for session creation.
+
 ## Attachments and blobs
 
 Two blob paths are supported:

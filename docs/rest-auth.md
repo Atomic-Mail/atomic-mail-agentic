@@ -10,11 +10,12 @@ Base URLs:
 
 ## PoW and token flow
 
-1. `POST /api/v1/challenge` -> receive challenge, salt, difficulty.
+1. `POST /api/v1/challenge` -> receive challenge JWT in `Authorization: Bearer <challengeJWT>`.
 2. Solve `scrypt` PoW locally.
-3. `POST /api/v1/register` (first-time account creation only) or
-   `POST /api/v1/session` (existing API key login).
+3. `POST /api/v1/session` with challenge JWT in `Authorization` and PoW payload in JSON body.
+   Receive session JWT from response `Authorization: Bearer <sessionJWT>`.
 4. `POST /api/v1/capability` with session bearer.
+   Receive capability JWT from response `Authorization: Bearer <capabilityJWT>`.
 5. Use capability JWT for JMAP requests.
 
 Token TTLs:
@@ -57,26 +58,37 @@ Example success hint shape:
 }
 ```
 
-## Request challenge
+## Request challenge JWT
 
 ```bash
-curl -X POST https://auth.atomicmail.ai/api/v1/challenge
+curl -i -X POST https://auth.atomicmail.ai/api/v1/challenge
 ```
 
-## Register inbox (first run)
+Read challenge JWT from response header:
 
-```bash
-curl -X POST https://auth.atomicmail.ai/api/v1/register \
-  -H "Content-Type: application/json" \
-  -d '{"challenge":"<challenge>","nonce":"<nonce>","username":"myagent"}'
+```http
+Authorization: Bearer <challengeJWT>
 ```
 
 ## Create session JWT
 
 ```bash
 curl -X POST https://auth.atomicmail.ai/api/v1/session \
+  -H "Authorization: Bearer <challengeJWT>" \
   -H "Content-Type: application/json" \
-  -d '{"challenge":"<challenge>","nonce":"<nonce>","apiKey":"<apiKey>"}'
+  -d '{"powHex":"<powHex>","nonce":"<nonce>","username":"myagent"}'
+```
+
+Read session JWT from response header:
+
+```http
+Authorization: Bearer <sessionJWT>
+```
+
+For login with an existing API key, send:
+
+```json
+{"powHex":"<powHex>","nonce":"<nonce>","apiKey":"<apiKey>"}
 ```
 
 ## Create capability JWT
@@ -84,6 +96,12 @@ curl -X POST https://auth.atomicmail.ai/api/v1/session \
 ```bash
 curl -X POST https://auth.atomicmail.ai/api/v1/capability \
   -H "Authorization: Bearer <sessionJwt>"
+```
+
+Read capability JWT from response header:
+
+```http
+Authorization: Bearer <capabilityJWT>
 ```
 
 Continue with [`Raw JMAP requests`](/jmap) to execute mail method

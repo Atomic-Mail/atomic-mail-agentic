@@ -1,8 +1,5 @@
 // JWT helpers for capability/session expiry checks.
 
-export const SESSION_TTL_MS = 4 * 60 * 60 * 1000;
-export const CAPABILITY_TTL_MS = 2 * 60 * 1000;
-
 export const SESSION_SAFETY_MARGIN_MS = 60_000;
 export const CAPABILITY_SAFETY_MARGIN_MS = 20_000;
 

@@ -92,7 +92,7 @@ exist).
 
 1. **Challenge** — \`POST /api/v1/challenge\`
 2. **Proof-of-work** — scrypt until difficulty satisfied
-3. **Session JWT** — \`POST /api/v1/session\` (4h TTL); signup returns a
+3. **Session JWT** — \`POST /api/v1/session\` (1h TTL); signup returns a
    one-time \`apiKey\`
 4. **Capability JWT** — \`POST /api/v1/capability\` (2 min TTL) used as the
    JMAP bearer

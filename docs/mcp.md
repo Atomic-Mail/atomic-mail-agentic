@@ -90,7 +90,7 @@ Example:
 Mode `0600`:
 
 - `credentials.json` — `{ apiKey, inboxId, authUrl, apiUrl, scryptSalt, uploadUrl, downloadUrl }`
-- `session.jwt` — 4h TTL, rotated via PoW
+- `session.jwt` — 1h TTL, rotated via PoW
 - `capability.jwt` — 2m TTL, rotated before JMAP calls
 
 These files are created and rotated automatically by MCP tool calls. AgentSkill

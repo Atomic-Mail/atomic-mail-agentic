@@ -19,7 +19,7 @@ Base URLs:
 
 Token TTLs:
 
-- Session JWT: 4 hours
+- Session JWT: 1 hour
 - Capability JWT: 2 minutes
 
 ## Agent hints in auth responses

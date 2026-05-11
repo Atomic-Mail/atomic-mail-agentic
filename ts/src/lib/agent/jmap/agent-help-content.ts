@@ -20,7 +20,8 @@ Three operations only:
    \`$INBOX\`, \`$UPLOAD_URL\`, \`$DOWNLOAD_URL\`, \`$TO\`, \`$SUBJECT\` are
    replaced before the request is sent. \`$ACCOUNT_ID\` / \`$INBOX\` /
    \`$INBOX_MAILBOX_ID\` / \`$UPLOAD_URL\` / \`$DOWNLOAD_URL\` come from the JMAP
-   session and credentials; pass any other names via MCP \`vars\` or skill
+   session and credentials (\`$INBOX\` is always a full mailbox address; see
+   presets topic); pass any other names via MCP \`vars\` or skill
    \`--vars\`. Optional **local file attachments** (MCP \`attachments\`, skill
    \`--attachment\`): each file is RFC 8620–uploaded to \`uploadUrl\` first, then
    \`$ATTACHMENT_0_BLOB_ID\`, \`$ATTACHMENT_0_NAME\`, \`$ATTACHMENT_0_TYPE\`, …
@@ -137,9 +138,11 @@ Common URNs:
 
 ## Placeholders
 
-- \`$ACCOUNT_ID\`, \`$INBOX\` (inbox **email**), \`$INBOX_MAILBOX_ID\` (JMAP mailbox
-  id for the inbox — use for \`Email/query\` → \`inMailbox\` and \`Email/set\` →
-  \`mailboxIds\`), \`$UPLOAD_URL\`, \`$DOWNLOAD_URL\` resolve from the session.
+- \`$ACCOUNT_ID\`, \`$INBOX\` (full mailbox **email** for \`From\` / envelope; from
+  \`inboxId\`, appending \`@atomicmail.ai\` or \`ATOMIC_MAIL_INBOX_DOMAIN\` when
+  needed), \`$INBOX_MAILBOX_ID\` (JMAP mailbox id — use for \`Email/query\` →
+  \`inMailbox\` and \`Email/set\` → \`mailboxIds\`), \`$UPLOAD_URL\`,
+  \`$DOWNLOAD_URL\` resolve from the session.
 - Pass \`$TO\`, \`$SUBJECT\`, \`$BODY\`, etc. via MCP \`vars\` or skill \`--vars\`
   (object of strings).
 

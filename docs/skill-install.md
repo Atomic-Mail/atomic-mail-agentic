@@ -5,7 +5,8 @@ description: Install and run the @atomicmail/agent-skill CLI (register, jmap_req
 # @atomicmail/agent-skill
 
 Atomic Mail AgentSkill CLI for shell-capable AI agents. It exposes three
-commands: `register`, `jmap_request`, and `help`.
+commands: `register`, `jmap_request`, and `help`. **`jmap_request`** uses the
+same shared library as **`@atomicmail/mcp`**.
 
 ## Install / run
 
@@ -70,6 +71,8 @@ Bundled presets:
 - `send_mail.json` (`$TO`, `$SUBJECT`, `$BODY`)
 - `send_mail_attachment.json` (`$TO`, `$SUBJECT`, `$BODY`, `$ATTACHMENT_BASE64`,
   `$ATTACHMENT_TYPE`, `$ATTACHMENT_NAME`)
+- `send_mail_blob_attachment.json` (`$TO`, `$SUBJECT`, `$BODY`; use with
+  `--attachment` for RFC 8620 upload and `$ATTACHMENT_0_BLOB_ID`, …)
 - `list_inbox.json` (latest 50 inbox messages; uses `$INBOX_MAILBOX_ID`)
 - `reply.json` (`$MAIL_ID`, `$BODY`)
 

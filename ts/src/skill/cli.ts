@@ -217,7 +217,10 @@ Options:
     fail("Provide --ops or --ops-file.", 2);
   }
 
-  const rawAttachments = parsed.values.attachment as string[] | string | undefined;
+  const rawAttachments = parsed.values.attachment as
+    | string[]
+    | string
+    | undefined;
   const attachmentPaths = rawAttachments === undefined
     ? []
     : Array.isArray(rawAttachments)
@@ -294,6 +297,8 @@ Options:
     | string
     | undefined;
 
+  // Same JMAP path as MCP: built-in `$INBOX` is normalized to a full mailbox
+  // address via shared `runJmapRequest` (see `inboxIdToMailboxEmail`).
   const { ok, status, bodyText } = await runJmapRequest({
     session,
     opsJson: raw,

@@ -5,6 +5,7 @@ export * from "./core/consts.ts";
 export * from "./core/types.ts";
 
 export * from "./agent/session/agent-credentials-store.ts";
+export * from "./agent/session/inbox-id-to-mailbox-email.ts";
 export * from "./agent/auth/agent-jwt.ts";
 export * from "./agent/auth/agent-pow.ts";
 export * from "./agent/auth/agent-auth-http.ts";

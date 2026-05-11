@@ -91,7 +91,8 @@ Placeholder rules:
 - Pattern: `$VAR_NAME`, where `VAR_NAME` matches `^[A-Z][A-Z0-9_]*$`.
 - Built-ins: `$ACCOUNT_ID`, `$INBOX`, `$INBOX_MAILBOX_ID`, `$UPLOAD_URL`,
   `$DOWNLOAD_URL`.
-- **`$INBOX`** is your mailbox **email address** (from credentials).\
+- **`$INBOX`** is your mailbox **email address** used in `From` / submission.
+  `envelope` / similar. The value comes from `credentials.json` **`inboxId`**;
   **`$INBOX_MAILBOX_ID`** is the JMAP **mailbox id** for the inbox
   (`Mailbox/query` with `role: "inbox"`). Use **`$INBOX_MAILBOX_ID`** anywhere
   the API expects a mailbox id (for example `Email/query` → `filter.inMailbox`,
@@ -115,6 +116,11 @@ Bundled presets:
 - `send_mail_attachment.json` — `$TO`, `$SUBJECT`, `$BODY`,
   `$ATTACHMENT_BASE64`, `$ATTACHMENT_TYPE`, `$ATTACHMENT_NAME` (`Blob/upload` +
   send in one batch).
+- `send_mail_blob_attachment.json` — `$TO`, `$SUBJECT`, `$BODY`; the attachment
+  **`blobId`** is **`$ATTACHMENT_0_BLOB_ID`** (and further indices for more
+  parts). Use together with MCP **`attachments`** (local file paths) or the
+  skill **`--attachment`**: the client **RFC 8620**-uploads each file to
+  **`uploadUrl`** before substitution and the JMAP batch.
 
 `ops_file` resolves against the credentials directory first, then bundled
 presets inside the package.
@@ -238,6 +244,12 @@ parameterised attachment, use preset **`send_mail_attachment.json`** and pass
 
 ### Separate upload/download flow (RFC 8620)
 
+For **file attachments** without in-band `Blob/upload`, prefer
+**`send_mail_blob_attachment.json`** plus MCP **`attachments`** / skill
+**`--attachment`** (see bundled preset above). The client uploads bytes to
+**`uploadUrl`**, then injects **`$ATTACHMENT_N_BLOB_ID`** (and name, type, size,
+count) into your ops JSON.
+
 Use the templated URLs from session/credentials:
 
 - `$UPLOAD_URL` template contains `{accountId}`.
@@ -300,6 +312,7 @@ that works is **`data:asBase64`** and **`size`**:
         "ATOMIC_MAIL_AUTH_URL": "https://custom-auth.example",
         "ATOMIC_MAIL_API_URL": "https://custom-api.example",
         "ATOMIC_MAIL_CREDENTIALS_DIR": "/Users/me/.atomicmail",
+        "ATOMIC_MAIL_INBOX_DOMAIN": "mail.example.com",
         "ATOMIC_MAIL_SCRYPT_SALT": "hex-salt-override",
         "ATOMIC_MAIL_API_KEY": "existing-api-key"
       }

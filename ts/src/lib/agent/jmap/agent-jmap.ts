@@ -6,6 +6,7 @@ import { cwd } from "node:process";
 import { fileURLToPath } from "node:url";
 
 import { readCredentials } from "../session/agent-credentials-store.ts";
+import { inboxIdToMailboxEmail } from "../session/inbox-id-to-mailbox-email.ts";
 import {
   buildVarsFromAttachmentFiles,
   type JmapAttachmentInput,
@@ -259,9 +260,12 @@ export async function runJmapRequest(
     vars: mergedVars,
     autoResolvers: {
       ACCOUNT_ID: () => input.session.getPrimaryMailAccountId(),
-      INBOX: async () =>
-        input.session.currentInboxId ??
-          (await readCredentials(input.session.files.credentialsFile)).inboxId,
+      INBOX: async () => {
+        const raw =
+          input.session.currentInboxId ??
+          (await readCredentials(input.session.files.credentialsFile)).inboxId;
+        return inboxIdToMailboxEmail(raw);
+      },
       INBOX_MAILBOX_ID: () => fetchInboxMailboxId(input.session),
       UPLOAD_URL: async () =>
         input.session.currentUploadUrl ??
@@ -310,7 +314,7 @@ export async function runJmapRequest(
 /**
  * Resolves the JMAP `Mailbox` id for the account inbox (`role: "inbox"`).
  * Used for `$INBOX_MAILBOX_ID` substitution (distinct from `$INBOX`, which is
- * the mailbox *email address* from credentials).
+ * the mailbox *email address* — see `inboxIdToMailboxEmail` for normalization).
  */
 export async function fetchInboxMailboxId(
   port: JmapSessionPort,

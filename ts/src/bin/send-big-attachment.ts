@@ -20,6 +20,7 @@ import {
   DEFAULT_JMAP_USING,
   assertBlobUploadSizesNonZero,
   assertJmapSubmissionCreated,
+  inboxIdToMailboxEmail,
   readOpsFile,
   resolveAgentConfigFromEnv,
   runJmapRequest,
@@ -50,10 +51,6 @@ function parseArgs(): {
     }
   }
   return { bytes, to, inBand, plain };
-}
-
-function defaultFullAddress(inboxId: string): string {
-  return inboxId.includes("@") ? inboxId : `${inboxId}@atomicmail.ai`;
 }
 
 async function sendOutOfBandViaAttachments(
@@ -180,7 +177,7 @@ async function main(): Promise<void> {
   if (!inbox) {
     throw new Error("No inbox in session; run register first.");
   }
-  const addr = toFlag ?? defaultFullAddress(inbox);
+  const addr = toFlag ?? inboxIdToMailboxEmail(inbox);
 
   try {
     if (plain) {

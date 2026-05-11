@@ -23,7 +23,7 @@ Atomic Mail MCP — programmable inbox for AI agents.
 WORKFLOW
   1. Call register with a desired username (PoW signup; credentials on disk).
   2. Call jmap_request with JMAP method calls (inline ops JSON or ops_file preset).
-     $VAR_NAME tokens: $ACCOUNT_ID / $INBOX / $INBOX_MAILBOX_ID from session;
+     $VAR_NAME tokens: $ACCOUNT_ID / $INBOX (full mailbox) / $INBOX_MAILBOX_ID from session;
      pass others in vars. Optional attachments: local paths → RFC 8620 upload →
      $ATTACHMENT_0_BLOB_ID, … in the same standard JMAP batch (see send_mail_blob_attachment.json).
   3. Call help for full documentation (JMAP cheatsheet, presets, troubleshooting);
@@ -37,6 +37,7 @@ ENVIRONMENT
   ATOMIC_MAIL_CREDENTIALS_DIR  credential directory
   ATOMIC_MAIL_AUTH_URL         auth-service base URL
   ATOMIC_MAIL_API_URL          JMAP / API base URL
+  ATOMIC_MAIL_INBOX_DOMAIN     optional hostname when inboxId has no @ (default atomicmail.ai)
   ATOMIC_MAIL_SCRYPT_SALT      optional PoW salt override
   ATOMIC_MAIL_API_KEY          optional existing API key
 

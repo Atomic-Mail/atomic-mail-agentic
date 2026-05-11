@@ -23,11 +23,11 @@ Your MCP host spawns this process; see configuration below.
 
 ## Tools exposed
 
-| Tool           | Description                                                                                                                                               |
-| -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `register`     | PoW signup; persists credentials. Idempotent when username matches inbox.                                                                                 |
+| Tool           | Description                                                                                                                                                                                 |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `register`     | PoW signup; persists credentials. Idempotent when username matches inbox.                                                                                                                   |
 | `jmap_request` | JMAP batch via `ops` or `ops_file`. Uppercase `$VAR_NAME` tokens are substituted (`$ACCOUNT_ID` / `$INBOX` / `$UPLOAD_URL` / `$DOWNLOAD_URL` from session; others via optional `vars` map). |
-| `help`         | Built-in docs (`topic` optional).                                                                                                                         |
+| `help`         | Built-in docs (`topic` optional); use `topic: "readme"` for the published package `README.md`.                                                                                              |
 
 ## Typical MCP workflow
 
@@ -66,7 +66,8 @@ Placeholder rules:
 - Lowercase `$tokens` such as JMAP back-references (`$draft`) are not matched.
 - Custom placeholders: passed in `vars` as string values.
 - Resolution order per variable: `vars` first, then built-in auto-resolvers.
-- Built-ins can be overridden by providing `ACCOUNT_ID`, `INBOX`, `UPLOAD_URL`, or `DOWNLOAD_URL` in `vars`.
+- Built-ins can be overridden by providing `ACCOUNT_ID`, `INBOX`, `UPLOAD_URL`,
+  or `DOWNLOAD_URL` in `vars`.
 - If any referenced variable is unresolved, `jmap_request` fails with a missing
   variables error.
 - Substitution is single-pass: inserted values are not scanned again for nested
@@ -89,7 +90,8 @@ Example:
 
 Mode `0600`:
 
-- `credentials.json` — `{ apiKey, inboxId, authUrl, apiUrl, scryptSalt, uploadUrl, downloadUrl }`
+- `credentials.json` —
+  `{ apiKey, inboxId, authUrl, apiUrl, scryptSalt, uploadUrl, downloadUrl }`
 - `session.jwt` — 1h TTL, rotated via PoW
 - `capability.jwt` — 2m TTL, rotated before JMAP calls
 
@@ -99,16 +101,18 @@ CLI uses the same files.
 During PoW auth, the challenge JWT is exchanged via `Authorization: Bearer ...`
 for both `POST /api/v1/challenge` (response header) and `POST /api/v1/session`
 (request header), and session JWT is read from the `POST /api/v1/session`
-response header. `POST /api/v1/capability` accepts session JWT via bearer
-header and returns capability JWT in the response bearer header. PoW values
-(`powHex`, `nonce`) remain in the JSON body for session creation.
+response header. `POST /api/v1/capability` accepts session JWT via bearer header
+and returns capability JWT in the response bearer header. PoW values (`powHex`,
+`nonce`) remain in the JSON body for session creation.
 
 ## Attachments and blobs
 
 Two blob paths are supported:
 
-- **RFC 9404 in-band blobs** via `Blob/upload` and `Blob/get` over `jmap_request`.
-- **RFC 8620 out-of-band blobs** via `uploadUrl` and `downloadUrl` templates from JMAP session.
+- **RFC 9404 in-band blobs** via `Blob/upload` and `Blob/get` over
+  `jmap_request`.
+- **RFC 8620 out-of-band blobs** via `uploadUrl` and `downloadUrl` templates
+  from JMAP session.
 
 ### Inline blob flow (RFC 9404)
 
@@ -178,13 +182,17 @@ Add `urn:ietf:params:jmap:blob` and upload data in the same JMAP batch:
 Use the templated URLs from session/credentials:
 
 - `$UPLOAD_URL` template contains `{accountId}`.
-- `$DOWNLOAD_URL` template contains `{accountId}`, `{blobId}`, `{name}`, and `{type}`.
+- `$DOWNLOAD_URL` template contains `{accountId}`, `{blobId}`, `{name}`, and
+  `{type}`.
 
 Example (MCP flow):
 
-1. Call `jmap_request` to get attachment metadata (for example `Email/get` with `attachments`).
-2. Expand `$DOWNLOAD_URL` template with account/blob metadata and fetch bytes via HTTP bearer auth.
-3. To upload bytes, expand `$UPLOAD_URL` with account id and POST binary content per RFC 8620 upload endpoint.
+1. Call `jmap_request` to get attachment metadata (for example `Email/get` with
+   `attachments`).
+2. Expand `$DOWNLOAD_URL` template with account/blob metadata and fetch bytes
+   via HTTP bearer auth.
+3. To upload bytes, expand `$UPLOAD_URL` with account id and POST binary content
+   per RFC 8620 upload endpoint.
 
 ### Blob retrieval (RFC 9404)
 

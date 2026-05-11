@@ -11,8 +11,10 @@ import {
   DEFAULT_POW_SCRYPT_SALT_HEX,
   defaultFilesFromOutDir,
   getHelp,
+  normalizeHelpTopic,
   persistLoginWithApiKey,
   readCredentials,
+  readNpmPackageReadme,
   readOpsFile,
   runJmapRequest,
 } from "../lib/mod.ts";
@@ -25,7 +27,7 @@ Usage:
 Commands:
   register       PoW signup or login with API key (writes credentials)
   jmap_request   Send a JMAP batch (inline --ops or --ops-file preset)
-  help           Full documentation [--topic TOPIC]
+  help           Full documentation [--topic TOPIC] (topic readme = package README)
 
 Examples:
   atomicmail register --username alice
@@ -33,6 +35,7 @@ Examples:
   atomicmail jmap_request --credentials-dir ./.atomic-mail --ops-file fetch.json
   atomicmail jmap_request --credentials-dir ./.atomic-mail --ops-file send.json --vars '{"TO":"a@b.com","SUBJECT":"Hi"}'
   atomicmail help --topic presets
+  atomicmail help --topic readme
 
 Run  atomicmail <command> --help  for command-specific flags.
 `;
@@ -287,7 +290,7 @@ Options:
   process.stdout.write(bodyText.endsWith("\n") ? bodyText : bodyText + "\n");
 }
 
-function cmdHelp(argv: string[]): void {
+async function cmdHelp(argv: string[]): Promise<void> {
   let parsed: ReturnType<typeof parseArgs>;
   try {
     parsed = parseArgs({
@@ -306,12 +309,22 @@ function cmdHelp(argv: string[]): void {
   if (parsed.values.help) {
     process.stdout.write(`Usage: atomicmail help [--topic TOPIC]
 
-Topics include: overview, installation, auth, jmap_cheatsheet, tools, presets, troubleshooting.
+Topics include: overview, installation, auth, jmap_cheatsheet, tools, presets, troubleshooting, readme.
+Topic readme prints the npm package README.md (requires install from npm).
 `);
     process.exit(0);
   }
 
   const topic = parsed.values.topic as string | undefined;
+  if (topic !== undefined && normalizeHelpTopic(topic) === "readme") {
+    try {
+      const text = await readNpmPackageReadme();
+      process.stdout.write(text.endsWith("\n") ? text : text + "\n");
+    } catch (err) {
+      fail(err instanceof Error ? err.message : String(err));
+    }
+    return;
+  }
   process.stdout.write(getHelp(topic) + "\n");
 }
 
@@ -332,7 +345,7 @@ async function main(): Promise<void> {
       await cmdJmapRequest(rest);
       break;
     case "help":
-      cmdHelp(rest);
+      await cmdHelp(rest);
       break;
     default:
       process.stderr.write(`Unknown command: ${cmd}\n\n`);

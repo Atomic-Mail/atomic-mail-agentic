@@ -1,0 +1,69 @@
+import { readFile } from "node:fs/promises";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const MAX_DEPTH = 16;
+
+const ATOMICMAIL_NPM_NAMES = new Set([
+  "@atomicmail/mcp",
+  "@atomicmail/agent-skill",
+]);
+
+function isEnoent(err: unknown): boolean {
+  if (!(err instanceof Error)) return false;
+  const code = (err as NodeJS.ErrnoException).code;
+  return code === "ENOENT" || code === "ENOTDIR";
+}
+
+/**
+ * Reads README.md from the npm package root (next to package.json).
+ * Intended for published @atomicmail/mcp and @atomicmail/agent-skill layouts.
+ */
+export async function readNpmPackageReadme(): Promise<string> {
+  const moduleDir = dirname(fileURLToPath(import.meta.url));
+  let currentDir = moduleDir;
+
+  for (let i = 0; i < MAX_DEPTH; i++) {
+    const pkgPath = resolve(currentDir, "package.json");
+    const readmePath = resolve(currentDir, "README.md");
+
+    let pkgRaw: string;
+    try {
+      pkgRaw = await readFile(pkgPath, "utf-8");
+    } catch (err) {
+      if (!isEnoent(err)) throw err;
+      const parent = resolve(currentDir, "..");
+      if (parent === currentDir) break;
+      currentDir = parent;
+      continue;
+    }
+
+    let name: string | undefined;
+    try {
+      name = (JSON.parse(pkgRaw) as { name?: string }).name;
+    } catch {
+      name = undefined;
+    }
+    if (!name || !ATOMICMAIL_NPM_NAMES.has(name)) {
+      const parent = resolve(currentDir, "..");
+      if (parent === currentDir) break;
+      currentDir = parent;
+      continue;
+    }
+
+    try {
+      return await readFile(readmePath, "utf-8");
+    } catch (err) {
+      if (!isEnoent(err)) throw err;
+    }
+
+    const parent = resolve(currentDir, "..");
+    if (parent === currentDir) break;
+    currentDir = parent;
+  }
+
+  throw new Error(
+    "Could not find Atomic Mail package README.md — use a published npm install " +
+      "(@atomicmail/mcp or @atomicmail/agent-skill) for --topic readme.",
+  );
+}

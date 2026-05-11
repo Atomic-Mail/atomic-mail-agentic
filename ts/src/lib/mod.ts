@@ -1,5 +1,6 @@
 export * from "./network/auth-client.ts";
 export * from "./core/utils.ts";
+export * from "./core/read-npm-package-readme.ts";
 export * from "./core/consts.ts";
 export * from "./core/types.ts";
 

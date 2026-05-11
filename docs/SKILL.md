@@ -13,7 +13,8 @@ rotation. This skill ships a single CLI entrypoint with three commands:
 
 - Register a new inbox or log in with an existing API key.
 - Send JMAP batches (inline JSON or preset files).
-- Read built-in documentation (JMAP cheatsheet, presets, troubleshooting).
+- Read built-in documentation (JMAP cheatsheet, presets, troubleshooting) or
+  the package README (`atomicmail help --topic readme`).
 
 ## Commands
 
@@ -58,9 +59,9 @@ npx --package=@atomicmail/agent-skill atomicmail jmap_request \
 ```
 
 `$ACCOUNT_ID`, `$INBOX`, `$UPLOAD_URL`, and `$DOWNLOAD_URL` resolve from the
-session/credentials. Other
-placeholders such as `$TO` or `$SUBJECT` require `--vars` with a JSON object of
-strings (same substitution applies to `--ops` and `--ops-file`).
+session/credentials. Other placeholders such as `$TO` or `$SUBJECT` require
+`--vars` with a JSON object of strings (same substitution applies to `--ops` and
+`--ops-file`).
 
 Preset file:
 

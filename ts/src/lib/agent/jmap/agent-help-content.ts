@@ -21,7 +21,8 @@ Three operations only:
    replaced before the request is sent. \`$ACCOUNT_ID\` / \`$INBOX\` /
    \`$UPLOAD_URL\` / \`$DOWNLOAD_URL\` come from the JMAP session and
    credentials; pass any other names via MCP \`vars\` or skill \`--vars\`.
-3. **help** — This documentation (optional \`topic\` / \`--topic\`).
+3. **help** — This documentation (optional \`topic\` / \`--topic\`), or the
+   published package README (\`topic\` / \`--topic\` \`readme\`).
 
 ## Typical workflow
 
@@ -31,7 +32,7 @@ Three operations only:
 3. If stuck, read error hints and call \`help\`.
 
 Available topics: overview, installation, auth, jmap_cheatsheet, tools,
-presets, troubleshooting.`,
+presets, troubleshooting. Use \`readme\` for the npm package \`README.md\`.`,
 
   installation: `\
 # Atomic Mail — Installation
@@ -185,7 +186,8 @@ replaces credentials in the directory and registers a new inbox.
 **Skill:** \`help [--topic TOPIC]\`
 
 Topics: overview, installation, auth, jmap_cheatsheet, tools, presets,
-troubleshooting.`,
+troubleshooting. Topic \`readme\` prints the published package \`README.md\`
+(same layout as npm; requires install from npm).`,
 
   presets: `\
 # JMAP presets
@@ -252,15 +254,26 @@ strings. Ensure \`register\` completed so \`$ACCOUNT_ID\` / \`$INBOX\` can resol
 
 export const HELP_TOPIC_LIST = Object.keys(HELP_TOPICS);
 
+export function normalizeHelpTopic(topic: string): string {
+  return topic.toLowerCase().replace(/[\s-]/g, "_");
+}
+
 export function getHelp(topic?: string): string {
   if (!topic) {
     return HELP_TOPICS["overview"];
   }
-  const key = topic.toLowerCase().replace(/[\s-]/g, "_");
+  const key = normalizeHelpTopic(topic);
+  if (key === "readme") {
+    return (
+      "Topic \"readme\" prints the package README.md from the npm install. " +
+      "From MCP use {\"topic\":\"readme\"}; from the CLI: " +
+      "`atomicmail help --topic readme`."
+    );
+  }
   return (
     HELP_TOPICS[key] ??
       `Unknown topic "${topic}". Available topics: ${
         HELP_TOPIC_LIST.join(", ")
-      }`
+      }, readme`
   );
 }

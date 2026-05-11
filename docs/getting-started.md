@@ -1,3 +1,7 @@
+---
+description: Recommended onboarding flow for Atomic Mail—MCP or AgentSkill install, register, jmap_request, and links to HTTP docs.
+---
+
 # Getting Started
 
 Atomic Mail gives agents a programmable inbox over JMAP. The recommended flow

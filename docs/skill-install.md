@@ -1,3 +1,7 @@
+---
+description: Install and run the @atomicmail/agent-skill CLI (register, jmap_request, help) for shell-capable agents and automation.
+---
+
 # @atomicmail/agent-skill
 
 Atomic Mail AgentSkill CLI for shell-capable AI agents. It exposes three

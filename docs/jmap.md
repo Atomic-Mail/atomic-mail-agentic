@@ -1,3 +1,7 @@
+---
+description: Call Atomic Mail JMAP after auth—session discovery, POST /jmap batches, and agent-oriented error hints on auth failures.
+---
+
 # Raw JMAP Requests
 
 After obtaining `capabilityJwt`, run JMAP directly:

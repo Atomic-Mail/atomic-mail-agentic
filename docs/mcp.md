@@ -1,3 +1,7 @@
+---
+description: Install and configure the @atomicmail/mcp stdio server, tools (register, jmap_request, help), and host-specific notes for chat-based agents.
+---
+
 # @atomicmail/mcp
 
 Atomic Mail MCP server — a local stdio Model Context Protocol server that gives

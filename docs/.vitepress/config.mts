@@ -1,10 +1,20 @@
 import { defineConfig } from "vitepress";
+import llmstxt from "vitepress-plugin-llms";
+import { copyOrDownloadAsMarkdownButtons } from "vitepress-plugin-llms";
 
 // https://vitepress.dev/reference/site-config
 export default defineConfig({
   lang: "en-US",
   title: "Atomic Mail Agentic",
   description: "API, MCP and AgentSkill Documentation",
+  vite: {
+    plugins: [llmstxt()],
+  },
+  markdown: {
+    config(md) {
+      md.use(copyOrDownloadAsMarkdownButtons);
+    },
+  },
   themeConfig: {
     // https://vitepress.dev/reference/default-theme-config
     nav: [

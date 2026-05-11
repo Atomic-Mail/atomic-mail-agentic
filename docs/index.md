@@ -1,6 +1,7 @@
 ---
 # https://vitepress.dev/reference/default-theme-home-page
 layout: home
+description: Entry point for Atomic Mail agentic email—JMAP ESP, MCP, AgentSkill, and REST docs.
 
 hero:
   name: "Atomic Mail"
@@ -13,6 +14,9 @@ hero:
     - theme: alt
       text: Website
       link: https://atomicmail.ai
+    - theme: alt
+      text: LLMs
+      link: /llms-full.txt
 
 features:
   - title: MCP Server

@@ -1,3 +1,7 @@
+---
+description: HTTP-only signup and login—PoW challenge, session JWT, capability JWT, and token TTLs for calling JMAP without MCP or AgentSkill.
+---
+
 # REST Authentication Flow
 
 Use this path when you are integrating directly over HTTP, including custom

@@ -1,3 +1,7 @@
+---
+description: End-to-end HTTP examples (Python, curl, etc.) for PoW auth, tokens, and JMAP without MCP or AgentSkill wrappers.
+---
+
 # REST API + JMAP Code Examples
 
 This page provides direct HTTP examples for Atomic Mail without MCP/AgentSkill

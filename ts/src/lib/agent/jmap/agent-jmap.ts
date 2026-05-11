@@ -2,14 +2,30 @@
 
 import { readFile } from "node:fs/promises";
 import { dirname, isAbsolute, resolve as resolvePath } from "node:path";
+import { cwd } from "node:process";
 import { fileURLToPath } from "node:url";
 
 import { readCredentials } from "../session/agent-credentials-store.ts";
+import {
+  buildVarsFromAttachmentFiles,
+  type JmapAttachmentInput,
+} from "./agent-jmap-blob-upload.ts";
 import { substituteVars } from "./agent-vars.ts";
+
+export type { JmapAttachmentInput } from "./agent-jmap-blob-upload.ts";
 
 export const DEFAULT_JMAP_USING = [
   "urn:ietf:params:jmap:core",
   "urn:ietf:params:jmap:mail",
+] as const;
+
+/** Presets shipped with MCP / skill npm packages (for error hints). */
+export const BUNDLED_OPS_PRESET_NAMES = [
+  "list_inbox.json",
+  "reply.json",
+  "send_mail.json",
+  "send_mail_attachment.json",
+  "send_mail_blob_attachment.json",
 ] as const;
 
 export const JMAP_MAIL_URN = "urn:ietf:params:jmap:mail" as const;
@@ -74,7 +90,11 @@ export async function readOpsFile(
 
   const bundledPath = await resolveBundledPresetPath(opsFile);
   if (!bundledPath) {
-    return await readFile(filePath, "utf-8");
+    throw new Error(
+      `ops_file '${opsFile}' not found under credential directory (${filePath}) ` +
+        "and not among bundled presets: " +
+        `${BUNDLED_OPS_PRESET_NAMES.join(", ")}.`,
+    );
   }
   return await readFile(bundledPath, "utf-8");
 }
@@ -199,7 +219,15 @@ export interface RunJmapRequestInput {
   /** Label for parse errors */
   sourceLabel: string;
   dryRun?: boolean;
-  /** Values for `$VAR` tokens (keys without `$`). Overrides session vars when present. */
+  /**
+   * Local files uploaded via RFC 8620 (`POST` to session `uploadUrl`) before
+   * `$VAR` substitution. Injects `ATTACHMENT_0_BLOB_ID`, `ATTACHMENT_0_NAME`,
+   * `ATTACHMENT_0_TYPE`, `ATTACHMENT_0_SIZE`, … and `ATTACHMENT_COUNT`.
+   */
+  attachments?: JmapAttachmentInput[];
+  /** Base path for relative `attachments[].path` (default: process cwd). */
+  attachmentPathBase?: string;
+  /** Values for `$VAR` tokens (keys without `$`). Overrides injected attachment vars. */
   vars?: Record<string, string>;
 }
 
@@ -209,9 +237,26 @@ export interface RunJmapRequestInput {
 export async function runJmapRequest(
   input: RunJmapRequestInput,
 ): Promise<{ ok: boolean; status: number; bodyText: string }> {
+  if (input.dryRun && input.attachments && input.attachments.length > 0) {
+    throw new Error(
+      "dryRun cannot be used with attachments: RFC 8620 upload runs first and would create blobs.",
+    );
+  }
+
+  let mergedVars = input.vars ?? {};
+  if (input.attachments && input.attachments.length > 0) {
+    const pathBase = input.attachmentPathBase ?? cwd();
+    const injected = await buildVarsFromAttachmentFiles(
+      input.session,
+      input.attachments,
+      pathBase,
+    );
+    mergedVars = { ...injected, ...mergedVars };
+  }
+
   const { text: raw } = await substituteVars({
     raw: input.opsJson,
-    vars: input.vars,
+    vars: mergedVars,
     autoResolvers: {
       ACCOUNT_ID: () => input.session.getPrimaryMailAccountId(),
       INBOX: async () =>

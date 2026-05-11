@@ -21,7 +21,10 @@ Three operations only:
    replaced before the request is sent. \`$ACCOUNT_ID\` / \`$INBOX\` /
    \`$INBOX_MAILBOX_ID\` / \`$UPLOAD_URL\` / \`$DOWNLOAD_URL\` come from the JMAP
    session and credentials; pass any other names via MCP \`vars\` or skill
-   \`--vars\`.
+   \`--vars\`. Optional **local file attachments** (MCP \`attachments\`, skill
+   \`--attachment\`): each file is RFC 8620–uploaded to \`uploadUrl\` first, then
+   \`$ATTACHMENT_0_BLOB_ID\`, \`$ATTACHMENT_0_NAME\`, \`$ATTACHMENT_0_TYPE\`, …
+   are substituted into the same standard JMAP JSON you would hand-write.
 3. **help** — This documentation (optional \`topic\` / \`--topic\`), or the
    published package README (\`topic\` / \`--topic\` \`readme\`).
 
@@ -60,7 +63,8 @@ npx --package=@atomicmail/agent-skill atomicmail jmap_request \\
 npx --package=@atomicmail/agent-skill atomicmail help
 \`\`\`
 
-From the repo: \`deno run -A scripts/cli.ts <command> ...\` inside \`skill/\`.
+From the repo: \`cd ts\` then \`deno run -A src/skill/cli.ts <command> ...\` (see
+repository \`README.md\` for publishing and build tasks).
 
 ## Shared credentials
 
@@ -76,14 +80,15 @@ MCP and the skill use the same directory layout (default \`~/.atomicmail/\`):
 
 ## From source (development)
 
-From the repo \`mcp/\` or \`skill/\` directory:
+From the repository \`ts/\` directory:
 
 \`\`\`bash
-deno task start   # MCP
-deno task build:npm
+deno run -A src/mcp/main.ts                    # MCP stdio (development)
+deno run -A build_mcp_npm.ts [version]         # MCP npm output -> ./mcp_npm
+deno run -A build_skill_npm.ts [version]       # skill npm output -> ./skill_npm
 \`\`\`
 
-See each package README for details.`,
+See the repository \`README.md\` for publishing.`,
 
   auth: `\
 # Atomic Mail — Auth flow
@@ -270,6 +275,16 @@ Minimal inline shape (replace base64 and addresses):
 }
 \`\`\`
 
+## Attachment via RFC 8620 (\`uploadUrl\`) — still standard JMAP
+
+Keep \`Email/set\` / \`EmailSubmission/set\` exactly as in RFC 8621; only the blob
+bytes go out-of-band: pass MCP \`attachments\` or skill \`--attachment PATH\`
+(repeatable). The client \`POST\`s each file to the session \`uploadUrl\`, then
+substitutes \`$ATTACHMENT_0_BLOB_ID\`, \`$ATTACHMENT_0_NAME\`, \`$ATTACHMENT_0_TYPE\`
+into your \`ops\` / preset before the \`/jmap/\` batch. Bundled
+\`send_mail_blob_attachment.json\` is a minimal one-file example; for several
+parts, add more objects under \`attachments\` referencing \`$ATTACHMENT_1_BLOB_ID\`, etc.
+
 ## Blob/get
 
 \`\`\`json
@@ -305,12 +320,18 @@ replaces credentials in the directory and registers a new inbox.
 ## jmap_request
 
 **MCP input:** \`{ "using"?: string[], "ops"?: string, "ops_file"?: string,
-"vars"?: Record<string, string> }\` — keys in \`vars\` are names without \`$\`
-(e.g. \`TO\` for \`$TO\`). Exactly one of \`ops\` or \`ops_file\`.
+"vars"?: Record<string, string>, "attachments"?: { path, filename?, content_type? }[] }\` —
+keys in \`vars\` are names without \`$\` (e.g. \`TO\` for \`$TO\`). Exactly one of
+\`ops\` or \`ops_file\`. When \`attachments\` is non-empty, each path is read on
+the MCP host, \`POST\`ed to JMAP \`uploadUrl\` (RFC 8620), then
+\`$ATTACHMENT_N_BLOB_ID\` / \`$ATTACHMENT_N_NAME\` / \`$ATTACHMENT_N_TYPE\` /
+\`$ATTACHMENT_N_SIZE\` and \`$ATTACHMENT_COUNT\` are available in \`ops\` (same
+semantics as if you had pasted those strings in \`vars\`).
 
 **Skill:** \`jmap_request --ops '...'\` or \`--ops-file path\` plus
-\`--credentials-dir\` (optional), plus optional \`--vars '<json>'\`, \`--using\`,
-\`--dry-run\`.
+\`--credentials-dir\` (optional), plus optional \`--vars '<json>'\`,
+\`--attachment PATH\` (repeatable), \`--attachment-path-base DIR\`, \`--using\`,
+\`--dry-run\` (not with \`--attachment\`).
 
 ## help
 
@@ -338,7 +359,13 @@ presets that ship in both npm packages.
 - \`reply.json\` — replies in-thread using \`$MAIL_ID\` and \`$BODY\`.
 - \`send_mail_attachment.json\` — \`Blob/upload\` + send; \`vars\`: \`TO\`,
   \`SUBJECT\`, \`BODY\`, \`ATTACHMENT_BASE64\`, \`ATTACHMENT_TYPE\`,
-  \`ATTACHMENT_NAME\`.
+  \`ATTACHMENT_NAME\`. Fine for modest sizes; large files should use RFC 8620
+  upload instead (see \`send_mail_blob_attachment.json\`).
+- \`send_mail_blob_attachment.json\` — one attachment whose \`blobId\` comes from
+  \`$ATTACHMENT_0_BLOB_ID\` (etc.). Use with MCP \`attachments\` or skill
+  \`--attachment PATH\` so the client uploads files to \`uploadUrl\` before the
+  batch; \`vars\`: \`TO\`, \`SUBJECT\`, \`BODY\`. For several files in one
+  \`Email/set\`, write normal JMAP JSON referencing \`$ATTACHMENT_1_BLOB_ID\`, …
 
 ## Placeholders
 
@@ -355,6 +382,10 @@ keywords like \`$draft\` stay untouched).
 - Any other \`$FOO\` — must appear in MCP \`vars\` or skill \`--vars\` as
   \`"FOO": "..."\` (string values only; JSON escaping in the preset body is your
   responsibility).
+- \`$ATTACHMENT_N_BLOB_ID\`, \`$ATTACHMENT_N_NAME\`, \`$ATTACHMENT_N_TYPE\`,
+  \`$ATTACHMENT_N_SIZE\` (N = 0, 1, …) and \`$ATTACHMENT_COUNT\` — injected when
+  you pass MCP \`attachments\` or skill \`--attachment\`; you can still override
+  them in \`vars\` / \`--vars\` if needed.
 
 You may override \`ACCOUNT_ID\` / \`INBOX\` / \`INBOX_MAILBOX_ID\` /
 \`UPLOAD_URL\` / \`DOWNLOAD_URL\` via \`vars\` / \`--vars\` if needed.`,
@@ -398,6 +429,19 @@ paste the id into \`vars\`).
 
 On Atomic Mail, put base64 content in a \`data\` field. See \`help\` topic
 \`jmap_cheatsheet\` or preset \`send_mail_attachment.json\`.
+
+## RFC 8620 binary \`POST\` to \`uploadUrl\` returns 404
+
+The session lists an \`uploadUrl\` template, but your deployment must expose
+that HTTP resource. If \`POST\` returns 404, out-of-band upload is not wired
+on the server — use \`Blob/upload\` in JMAP instead, or fix the API gateway.
+
+## \`Blob/upload\` succeeds but \`size\` is 0 (or \`Email/set\` rejects the blob)
+
+The server accepted the method but did not persist octets (broken or
+incomplete \`Blob/upload\`). Verify with a tiny \`data\` payload; if \`size\`
+stays 0, fix the JMAP/blob implementation on the host before sending
+attachments.
 
 ## Site docs vs installed MCP version
 

@@ -13,8 +13,9 @@ import { AgentSession, resolveAgentConfigFromEnv } from "../lib/mod.ts";
 import { registerHelpTool } from "./tools/help.ts";
 import { registerJmapTool } from "./tools/jmap.ts";
 import { registerRegisterTool } from "./tools/register.ts";
+import { ATOMICMAIL_MCP_VERSION } from "./version.ts";
 
-const VERSION = "0.1.0";
+const VERSION = ATOMICMAIL_MCP_VERSION;
 
 const INSTRUCTIONS = `\
 Atomic Mail MCP — programmable inbox for AI agents.
@@ -23,7 +24,8 @@ WORKFLOW
   1. Call register with a desired username (PoW signup; credentials on disk).
   2. Call jmap_request with JMAP method calls (inline ops JSON or ops_file preset).
      $VAR_NAME tokens: $ACCOUNT_ID / $INBOX / $INBOX_MAILBOX_ID from session;
-     pass others in vars.
+     pass others in vars. Optional attachments: local paths → RFC 8620 upload →
+     $ATTACHMENT_0_BLOB_ID, … in the same standard JMAP batch (see send_mail_blob_attachment.json).
   3. Call help for full documentation (JMAP cheatsheet, presets, troubleshooting);
      topic readme returns the npm package README.
 

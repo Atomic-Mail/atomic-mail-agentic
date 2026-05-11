@@ -2,17 +2,20 @@
 //
 // Usage:  deno run -A build_npm.ts [version]
 //
-// Single CLI: atomicmail -> scripts/cli.ts
+// Single CLI: atomicmail -> src/skill/cli.ts
 //   npx atomicmail register --username ...
 //   npx atomicmail jmap_request --ops-file ...
 //   npx atomicmail help
 
 import { build, emptyDir } from "@deno/dnt";
 
-const version = (Deno.args[0] ?? "0.1.0").replace(/^v/, "");
+import { ATOMICMAIL_MCP_VERSION } from "./src/mcp/version.ts";
+
+const version = (Deno.args[0] ?? ATOMICMAIL_MCP_VERSION).replace(/^v/, "");
 const PRESET_FILES = [
   "send_mail.json",
   "send_mail_attachment.json",
+  "send_mail_blob_attachment.json",
   "list_inbox.json",
   "reply.json",
 ] as const;

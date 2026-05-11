@@ -23,7 +23,9 @@ export function registerJmapTool(
         "the credential directory). Tokens `$VAR_NAME` (uppercase `$FOO_BAR`) in " +
         "either input are replaced: `$ACCOUNT_ID`, `$INBOX`, `$INBOX_MAILBOX_ID`, " +
         "`$UPLOAD_URL`, and `$DOWNLOAD_URL` come from the JMAP session/credentials; " +
-        "pass other names via `vars`.",
+        "pass other names via `vars`. Optional `attachments`: each file is " +
+        "RFC 8620–uploaded first, then `$ATTACHMENT_0_BLOB_ID`, `$ATTACHMENT_0_NAME`, " +
+        "`$ATTACHMENT_0_TYPE`, … are substituted (see bundled `send_mail_blob_attachment.json`).",
       inputSchema: z.object({
         using: z
           .array(z.string())
@@ -55,11 +57,32 @@ export function registerJmapTool(
             "Map of placeholder names (no `$`) to string values, e.g. " +
               '{ "TO": "a@b.com", "SUBJECT": "Hi" } for `$TO` and `$SUBJECT` in ' +
               "ops or ops_file. Overrides session values for `ACCOUNT_ID`, `INBOX`, " +
-              "`INBOX_MAILBOX_ID`, `UPLOAD_URL`, or `DOWNLOAD_URL` if set.",
+              "`INBOX_MAILBOX_ID`, `UPLOAD_URL`, or `DOWNLOAD_URL` if set. Also " +
+              "overrides auto-injected `ATTACHMENT_*` keys when `attachments` is set.",
+          ),
+        attachments: z
+          .array(
+            z.object({
+              path: z.string().describe(
+                "Readable file path on the MCP host (absolute or relative to cwd).",
+              ),
+              filename: z.string().optional().describe(
+                "Attachment filename in the message (default: basename of path).",
+              ),
+              content_type: z.string().optional().describe(
+                "MIME type for upload `Content-Type` (default: guessed from filename).",
+              ),
+            }),
+          )
+          .optional()
+          .describe(
+            "Optional local files: each is POSTed to JMAP `uploadUrl` (RFC 8620) " +
+              "before substitution, injecting `$ATTACHMENT_N_BLOB_ID`, `$ATTACHMENT_N_NAME`, " +
+              "`$ATTACHMENT_N_TYPE`, `$ATTACHMENT_N_SIZE`, and `$ATTACHMENT_COUNT`.",
           ),
       }),
     },
-    async ({ using, ops, ops_file, vars }) => {
+    async ({ using, ops, ops_file, vars, attachments }) => {
       try {
         if (ops && ops_file) {
           return {
@@ -112,6 +135,11 @@ export function registerJmapTool(
           defaultUsing: using,
           sourceLabel,
           vars,
+          attachments: attachments?.map((a) => ({
+            path: a.path,
+            filename: a.filename,
+            contentType: a.content_type,
+          })),
         });
 
         if (!ok) {

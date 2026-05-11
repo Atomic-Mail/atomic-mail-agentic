@@ -26,7 +26,7 @@ Usage:
 
 Commands:
   register       PoW signup or login with API key (writes credentials)
-  jmap_request   Send a JMAP batch (inline --ops or --ops-file preset)
+  jmap_request   Send a JMAP batch (inline --ops or --ops-file; optional --attachment)
   help           Full documentation [--topic TOPIC] (topic readme = package README)
 
 Examples:
@@ -34,6 +34,7 @@ Examples:
   atomicmail register --api-key UUID
   atomicmail jmap_request --credentials-dir ./.atomic-mail --ops-file fetch.json
   atomicmail jmap_request --credentials-dir ./.atomic-mail --ops-file send.json --vars '{"TO":"a@b.com","SUBJECT":"Hi"}'
+  atomicmail jmap_request --ops-file send_mail_blob_attachment.json --attachment ./notes.txt --vars '{"TO":"self@example.com","SUBJECT":"File","BODY":"See attach."}'
   atomicmail help --topic presets
   atomicmail help --topic readme
 
@@ -162,6 +163,8 @@ async function cmdJmapRequest(argv: string[]): Promise<void> {
         using: { type: "string" },
         "dry-run": { type: "boolean" },
         vars: { type: "string" },
+        attachment: { type: "string", multiple: true },
+        "attachment-path-base": { type: "string" },
         help: { type: "boolean", short: "h" },
       },
       strict: true,
@@ -184,8 +187,10 @@ Options:
   --ops JSON                 Inline JMAP JSON (methodCalls or envelope)
   --ops-file PATH            Preset file ($VAR_NAME placeholders supported)
   --vars JSON                JSON object { VAR_NAME: string } for $VAR_NAME in ops / ops-file
+  --attachment PATH          Repeatable; each file is RFC 8620–uploaded before JMAP (injects $ATTACHMENT_N_*)
+  --attachment-path-base DIR Base for relative --attachment paths (default: cwd)
   --using LIST               Comma-separated capability URNs (optional)
-  --dry-run                  Print resolved request only
+  --dry-run                  Print resolved request only (not compatible with --attachment)
   --help, -h                 This message
 `);
     process.exit(0);
@@ -210,6 +215,16 @@ Options:
   }
   if (!ops && !opsFile) {
     fail("Provide --ops or --ops-file.", 2);
+  }
+
+  const rawAttachments = parsed.values.attachment as string[] | string | undefined;
+  const attachmentPaths = rawAttachments === undefined
+    ? []
+    : Array.isArray(rawAttachments)
+    ? rawAttachments
+    : [rawAttachments];
+  if (parsed.values["dry-run"] === true && attachmentPaths.length > 0) {
+    fail("--dry-run cannot be combined with --attachment.", 2);
   }
 
   const usingFlag = parsed.values.using as string | undefined;
@@ -275,6 +290,10 @@ Options:
     sourceLabel = "ops";
   }
 
+  const attachmentPathBase = parsed.values["attachment-path-base"] as
+    | string
+    | undefined;
+
   const { ok, status, bodyText } = await runJmapRequest({
     session,
     opsJson: raw,
@@ -282,6 +301,10 @@ Options:
     sourceLabel,
     dryRun: parsed.values["dry-run"] === true,
     vars: userVars,
+    attachments: attachmentPaths.length > 0
+      ? attachmentPaths.map((path) => ({ path }))
+      : undefined,
+    attachmentPathBase,
   });
 
   if (!ok) {

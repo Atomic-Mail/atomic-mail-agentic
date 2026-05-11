@@ -217,6 +217,7 @@ export async function runJmapRequest(
       INBOX: async () =>
         input.session.currentInboxId ??
           (await readCredentials(input.session.files.credentialsFile)).inboxId,
+      INBOX_MAILBOX_ID: () => fetchInboxMailboxId(input.session),
       UPLOAD_URL: async () =>
         input.session.currentUploadUrl ??
           (await readCredentials(input.session.files.credentialsFile)).uploadUrl,
@@ -261,6 +262,60 @@ export async function runJmapRequest(
   return { ok, status, bodyText: attachJmapNextHints(bodyText) };
 }
 
+/**
+ * Resolves the JMAP `Mailbox` id for the account inbox (`role: "inbox"`).
+ * Used for `$INBOX_MAILBOX_ID` substitution (distinct from `$INBOX`, which is
+ * the mailbox *email address* from credentials).
+ */
+export async function fetchInboxMailboxId(
+  port: JmapSessionPort,
+): Promise<string> {
+  const accountId = await port.getPrimaryMailAccountId();
+  const capabilityJwt = await port.getCapabilityToken();
+  const envelope: JmapEnvelope = {
+    using: [
+      "urn:ietf:params:jmap:core",
+      "urn:ietf:params:jmap:mail",
+    ],
+    methodCalls: [
+      [
+        "Mailbox/query",
+        { accountId, filter: { role: "inbox" } },
+        "mq0",
+      ],
+    ],
+  };
+  const { ok, status, bodyText } = await postJmap(
+    port.apiUrl,
+    capabilityJwt,
+    envelope,
+  );
+  if (!ok) {
+    throw new Error(`Mailbox/query failed (HTTP ${status}): ${bodyText}`);
+  }
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(bodyText);
+  } catch {
+    throw new Error("Mailbox/query response is not valid JSON.");
+  }
+  const responses = (parsed as { methodResponses?: unknown[][] })
+    .methodResponses;
+  const first = responses?.[0];
+  if (!Array.isArray(first) || first[0] === "error") {
+    throw new Error(`Mailbox/query failed: ${bodyText}`);
+  }
+  if (first[0] !== "Mailbox/query") {
+    throw new Error(`Mailbox/query failed: ${bodyText}`);
+  }
+  const payload = first[1] as { ids?: string[] };
+  const id = payload.ids?.[0];
+  if (typeof id !== "string" || id.length === 0) {
+    throw new Error("Mailbox/query returned no inbox mailbox id.");
+  }
+  return id;
+}
+
 export async function postJmap(
   apiUrl: string,
   capabilityJwt: string,
@@ -281,7 +336,7 @@ export async function postJmap(
 
 const JMAP_NEXT_HINTS = [
   "Use jmap_request with Mailbox/get or Email/query to work with mail data.",
-  "Use presets with $VAR placeholders — $ACCOUNT_ID and $INBOX come from the session; pass others via vars / --vars.",
+  "Use presets with $VAR placeholders — $ACCOUNT_ID, $INBOX, and $INBOX_MAILBOX_ID come from the session; pass others via vars / --vars.",
   "Call help for the JMAP cheatsheet and troubleshooting.",
 ] as const;
 

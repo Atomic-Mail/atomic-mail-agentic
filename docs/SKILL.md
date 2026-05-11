@@ -21,7 +21,7 @@ rotation. This skill ships a single CLI entrypoint with three commands:
 ```bash
 npx --package=@atomicmail/agent-skill atomicmail register --username "myagent"
 
-npx --package=@atomicmail/agent-skill atomicmail jmap_request --ops-file list_inbox.json --vars '{"COUNT":"10"}'
+npx --package=@atomicmail/agent-skill atomicmail jmap_request --ops-file list_inbox.json
 ```
 
 Run **`atomicmail --help`** or **`atomicmail <command> --help`** for flags.
@@ -58,8 +58,9 @@ npx --package=@atomicmail/agent-skill atomicmail jmap_request \
   --ops '[["Mailbox/get", {"accountId": "$ACCOUNT_ID"}, "m0"]]'
 ```
 
-`$ACCOUNT_ID`, `$INBOX`, `$UPLOAD_URL`, and `$DOWNLOAD_URL` resolve from the
-session/credentials. Other placeholders such as `$TO` or `$SUBJECT` require
+`$ACCOUNT_ID`, `$INBOX`, `$INBOX_MAILBOX_ID`, `$UPLOAD_URL`, and `$DOWNLOAD_URL`
+resolve from the session/credentials. Other placeholders such as `$TO` or
+`$SUBJECT` require
 `--vars` with a JSON object of strings (same substitution applies to `--ops` and
 `--ops-file`).
 
@@ -67,7 +68,7 @@ Preset file:
 
 ```bash
 npx --package=@atomicmail/agent-skill atomicmail jmap_request \
-  --ops-file fetch_last_100.json
+  --ops-file list_inbox.json
 ```
 
 With custom placeholders:
@@ -81,7 +82,9 @@ npx --package=@atomicmail/agent-skill atomicmail jmap_request \
 Bundled presets (no local file creation required):
 
 - `send_mail.json` (`$TO`, `$SUBJECT`, `$BODY`)
-- `list_inbox.json` (`$COUNT`)
+- `send_mail_attachment.json` (`$TO`, `$SUBJECT`, `$BODY`, `$ATTACHMENT_BASE64`,
+  `$ATTACHMENT_TYPE`, `$ATTACHMENT_NAME`)
+- `list_inbox.json` (latest 50; uses `$INBOX_MAILBOX_ID`)
 - `reply.json` (`$MAIL_ID`, `$BODY`)
 
 ### 4. Help
@@ -101,24 +104,14 @@ npx --package=@atomicmail/agent-skill atomicmail help --topic jmap_cheatsheet
 ### Inline blobs in JMAP (RFC 9404)
 
 Use `Blob/upload` and `Blob/get` through `jmap_request` by adding
-`urn:ietf:params:jmap:blob` to `using`.
+`urn:ietf:params:jmap:blob` to `using`. On Atomic Mail, **`Blob/upload`** uses a
+**`data`** field with **base64** bytes (not `data:asText`). Prefer bundled preset
+**`send_mail_attachment.json`** for upload + send in one batch.
 
 ```bash
 npx --package=@atomicmail/agent-skill atomicmail jmap_request \
-  --ops '{
-    "using":[
-      "urn:ietf:params:jmap:core",
-      "urn:ietf:params:jmap:mail",
-      "urn:ietf:params:jmap:submission",
-      "urn:ietf:params:jmap:blob"
-    ],
-    "methodCalls":[
-      ["Blob/upload",{
-        "accountId":"$ACCOUNT_ID",
-        "create":{"b1":{"data:asText":"Hello attachment","type":"text/plain"}}
-      },"b0"]
-    ]
-  }'
+  --ops-file send_mail_attachment.json \
+  --vars '{"TO":"you@example.com","SUBJECT":"Hi","BODY":"See file","ATTACHMENT_BASE64":"SGVsbG8=","ATTACHMENT_TYPE":"text/plain","ATTACHMENT_NAME":"note.txt"}'
 ```
 
 ### Separate upload/download templates (RFC 8620)

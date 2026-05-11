@@ -8,7 +8,11 @@ function varPattern(): RegExp {
 }
 
 /** Names substituted from JMAP session / credentials when not overridden in `vars`. */
-export const SESSION_VAR_NAMES = new Set<string>(["ACCOUNT_ID", "INBOX"]);
+export const SESSION_VAR_NAMES = new Set<string>([
+  "ACCOUNT_ID",
+  "INBOX",
+  "INBOX_MAILBOX_ID",
+]);
 
 export interface SubstituteVarsInput {
   raw: string;
@@ -43,8 +47,8 @@ function formatMissingError(missing: string[]): Error {
     "Pass custom placeholders in vars (MCP) or --vars (skill).";
   if (hasSession) {
     msg +=
-      " For $ACCOUNT_ID and $INBOX, ensure register completed and credentials are valid, " +
-      "or pass overrides in vars.";
+      " For $ACCOUNT_ID, $INBOX, and $INBOX_MAILBOX_ID, ensure register completed " +
+      "and credentials are valid, or pass overrides in vars.";
   }
   return new Error(msg);
 }

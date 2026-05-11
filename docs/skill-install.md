@@ -25,7 +25,8 @@ npx --package=@atomicmail/agent-skill atomicmail jmap_request \
 
 ## `jmap_request` and placeholders
 
-- Built-in placeholders: `$ACCOUNT_ID`, `$INBOX`
+- Built-in placeholders: `$ACCOUNT_ID`, `$INBOX`, `$INBOX_MAILBOX_ID`,
+  `$UPLOAD_URL`, `$DOWNLOAD_URL`
 - Custom placeholders: any `$VAR_NAME` via `--vars '{"VAR_NAME":"value"}'`
 - Works for both `--ops` and `--ops-file`
 
@@ -42,7 +43,7 @@ npx --package=@atomicmail/agent-skill atomicmail jmap_request \
 Presets are reusable JSON files for `jmap_request`:
 
 - Inline JSON: `--ops '[["Mailbox/get", {"accountId":"$ACCOUNT_ID"}, "m0"]]'`
-- Preset file: `--ops-file list_inbox.json --vars '{"COUNT":"10"}'`
+- Preset file: `--ops-file list_inbox.json`
 
 Resolution order for `--ops-file`:
 
@@ -52,11 +53,13 @@ Resolution order for `--ops-file`:
 Placeholder rules:
 
 - Pattern: `$VAR_NAME`, where `VAR_NAME` matches `^[A-Z][A-Z0-9_]*$`.
-- Built-ins: `$ACCOUNT_ID`, `$INBOX`.
+- Built-ins: `$ACCOUNT_ID`, `$INBOX`, `$INBOX_MAILBOX_ID`, `$UPLOAD_URL`,
+  `$DOWNLOAD_URL`.
 - Lowercase `$tokens` such as JMAP back-references (`$draft`) are not matched.
 - Custom placeholders: pass string values via `--vars`.
 - Resolution order per variable: `--vars` first, then built-in auto-resolvers.
-- Built-ins can be overridden via `--vars` using `ACCOUNT_ID` or `INBOX`.
+- Built-ins can be overridden via `--vars` using `ACCOUNT_ID`, `INBOX`,
+  `INBOX_MAILBOX_ID`, `UPLOAD_URL`, or `DOWNLOAD_URL`.
 - If any referenced variable is unresolved, `jmap_request` fails with a missing
   variables error.
 - Substitution is single-pass: inserted values are not scanned again for nested
@@ -65,7 +68,9 @@ Placeholder rules:
 Bundled presets:
 
 - `send_mail.json` (`$TO`, `$SUBJECT`, `$BODY`)
-- `list_inbox.json` (`$COUNT`)
+- `send_mail_attachment.json` (`$TO`, `$SUBJECT`, `$BODY`, `$ATTACHMENT_BASE64`,
+  `$ATTACHMENT_TYPE`, `$ATTACHMENT_NAME`)
+- `list_inbox.json` (latest 50 inbox messages; uses `$INBOX_MAILBOX_ID`)
 - `reply.json` (`$MAIL_ID`, `$BODY`)
 
 `--ops-file` resolves against `--credentials-dir` first, then bundled presets

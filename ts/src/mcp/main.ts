@@ -22,7 +22,8 @@ Atomic Mail MCP — programmable inbox for AI agents.
 WORKFLOW
   1. Call register with a desired username (PoW signup; credentials on disk).
   2. Call jmap_request with JMAP method calls (inline ops JSON or ops_file preset).
-     $VAR_NAME tokens: $ACCOUNT_ID / $INBOX from session; pass others in vars.
+     $VAR_NAME tokens: $ACCOUNT_ID / $INBOX / $INBOX_MAILBOX_ID from session;
+     pass others in vars.
   3. Call help for full documentation (JMAP cheatsheet, presets, troubleshooting);
      topic readme returns the npm package README.
 

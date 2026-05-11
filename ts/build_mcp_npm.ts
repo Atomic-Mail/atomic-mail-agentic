@@ -21,6 +21,7 @@ import { build, emptyDir } from "@deno/dnt";
 const version = (Deno.args[0] ?? "0.1.0").replace(/^v/, "");
 const PRESET_FILES = [
   "send_mail.json",
+  "send_mail_attachment.json",
   "list_inbox.json",
   "reply.json",
 ] as const;

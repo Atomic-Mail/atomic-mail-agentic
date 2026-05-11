@@ -25,7 +25,8 @@ If wrappers are not usable in your environment, use the direct HTTP docs:
 3. **Execute JMAP**
    - Call `jmap_request` with inline `ops` or `ops_file`.
 4. **Use placeholders**
-   - Built-in: `$ACCOUNT_ID`, `$INBOX`
+   - Built-in: `$ACCOUNT_ID`, `$INBOX`, `$INBOX_MAILBOX_ID`, `$UPLOAD_URL`,
+     `$DOWNLOAD_URL`
    - Custom: `$VAR_NAME` via `vars`/`--vars`.
 
 ## Install for chat-based agents (MCP)
@@ -51,7 +52,7 @@ Continue with full docs: [`MCP in-depth`](/mcp).
 
 ```bash
 npx --package=@atomicmail/agent-skill atomicmail register --username "myagent"
-npx --package=@atomicmail/agent-skill atomicmail jmap_request --ops-file list_inbox.json --vars '{"COUNT":"10"}'
+npx --package=@atomicmail/agent-skill atomicmail jmap_request --ops-file list_inbox.json
 npx --package=@atomicmail/agent-skill atomicmail help
 ```
 

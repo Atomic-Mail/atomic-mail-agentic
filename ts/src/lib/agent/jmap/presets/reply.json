@@ -27,6 +27,7 @@
         "accountId": "$ACCOUNT_ID",
         "create": {
           "d1": {
+            "mailboxIds": { "$INBOX_MAILBOX_ID": true },
             "from": [{ "email": "$INBOX" }],
             "#to": {
               "resultOf": "g0",

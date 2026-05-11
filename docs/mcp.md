@@ -27,11 +27,11 @@ Your MCP host spawns this process; see configuration below.
 
 ## Tools exposed
 
-| Tool           | Description                                                                                                                                                                                 |
-| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `register`     | PoW signup; persists credentials. Idempotent when username matches inbox.                                                                                                                   |
-| `jmap_request` | JMAP batch via `ops` or `ops_file`. Uppercase `$VAR_NAME` tokens are substituted (`$ACCOUNT_ID` / `$INBOX` / `$UPLOAD_URL` / `$DOWNLOAD_URL` from session; others via optional `vars` map). |
-| `help`         | Built-in docs (`topic` optional); use `topic: "readme"` for the published package `README.md`.                                                                                              |
+| Tool           | Description                                                                                                                                                                                                       |
+| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `register`     | PoW signup; persists credentials. Idempotent when username matches inbox.                                                                                                                                         |
+| `jmap_request` | JMAP batch via `ops` or `ops_file`. Uppercase `$VAR_NAME` tokens are substituted (`$ACCOUNT_ID` / `$INBOX` / `$INBOX_MAILBOX_ID` / `$UPLOAD_URL` / `$DOWNLOAD_URL` from session; others via optional `vars` map). |
+| `help`         | Built-in docs (`topic` optional); use `topic: "readme"` for the published package `README.md`.                                                                                                                    |
 
 ## Typical MCP workflow
 
@@ -44,34 +44,63 @@ Your MCP host spawns this process; see configuration below.
 
 `jmap_request` accepts either:
 
-- inline `ops` (JMAP methodCalls array), or
-- `ops_file` (JSON file path)
+- inline `ops` — a JSON **string** whose value is either a **methodCalls array**
+  (for example `[["Mailbox/get", {...}, "m0"]]`) or a full envelope object
+  `{ "using": [...], "methodCalls": [...] }`, or
+- `ops_file` — path to a JSON file containing the same shapes as `ops`.
 
 When using `ops_file`, relative paths first resolve against the credential
 directory. If a file is not present there, the runtime falls back to bundled
 presets shipped in the npm package.
 
+### Default `using` for a bare methodCalls array
+
+If `ops` is **only** a methodCalls array (no `using` in the JSON), the server
+merges the tool’s default capability list — today
+**`urn:ietf:params:jmap:core`** and **`urn:ietf:params:jmap:mail`** only. For
+**`EmailSubmission/set`**, **`Blob/upload`**, or **`Blob/get`**, either pass a
+full envelope that includes the right URNs in `using`, or rely on your MCP host
+passing an extended `using` array on the tool call (when supported).
+
 ## Presets and placeholders
 
-Presets are reusable JSON files for `jmap_request` batches:
+Presets are reusable JSON files for `jmap_request` batches. With MCP, pass
+`vars` on the **tool** input alongside `ops` or `ops_file` (not inside the ops
+JSON string).
 
-- Inline JSON: `{"ops":[...],"vars":{"COUNT":"10"}}`
-- Preset file: `{"ops_file":"list_inbox.json","vars":{"COUNT":"10"}}`
+Example tool arguments:
+
+`{ "ops_file": "list_inbox.json" }`
+
+`{ "ops_file": "send_mail.json", "vars": { "TO": "a@b.com", "SUBJECT": "Hi", "BODY": "..." } }`
 
 Resolution order for `ops_file`:
 
 1. Resolve relative to credentials directory (`~/.atomicmail` by default).
 2. If missing, fall back to bundled presets in the npm package.
 
+**Preset shadowing:** a file such as `list_inbox.json` in the credential
+directory **replaces** the bundled preset with the same name. After upgrading
+`@atomicmail/mcp`, errors like **missing `$COUNT`** or **missing
+`$INBOX_MAILBOX_ID`** usually mean an **older copy** of the preset is still on
+disk — delete or update it, or point `ops_file` at an absolute path to a known
+JSON file.
+
 Placeholder rules:
 
 - Pattern: `$VAR_NAME`, where `VAR_NAME` matches `^[A-Z][A-Z0-9_]*$`.
-- Built-ins: `$ACCOUNT_ID`, `$INBOX`, `$UPLOAD_URL`, `$DOWNLOAD_URL`.
+- Built-ins: `$ACCOUNT_ID`, `$INBOX`, `$INBOX_MAILBOX_ID`, `$UPLOAD_URL`,
+  `$DOWNLOAD_URL`.
+- **`$INBOX`** is your mailbox **email address** (from credentials).\
+  **`$INBOX_MAILBOX_ID`** is the JMAP **mailbox id** for the inbox
+  (`Mailbox/query` with `role: "inbox"`). Use **`$INBOX_MAILBOX_ID`** anywhere
+  the API expects a mailbox id (for example `Email/query` → `filter.inMailbox`,
+  or `Email/set` → `mailboxIds`).
 - Lowercase `$tokens` such as JMAP back-references (`$draft`) are not matched.
 - Custom placeholders: passed in `vars` as string values.
 - Resolution order per variable: `vars` first, then built-in auto-resolvers.
-- Built-ins can be overridden by providing `ACCOUNT_ID`, `INBOX`, `UPLOAD_URL`,
-  or `DOWNLOAD_URL` in `vars`.
+- Built-ins can be overridden by providing `ACCOUNT_ID`, `INBOX`,
+  `INBOX_MAILBOX_ID`, `UPLOAD_URL`, or `DOWNLOAD_URL` in `vars`.
 - If any referenced variable is unresolved, `jmap_request` fails with a missing
   variables error.
 - Substitution is single-pass: inserted values are not scanned again for nested
@@ -79,16 +108,20 @@ Placeholder rules:
 
 Bundled presets:
 
-- `send_mail.json` (`$TO`, `$SUBJECT`, `$BODY`)
-- `list_inbox.json` (`$COUNT`)
-- `reply.json` (`$MAIL_ID`, `$BODY`)
+- `send_mail.json` — `$TO`, `$SUBJECT`, `$BODY` (draft + submit).
+- `list_inbox.json` — latest **50** inbox messages (uses `$INBOX_MAILBOX_ID`; no
+  extra vars).
+- `reply.json` — `$MAIL_ID`, `$BODY` (reply in-thread).
+- `send_mail_attachment.json` — `$TO`, `$SUBJECT`, `$BODY`,
+  `$ATTACHMENT_BASE64`, `$ATTACHMENT_TYPE`, `$ATTACHMENT_NAME` (`Blob/upload` +
+  send in one batch).
 
-`ops-file` resolves against credentials directory first, then bundled presets
-inside the package.
+`ops_file` resolves against the credentials directory first, then bundled
+presets inside the package.
 
 Example:
 
-`{ "ops_file": "list_inbox.json", "vars": { "COUNT": "10" } }`
+`{ "ops_file": "list_inbox.json" }`
 
 ## Credential files and token lifecycle
 
@@ -120,7 +153,20 @@ Two blob paths are supported:
 
 ### Inline blob flow (RFC 9404)
 
-Add `urn:ietf:params:jmap:blob` and upload data in the same JMAP batch:
+Add `urn:ietf:params:jmap:blob` and upload bytes in the same JMAP batch.
+
+On Atomic Mail, **`Blob/upload`** expects base64 in a **`data`** property (not
+`data:asText` / `data:asBase64`). The created blob’s id is referenced from the
+same batch as **`#b1`** when the create key is `b1`.
+
+`Email/set` should include **`mailboxIds`** (map of mailbox id → `true`). Use
+**`$INBOX_MAILBOX_ID`** as the key (see placeholders above).
+**`EmailSubmission/set`** should include an **`envelope`** with **`mailFrom`**
+and **`rcptTo`** (see bundled `send_mail.json`).
+
+The example below uses **`SGVsbG8=`** as sample base64 (UTF-8 `Hello`). For a
+parameterised attachment, use preset **`send_mail_attachment.json`** and pass
+`ATTACHMENT_BASE64`, `ATTACHMENT_NAME`, and `ATTACHMENT_TYPE` in `vars`.
 
 ```json
 {
@@ -137,7 +183,7 @@ Add `urn:ietf:params:jmap:blob` and upload data in the same JMAP batch:
         "accountId": "$ACCOUNT_ID",
         "create": {
           "b1": {
-            "data:asText": "Hello attachment",
+            "data": "SGVsbG8=",
             "type": "text/plain"
           }
         }
@@ -150,6 +196,7 @@ Add `urn:ietf:params:jmap:blob` and upload data in the same JMAP batch:
         "accountId": "$ACCOUNT_ID",
         "create": {
           "m1": {
+            "mailboxIds": { "$INBOX_MAILBOX_ID": true },
             "from": [{ "email": "$INBOX" }],
             "to": [{ "email": "$TO" }],
             "subject": "With attachment",
@@ -173,7 +220,15 @@ Add `urn:ietf:params:jmap:blob` and upload data in the same JMAP batch:
       "EmailSubmission/set",
       {
         "accountId": "$ACCOUNT_ID",
-        "create": { "s1": { "emailId": "#m1" } }
+        "create": {
+          "s1": {
+            "emailId": "#m1",
+            "envelope": {
+              "mailFrom": { "email": "$INBOX" },
+              "rcptTo": [{ "email": "$TO" }]
+            }
+          }
+        }
       },
       "s0"
     ]
@@ -200,7 +255,12 @@ Example (MCP flow):
 
 ### Blob retrieval (RFC 9404)
 
-For in-band retrieval, use `Blob/get`:
+For in-band retrieval, use `Blob/get` with **`urn:ietf:params:jmap:blob`** in
+`using`. Pass the blob id in **`ids`** (for example from **`vars`** as
+`"BLOB_ID": "…"` → `"$BLOB_ID"` in ops).
+
+Atomic Mail may reject some property names in **`properties`**; a minimal set
+that works is **`data:asBase64`** and **`size`**:
 
 ```json
 {
@@ -214,7 +274,7 @@ For in-band retrieval, use `Blob/get`:
       {
         "accountId": "$ACCOUNT_ID",
         "ids": ["$BLOB_ID"],
-        "properties": ["id", "data:asBase64", "size", "type"]
+        "properties": ["data:asBase64", "size"]
       },
       "g0"
     ]

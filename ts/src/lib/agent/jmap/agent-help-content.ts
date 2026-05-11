@@ -19,8 +19,9 @@ Three operations only:
    substitution applies to both). Uppercase tokens like \`$ACCOUNT_ID\`,
    \`$INBOX\`, \`$UPLOAD_URL\`, \`$DOWNLOAD_URL\`, \`$TO\`, \`$SUBJECT\` are
    replaced before the request is sent. \`$ACCOUNT_ID\` / \`$INBOX\` /
-   \`$UPLOAD_URL\` / \`$DOWNLOAD_URL\` come from the JMAP session and
-   credentials; pass any other names via MCP \`vars\` or skill \`--vars\`.
+   \`$INBOX_MAILBOX_ID\` / \`$UPLOAD_URL\` / \`$DOWNLOAD_URL\` come from the JMAP
+   session and credentials; pass any other names via MCP \`vars\` or skill
+   \`--vars\`.
 3. **help** — This documentation (optional \`topic\` / \`--topic\`), or the
    published package README (\`topic\` / \`--topic\` \`readme\`).
 
@@ -55,8 +56,7 @@ presets, troubleshooting. Use \`readme\` for the npm package \`README.md\`.`,
 \`\`\`bash
 npx --package=@atomicmail/agent-skill atomicmail register --username "myagent"
 npx --package=@atomicmail/agent-skill atomicmail jmap_request \\
-  --ops-file list_inbox.json \\
-  --vars '{"COUNT":"10"}'
+  --ops-file list_inbox.json
 npx --package=@atomicmail/agent-skill atomicmail help
 \`\`\`
 
@@ -123,39 +123,171 @@ JWTs are rotated before expiry and written back to disk.
 
 ## Capabilities (\`using\`)
 
+Common URNs:
+
 - urn:ietf:params:jmap:core
 - urn:ietf:params:jmap:mail
-- urn:ietf:params:jmap:submission
+- urn:ietf:params:jmap:submission — required for \`EmailSubmission/set\`
+- urn:ietf:params:jmap:blob — required for \`Blob/upload\` / \`Blob/get\`
 
-## Examples
+## Placeholders
 
-Use \`$ACCOUNT_ID\`, \`$INBOX\`, \`$UPLOAD_URL\`, and \`$DOWNLOAD_URL\` for
-session fields; use \`$TO\`, \`$SUBJECT\`,
-etc., and supply values via MCP \`vars\` or \`--vars\` (JSON object of strings).
+- \`$ACCOUNT_ID\`, \`$INBOX\` (inbox **email**), \`$INBOX_MAILBOX_ID\` (JMAP mailbox
+  id for the inbox — use for \`Email/query\` → \`inMailbox\` and \`Email/set\` →
+  \`mailboxIds\`), \`$UPLOAD_URL\`, \`$DOWNLOAD_URL\` resolve from the session.
+- Pass \`$TO\`, \`$SUBJECT\`, \`$BODY\`, etc. via MCP \`vars\` or skill \`--vars\`
+  (object of strings).
 
-### Mailboxes
+## Bare methodCalls vs full envelope
+
+If \`ops\` is **only** a methodCalls array, the default \`using\` is **core + mail**
+only. For submission or blob methods, pass a full \`{ "using", "methodCalls" }\`
+object (or use bundled presets, which include the right \`using\`).
+
+## Mailboxes
+
 \`\`\`json
 ["Mailbox/get", {"accountId": "$ACCOUNT_ID"}, "m0"]
 \`\`\`
 
-### Query + fetch emails
+## Query + fetch latest inbox mail
+
+\`inMailbox\` must be a **mailbox id**, not the email address — use
+\`$INBOX_MAILBOX_ID\`.
+
 \`\`\`json
-["Email/query", {
-  "accountId": "$ACCOUNT_ID",
-  "filter": {"inMailbox": "$INBOX"},
-  "sort": [{"property": "receivedAt", "isAscending": false}],
-  "limit": 100
-}, "q0"]
+{
+  "using": ["urn:ietf:params:jmap:core", "urn:ietf:params:jmap:mail"],
+  "methodCalls": [
+    ["Email/query", {
+      "accountId": "$ACCOUNT_ID",
+      "filter": {"inMailbox": "$INBOX_MAILBOX_ID"},
+      "sort": [{"property": "receivedAt", "isAscending": false}],
+      "limit": 25
+    }, "q0"],
+    ["Email/get", {
+      "accountId": "$ACCOUNT_ID",
+      "#ids": {"resultOf": "q0", "name": "Email/query", "path": "/ids"},
+      "properties": ["id", "threadId", "receivedAt", "from", "to", "subject", "preview"]
+    }, "g0"]
+  ]
+}
 \`\`\`
 
-### Send (add submission to \`using\`)
+## Send one email (draft + submit)
 
-Include \`urn:ietf:params:jmap:submission\` in the envelope \`using\` array
-when calling \`EmailSubmission/set\`.
+Same pattern as bundled \`send_mail.json\`: \`Email/set\` includes
+\`mailboxIds\` with \`$INBOX_MAILBOX_ID\` as the mailbox id key, then
+\`EmailSubmission/set\` with \`envelope\`.
+
+\`\`\`json
+{
+  "using": [
+    "urn:ietf:params:jmap:core",
+    "urn:ietf:params:jmap:mail",
+    "urn:ietf:params:jmap:submission"
+  ],
+  "methodCalls": [
+    ["Email/set", {
+      "accountId": "$ACCOUNT_ID",
+      "create": {
+        "d1": {
+          "mailboxIds": {"$INBOX_MAILBOX_ID": true},
+          "from": [{"email": "$INBOX"}],
+          "to": [{"email": "$TO"}],
+          "subject": "$SUBJECT",
+          "textBody": [{"partId": "b", "type": "text/plain"}],
+          "bodyValues": {"b": {"value": "$BODY"}},
+          "keywords": {"$draft": true}
+        }
+      }
+    }, "c0"],
+    ["EmailSubmission/set", {
+      "accountId": "$ACCOUNT_ID",
+      "create": {
+        "s1": {
+          "emailId": "#d1",
+          "envelope": {
+            "mailFrom": {"email": "$INBOX"},
+            "rcptTo": [{"email": "$TO"}]
+          }
+        }
+      }
+    }, "c1"]
+  ]
+}
+\`\`\`
+
+## Attachment in one batch (\`Blob/upload\` + send)
+
+Atomic Mail expects blob bytes in a \`data\` property (**base64** string), not
+\`data:asText\`. Prefer preset \`send_mail_attachment.json\` with \`vars\`:
+\`TO\`, \`SUBJECT\`, \`BODY\`, \`ATTACHMENT_BASE64\`, \`ATTACHMENT_TYPE\`,
+\`ATTACHMENT_NAME\`.
+
+Minimal inline shape (replace base64 and addresses):
+
+\`\`\`json
+{
+  "using": [
+    "urn:ietf:params:jmap:core",
+    "urn:ietf:params:jmap:mail",
+    "urn:ietf:params:jmap:submission",
+    "urn:ietf:params:jmap:blob"
+  ],
+  "methodCalls": [
+    ["Blob/upload", {
+      "accountId": "$ACCOUNT_ID",
+      "create": {"b1": {"data": "SGVsbG8=", "type": "text/plain"}}
+    }, "b0"],
+    ["Email/set", {
+      "accountId": "$ACCOUNT_ID",
+      "create": {
+        "m1": {
+          "mailboxIds": {"$INBOX_MAILBOX_ID": true},
+          "from": [{"email": "$INBOX"}],
+          "to": [{"email": "$TO"}],
+          "subject": "With attachment",
+          "bodyValues": {"body1": {"value": "See attachment."}},
+          "textBody": [{"partId": "body1", "type": "text/plain"}],
+          "attachments": [{"blobId": "#b1", "type": "text/plain", "name": "note.txt"}]
+        }
+      }
+    }, "m0"],
+    ["EmailSubmission/set", {
+      "accountId": "$ACCOUNT_ID",
+      "create": {
+        "s1": {
+          "emailId": "#m1",
+          "envelope": {
+            "mailFrom": {"email": "$INBOX"},
+            "rcptTo": [{"email": "$TO"}]
+          }
+        }
+      }
+    }, "s0"]
+  ]
+}
+\`\`\`
+
+## Blob/get
+
+\`\`\`json
+{
+  "using": ["urn:ietf:params:jmap:core", "urn:ietf:params:jmap:blob"],
+  "methodCalls": [
+    ["Blob/get", {
+      "accountId": "$ACCOUNT_ID",
+      "ids": ["$BLOB_ID"],
+      "properties": ["data:asBase64", "size"]
+    }, "g0"]
+  ]
+}
+\`\`\`
 
 ## Tips
 
-- Back-references (\`#ids\`, \`#draft\`) chain calls in one batch.
+- Back-references (\`#b1\`, \`#m1\`, \`#draft\`) chain calls in one batch.
 - Save reusable JSON as preset files and pass \`ops_file\`.`,
 
   tools: `\
@@ -202,8 +334,11 @@ presets that ship in both npm packages.
 ## Bundled presets
 
 - \`send_mail.json\` — sends one email using \`$TO\`, \`$SUBJECT\`, \`$BODY\`.
-- \`list_inbox.json\` — returns the latest \`$COUNT\` inbox messages.
+- \`list_inbox.json\` — latest 50 inbox messages (uses \`$INBOX_MAILBOX_ID\`).
 - \`reply.json\` — replies in-thread using \`$MAIL_ID\` and \`$BODY\`.
+- \`send_mail_attachment.json\` — \`Blob/upload\` + send; \`vars\`: \`TO\`,
+  \`SUBJECT\`, \`BODY\`, \`ATTACHMENT_BASE64\`, \`ATTACHMENT_TYPE\`,
+  \`ATTACHMENT_NAME\`.
 
 ## Placeholders
 
@@ -213,14 +348,16 @@ keywords like \`$draft\` stay untouched).
 - \`$ACCOUNT_ID\` — primary mail account id (from \`GET /.well-known/jmap\` when
   referenced).
 - \`$INBOX\` — inbox email address from credentials.
+- \`$INBOX_MAILBOX_ID\` — JMAP mailbox id for the inbox (extra \`Mailbox/query\`;
+  use for \`Email/query\` / \`Email/set\` where the API wants a mailbox id).
 - \`$UPLOAD_URL\` — RFC 8620 upload URL template from JMAP session.
 - \`$DOWNLOAD_URL\` — RFC 8620 download URL template from JMAP session.
 - Any other \`$FOO\` — must appear in MCP \`vars\` or skill \`--vars\` as
   \`"FOO": "..."\` (string values only; JSON escaping in the preset body is your
   responsibility).
 
-You may override \`ACCOUNT_ID\` / \`INBOX\` / \`UPLOAD_URL\` / \`DOWNLOAD_URL\`
-via \`vars\` / \`--vars\` if needed.`,
+You may override \`ACCOUNT_ID\` / \`INBOX\` / \`INBOX_MAILBOX_ID\` /
+\`UPLOAD_URL\` / \`DOWNLOAD_URL\` via \`vars\` / \`--vars\` if needed.`,
 
   troubleshooting: `\
 # Troubleshooting
@@ -249,7 +386,25 @@ Check the path; use an absolute path if unsure.
 ## Missing values for variables (\`$TO\`, etc.)
 
 Pass every custom placeholder in MCP \`vars\` or \`--vars\` as a JSON object of
-strings. Ensure \`register\` completed so \`$ACCOUNT_ID\` / \`$INBOX\` can resolve.`,
+strings. Ensure \`register\` completed so \`$ACCOUNT_ID\` / \`$INBOX\` can resolve.
+
+## \`invalidArguments\` on \`Email/query\` / \`filter/inMailbox\`
+
+\`inMailbox\` must be a **mailbox id**, not your inbox email. Use the built-in
+\`$INBOX_MAILBOX_ID\` placeholder (or run \`Mailbox/get\` / \`Mailbox/query\` and
+paste the id into \`vars\`).
+
+## \`invalidProperties\` on \`Blob/upload\` (\`data:asText\`, etc.)
+
+On Atomic Mail, put base64 content in a \`data\` field. See \`help\` topic
+\`jmap_cheatsheet\` or preset \`send_mail_attachment.json\`.
+
+## Site docs vs installed MCP version
+
+The VitePress site (\`docs/\` in the repo) may be **ahead of** the version
+\`npx -y @atomicmail/mcp\` resolves to until a new package is published. If
+\`help\` or presets disagree with the website, prefer the behavior of your
+installed package or run from source after \`git pull\`.`,
 };
 
 export const HELP_TOPIC_LIST = Object.keys(HELP_TOPICS);
@@ -265,8 +420,8 @@ export function getHelp(topic?: string): string {
   const key = normalizeHelpTopic(topic);
   if (key === "readme") {
     return (
-      "Topic \"readme\" prints the package README.md from the npm install. " +
-      "From MCP use {\"topic\":\"readme\"}; from the CLI: " +
+      'Topic "readme" prints the package README.md from the npm install. ' +
+      'From MCP use {"topic":"readme"}; from the CLI: ' +
       "`atomicmail help --topic readme`."
     );
   }

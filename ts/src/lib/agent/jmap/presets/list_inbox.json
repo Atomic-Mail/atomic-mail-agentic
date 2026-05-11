@@ -8,9 +8,9 @@
       "Email/query",
       {
         "accountId": "$ACCOUNT_ID",
-        "filter": { "inMailbox": "$INBOX" },
+        "filter": { "inMailbox": "$INBOX_MAILBOX_ID" },
         "sort": [{ "property": "receivedAt", "isAscending": false }],
-        "limit": "$COUNT"
+        "limit": 50
       },
       "q0"
     ],

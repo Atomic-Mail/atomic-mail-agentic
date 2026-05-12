@@ -1,6 +1,6 @@
 # Major release QA — `@atomicmail/mcp`
 
-Stdio MCP server for chat-based agents. Derived from `docs/mcp.md`, `docs/getting-started.md`, and shipped `help` / tool behavior. Where static docs lag the npm artifact (for example `attachments` + `send_mail_blob_attachment.json`), still run those paths and file doc drift under §6.
+Stdio MCP server for chat-based agents. Derived from `docs/mcp.md`, `docs/getting-started.md`, and shipped `help` / tool behavior. Where static docs lag the npm artifact (for example `attachments` + `send_mail_blob_attachment.json`), still run those paths and file doc drift under §7.
 
 **Prereqs:** Clean or disposable MCP host; optional isolated `ATOMIC_MAIL_CREDENTIALS_DIR` for the test run.
 
@@ -35,13 +35,22 @@ Stdio MCP server for chat-based agents. Derived from `docs/mcp.md`, `docs/gettin
 - [ ] Retrieve bytes: either **`Blob/get`** with `urn:ietf:params:jmap:blob` and minimal `properties` as in `docs/jmap.md`, **or** expand `$DOWNLOAD_URL` and `GET` with bearer capability JWT (RFC 8620 out-of-band path in `docs/jmap.md`).
 - [ ] Base64-decode or compare downloaded bytes to a known fixture (checksum or byte equality).
 
-## 6. Verify docs / `help` match what you did
+## 6. SMTP to the QA inbox, then fetch with MCP
+
+Exercises **inbound SMTP** into the **same** mailbox the MCP server uses for this run, then **read it back** via the `jmap_request` tool. Use when your stack exposes a plain SMTP listener (for example `<QA_SMTP_HOST>:25` with no auth).
+
+- [ ] From `register` output or `credentials.json` on the MCP host, determine the full mailbox address for **RCPT TO** (typically `inboxId` + `@` + inbox domain for that deployment).
+- [ ] Send via SMTP as if from another user (for example **curl** on the MCP host): `MAIL FROM` an unrelated address, `RCPT TO` that QA inbox, minimal RFC 5322 `DATA`. Confirm the MTA accepts the message (for example `250` / queued id in the SMTP transcript).
+- [ ] Call `jmap_request` with `ops_file`: `list_inbox.json` and confirm the new message appears (check **from**, **subject**, **preview**, or **receivedAt** in `methodResponses`).
+- [ ] Follow with a second `jmap_request` using `Email/get` (and `Blob/get` on the text **blobId** if **bodyValues** is empty) to confirm the body matches what you injected. Note any header normalization (for example restricted characters in **Subject**) as environment-specific behavior.
+
+## 7. Verify docs / `help` match what you did
 
 - [ ] Call `help` (default topic) and confirm sections still describe `register`, `jmap_request`, presets, placeholders, attachments, and env vars consistently with `docs/mcp.md`.
 - [ ] Call `help` with `topic: "readme"` and skim the published README for the same major version.
 - [ ] Log any mismatch (for example missing `send_mail_blob_attachment.json` or `attachments` in static docs) as a **doc drift** issue to fix before or immediately after release.
 
-## 7. Extra examples (help, tokens, edge cases)
+## 8. Extra examples (help, tokens, edge cases)
 
 - [ ] **`help` usage:** invoke `help` with at least one secondary topic (for example `jmap_cheatsheet` or `troubleshooting` if available) and confirm output is non-empty and accurate.
 - [ ] **Session / capability token renewal:** run several `jmap_request` calls in a row (or one long run); per `docs/mcp.md` credential lifecycle, confirm repeated JMAP calls succeed without manual token handling. Optionally note `session.jwt` / `capability.jwt` mtime updates across calls.

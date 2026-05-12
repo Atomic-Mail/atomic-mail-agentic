@@ -1,6 +1,6 @@
 # Major release QA — `@atomicmail/agent-skill`
 
-CLI / AgentSkill entrypoint `atomicmail`. Derived from `docs/SKILL.md`, `docs/skill-install.md`, `docs/getting-started.md`, and shipped `atomicmail help` / CLI behavior. Where static docs lag the npm artifact (for example `--attachment` and `send_mail_blob_attachment.json`), still run those paths and file doc drift under §6.
+CLI / AgentSkill entrypoint `atomicmail`. Derived from `docs/SKILL.md`, `docs/skill-install.md`, `docs/getting-started.md`, and shipped `atomicmail help` / CLI behavior. Where static docs lag the npm artifact (for example `--attachment` and `send_mail_blob_attachment.json`), still run those paths and file doc drift under §7.
 
 **Prereqs:** Shell with network; same optional isolated `ATOMIC_MAIL_CREDENTIALS_DIR` or `--credentials-dir`.
 
@@ -33,12 +33,21 @@ CLI / AgentSkill entrypoint `atomicmail`. Derived from `docs/SKILL.md`, `docs/sk
 - [ ] Follow with `Email/get` / `Blob/get` or RFC 8620 download via expanded URLs (same logical steps as the MCP checklist; build `--ops` or a small local JSON file with `$BLOB_ID` in `--vars` if needed).
 - [ ] Validate downloaded attachment bytes against the source file or a checksum.
 
-## 6. Verify docs / `help` match what you did
+## 6. SMTP to the QA inbox, then fetch with the skill
+
+Exercises **inbound SMTP** (no JMAP on the send path) into the **same** mailbox you registered for this run, then **read it back** over JMAP with `atomicmail`. Use when your stack exposes a plain SMTP listener (for example Haraka on `<QA_SMTP_HOST>:25` with no auth).
+
+- [ ] From `register` / `credentials.json`, determine the full mailbox address for **RCPT TO** (typically `inboxId` + `@` + inbox domain for that deployment).
+- [ ] Send via SMTP as if from another user (for example **curl**): `MAIL FROM` an unrelated address, `RCPT TO` that QA inbox, minimal RFC 5322 `DATA` (Subject + plain body). Confirm the MTA accepts the message (for example `250` / queued id in the SMTP transcript).
+- [ ] `atomicmail jmap_request --ops-file list_inbox.json` (same `--credentials-dir` / env as the rest of the run) and confirm the new message appears (check **from**, **subject**, **preview**, or **receivedAt**).
+- [ ] Follow with `Email/get` and, if needed, `Blob/get` on the text part **blobId** to confirm the body matches what you injected. Note any header normalization (for example restricted characters in **Subject**) as environment-specific behavior.
+
+## 7. Verify docs / `help` match what you did
 
 - [ ] `atomicmail help` and `atomicmail help --topic readme` (`docs/SKILL.md`).
 - [ ] Compare behavior and flags (`--auth-url`, `--api-url`, `--credentials-dir`, `--vars`, `--attachment`, `--attachment-path-base`, `--dry-run`) to `docs/skill-install.md`, `docs/SKILL.md`, and `docs/mcp.md` (MCP parity); file issues if static docs omit shipped flags or presets.
 
-## 7. Extra examples (help, tokens, edge cases)
+## 8. Extra examples (help, tokens, edge cases)
 
 - [ ] **`help` usage:** `atomicmail help --topic jmap_cheatsheet` (and any other topics you ship).
 - [ ] **Auto-renewal:** run multiple `jmap_request` invocations back-to-back; confirm no manual JWT handling (`docs/SKILL.md` security note: do not log tokens).

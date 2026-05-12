@@ -1,8 +1,7 @@
-// auth-client
+// Thin HTTP client for auth-service (PoW challenge → session → capability).
 //
-// Thin HTTP client for services/auth-service. Encapsulates the full PoW
-// challenge → session → capability flow so callers (integration tests, the
-// future agent skill, etc.) don't have to reimplement scrypt grinding.
+// Encapsulates the full PoW challenge → session → capability flow so callers
+// (integration tests, the future agent skill, etc.) don't have to reimplement scrypt grinding.
 //
 // The PoW digest is scrypt-based and uses the SAME salt the auth-service
 // uses on the verify path (see services/auth-service/src/crypto.ts). The

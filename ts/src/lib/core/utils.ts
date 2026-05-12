@@ -1,3 +1,5 @@
+// Small async helpers (delay, exponential backoff retry).
+
 import { ONE_SEC_MS } from "./consts.ts";
 import type { MaybePromise } from "./types.ts";
 
@@ -9,7 +11,7 @@ export type RetryCfg = {
   maxTimeoutMs?: number;
   startTimeoutMs?: number;
   backoffMul?: number;
-  // please, do not throw in this
+  /** Optional hook before the next retry; must not throw. */
   onBeforeRetry?: (e: unknown) => MaybePromise<void>;
 };
 
@@ -19,7 +21,7 @@ const defaultCfg: RetryCfg = {
   backoffMul: 2,
 };
 
-// retry with exponential backoff, retries the fn on throw, re-throws on max backoff
+/** Retries `fn` on throw with exponential backoff until `maxTimeoutMs` is exceeded. */
 export async function retry<R>(
   fn: () => MaybePromise<R>,
   config: RetryCfg,

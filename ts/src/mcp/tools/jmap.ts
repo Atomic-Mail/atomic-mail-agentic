@@ -1,3 +1,5 @@
+// MCP tool: jmap_request (JMAP batch + optional attachments).
+
 import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp";
 
@@ -6,7 +8,9 @@ import {
   DEFAULT_JMAP_USING,
   readOpsFile,
   runJmapRequest,
+  USER_VAR_KEY_RE,
 } from "../../lib/mod.ts";
+import { mcpError, mcpText } from "../mcp-result.ts";
 
 export function registerJmapTool(
   server: McpServer,
@@ -39,7 +43,7 @@ export function registerJmapTool(
           .describe("Preset path. Mutually exclusive with ops."),
         vars: z
           .record(
-            z.string().regex(/^[A-Z][A-Z0-9_]*$/),
+            z.string().regex(USER_VAR_KEY_RE),
             z.string(),
           )
           .optional()
@@ -70,26 +74,12 @@ export function registerJmapTool(
     async ({ using, ops, ops_file, vars, attachments }) => {
       try {
         if (ops && ops_file) {
-          return {
-            content: [
-              {
-                type: "text" as const,
-                text: "ops and ops_file are mutually exclusive — provide one.",
-              },
-            ],
-            isError: true,
-          };
+          return mcpError(
+            "ops and ops_file are mutually exclusive — provide one.",
+          );
         }
         if (!ops && !ops_file) {
-          return {
-            content: [
-              {
-                type: "text" as const,
-                text: "Provide either ops or ops_file.",
-              },
-            ],
-            isError: true,
-          };
+          return mcpError("Provide either ops or ops_file.");
         }
 
         let raw: string;
@@ -98,15 +88,9 @@ export function registerJmapTool(
           try {
             raw = await readOpsFile(session.credentialDir, ops_file);
           } catch (err) {
-            return {
-              content: [
-                {
-                  type: "text" as const,
-                  text: `Could not read ops_file: ${(err as Error).message}`,
-                },
-              ],
-              isError: true,
-            };
+            return mcpError(
+              `Could not read ops_file: ${(err as Error).message}`,
+            );
           }
           sourceLabel = `ops_file '${ops_file}'`;
         } else {
@@ -128,32 +112,18 @@ export function registerJmapTool(
         });
 
         if (!ok) {
-          return {
-            content: [
-              {
-                type: "text" as const,
-                text: `JMAP request failed (HTTP ${status}): ${bodyText}`,
-              },
-            ],
-            isError: true,
-          };
+          return mcpError(
+            `JMAP request failed (HTTP ${status}): ${bodyText}`,
+          );
         }
 
-        return {
-          content: [{ type: "text" as const, text: bodyText }],
-        };
+        return mcpText(bodyText);
       } catch (error) {
-        return {
-          content: [
-            {
-              type: "text" as const,
-              text: `JMAP request error: ${
-                error instanceof Error ? error.message : String(error)
-              }`,
-            },
-          ],
-          isError: true,
-        };
+        return mcpError(
+          `JMAP request error: ${
+            error instanceof Error ? error.message : String(error)
+          }`,
+        );
       }
     },
   );

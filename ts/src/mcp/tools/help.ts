@@ -1,3 +1,5 @@
+// MCP tool: help (built-in documentation topics).
+
 import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp";
 
@@ -7,6 +9,7 @@ import {
   normalizeHelpTopic,
   readNpmPackageReadme,
 } from "../../lib/mod.ts";
+import { mcpError, mcpText } from "../mcp-result.ts";
 
 export function registerHelpTool(server: McpServer): void {
   server.registerTool(
@@ -34,24 +37,13 @@ export function registerHelpTool(server: McpServer): void {
       try {
         if (topic !== undefined && normalizeHelpTopic(topic) === "readme") {
           const text = await readNpmPackageReadme();
-          return {
-            content: [{ type: "text" as const, text }],
-          };
+          return mcpText(text);
         }
-        return {
-          content: [{ type: "text" as const, text: getHelp(topic) }],
-        };
+        return mcpText(getHelp(topic));
       } catch (error) {
-        return {
-          content: [
-            {
-              type: "text" as const,
-              text:
-                error instanceof Error ? error.message : String(error),
-            },
-          ],
-          isError: true,
-        };
+        return mcpError(
+          error instanceof Error ? error.message : String(error),
+        );
       }
     },
   );

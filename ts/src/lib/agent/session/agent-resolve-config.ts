@@ -1,6 +1,8 @@
 // Resolve MCP / process credential dir + URLs from env + credentials.json.
 
+import { homedir } from "node:os";
 import process from "node:process";
+import { resolve } from "node:path";
 
 import { DEFAULT_POW_SCRYPT_SALT_HEX } from "../../core/consts.ts";
 import {
@@ -42,6 +44,16 @@ export function resolveCredentialDir(): string {
     );
   }
   return `${home.replace(/[\\/]+$/, "")}/.atomicmail`;
+}
+
+/**
+ * AgentSkill / CLI: resolve credential directory from `--credentials-dir` or
+ * `ATOMIC_MAIL_CREDENTIALS_DIR`, with `~` expansion (MCP uses `resolveCredentialDir` instead).
+ */
+export function expandCredentialDirInput(dir?: string): string {
+  const raw = dir ?? process.env.ATOMIC_MAIL_CREDENTIALS_DIR ?? "~/.atomicmail";
+  if (raw === "~") return homedir();
+  return resolve(raw.replace(/^~\//, `${homedir()}/`));
 }
 
 /**

@@ -1,7 +1,10 @@
+// MCP tool: register (PoW signup / credentials).
+
 import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp";
 
 import type { AgentSession } from "../../lib/mod.ts";
+import { mcpError, mcpText } from "../mcp-result.ts";
 
 export function registerRegisterTool(
   server: McpServer,
@@ -31,26 +34,13 @@ export function registerRegisterTool(
     async ({ username }) => {
       try {
         const result = await session.register(username);
-        return {
-          content: [
-            {
-              type: "text" as const,
-              text: JSON.stringify(result, null, 2),
-            },
-          ],
-        };
+        return mcpText(JSON.stringify(result, null, 2));
       } catch (error) {
-        return {
-          content: [
-            {
-              type: "text" as const,
-              text: `Registration failed: ${
-                error instanceof Error ? error.message : String(error)
-              }`,
-            },
-          ],
-          isError: true,
-        };
+        return mcpError(
+          `Registration failed: ${
+            error instanceof Error ? error.message : String(error)
+          }`,
+        );
       }
     },
   );

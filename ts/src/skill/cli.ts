@@ -2,16 +2,16 @@
 
 import process from "node:process";
 import { parseArgs } from "node:util";
-import { resolve } from "node:path";
-import { homedir } from "node:os";
 
 import {
   AgentSession,
   DEFAULT_JMAP_USING,
   DEFAULT_POW_SCRYPT_SALT_HEX,
   defaultFilesFromOutDir,
+  expandCredentialDirInput,
   getHelp,
   normalizeHelpTopic,
+  parseUserVarsJson,
   persistLoginWithApiKey,
   readCredentials,
   readNpmPackageReadme,
@@ -49,12 +49,6 @@ function exitUsage(code = 0): never {
 function fail(message: string, code = 1): never {
   process.stderr.write(`Error: ${message}\n`);
   process.exit(code);
-}
-
-function resolveCredentialDir(dir?: string): string {
-  const raw = dir ?? process.env.ATOMIC_MAIL_CREDENTIALS_DIR ?? "~/.atomicmail";
-  if (raw === "~") return homedir();
-  return resolve(raw.replace(/^~\//, `${homedir()}/`));
 }
 
 async function cmdRegister(argv: string[]): Promise<void> {
@@ -105,7 +99,7 @@ Options:
   const scryptSalt = (parsed.values["scrypt-salt"] as string | undefined) ??
     env.ATOMIC_MAIL_SCRYPT_SALT ?? DEFAULT_POW_SCRYPT_SALT_HEX;
   const dir = parsed.values["credentials-dir"] as string | undefined;
-  const credentialDir = resolveCredentialDir(dir);
+  const credentialDir = expandCredentialDirInput(dir);
 
   const username = parsed.values.username as string | undefined;
   const apiKey = parsed.values["api-key"] as string | undefined;
@@ -197,7 +191,7 @@ Options:
   }
 
   const dir = parsed.values["credentials-dir"] as string | undefined;
-  const credentialDir = resolveCredentialDir(dir);
+  const credentialDir = expandCredentialDirInput(dir);
   const defaults = defaultFilesFromOutDir(credentialDir);
   const credentialsFile =
     (parsed.values["credentials-file"] as string | undefined) ??
@@ -238,29 +232,11 @@ Options:
   let userVars: Record<string, string> | undefined;
   const varsFlag = parsed.values.vars as string | undefined;
   if (varsFlag !== undefined) {
-    let obj: unknown;
     try {
-      obj = JSON.parse(varsFlag);
+      userVars = parseUserVarsJson(varsFlag);
     } catch (err) {
-      fail(`--vars is not valid JSON: ${(err as Error).message}`, 2);
+      fail(err instanceof Error ? err.message : String(err), 2);
     }
-    if (!obj || typeof obj !== "object" || Array.isArray(obj)) {
-      fail("--vars must be a JSON object of { VAR_NAME: string }.", 2);
-    }
-    for (
-      const [k, v] of Object.entries(obj as Record<string, unknown>)
-    ) {
-      if (!/^[A-Z][A-Z0-9_]*$/.test(k)) {
-        fail(
-          `--vars key '${k}' must match /^[A-Z][A-Z0-9_]*$/.`,
-          2,
-        );
-      }
-      if (typeof v !== "string") {
-        fail(`--vars value for '${k}' must be a string.`, 2);
-      }
-    }
-    userVars = obj as Record<string, string>;
   }
 
   const creds = await readCredentials(credentialsFile);
@@ -287,7 +263,7 @@ Options:
     } catch (err) {
       fail(`Could not read --ops-file: ${(err as Error).message}`, 2);
     }
-    sourceLabel = opsFile;
+    sourceLabel = `ops_file '${opsFile}'`;
   } else {
     raw = ops!;
     sourceLabel = "ops";

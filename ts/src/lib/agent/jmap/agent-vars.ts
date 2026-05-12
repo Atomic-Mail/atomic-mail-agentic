@@ -1,5 +1,39 @@
 // Variable substitution for JMAP presets / inline ops ($VAR_NAME tokens).
 
+/** Keys allowed in MCP `vars` / skill `--vars` (without leading `$`). */
+export const USER_VAR_KEY_RE = /^[A-Z][A-Z0-9_]*$/;
+
+/**
+ * Parses a JSON object of string values (skill `--vars` / MCP `vars`).
+ * Throws `Error` with the same messages the CLI used to emit via `fail(...)`.
+ */
+export function parseUserVarsJson(jsonString: string): Record<string, string> {
+  let obj: unknown;
+  try {
+    obj = JSON.parse(jsonString);
+  } catch (err) {
+    throw new Error(
+      `--vars is not valid JSON: ${(err as Error).message}`,
+    );
+  }
+  if (!obj || typeof obj !== "object" || Array.isArray(obj)) {
+    throw new Error(
+      "--vars must be a JSON object of { VAR_NAME: string }.",
+    );
+  }
+  for (const [k, v] of Object.entries(obj as Record<string, unknown>)) {
+    if (!USER_VAR_KEY_RE.test(k)) {
+      throw new Error(
+        `--vars key '${k}' must match /^[A-Z][A-Z0-9_]*$/.`,
+      );
+    }
+    if (typeof v !== "string") {
+      throw new Error(`--vars value for '${k}' must be a string.`);
+    }
+  }
+  return obj as Record<string, string>;
+}
+
 /** Matches `$FOO_BAR`; excludes JMAP keywords like `$draft` (lowercase). */
 export const VAR_PATTERN = /\$([A-Z][A-Z0-9_]*)/g;
 

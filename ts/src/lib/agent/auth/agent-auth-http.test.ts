@@ -56,11 +56,12 @@ Deno.test("exchangeSession sends challenge JWT and reads session JWT from Author
   const calls: Array<{ auth?: string; body?: Record<string, unknown> }> = [];
   try {
     globalThis.fetch = (_input, init) => {
-      const headers = new Headers(init?.headers);
+      const reqInit = init as RequestInit | undefined;
+      const headers = new Headers(reqInit?.headers);
       calls.push({
         auth: headers.get("Authorization") ?? undefined,
-        body: init?.body
-          ? (JSON.parse(String(init.body)) as Record<string, unknown>)
+        body: reqInit?.body
+          ? (JSON.parse(String(reqInit.body)) as Record<string, unknown>)
           : undefined,
       });
       return Promise.resolve(new Response(JSON.stringify({ apiKey: "api-key" }), {
@@ -94,7 +95,8 @@ Deno.test("fetchCapability sends session JWT and reads capability JWT from Autho
   const calls: Array<{ auth?: string }> = [];
   try {
     globalThis.fetch = (_input, init) => {
-      const headers = new Headers(init?.headers);
+      const reqInit = init as RequestInit | undefined;
+      const headers = new Headers(reqInit?.headers);
       calls.push({
         auth: headers.get("Authorization") ?? undefined,
       });

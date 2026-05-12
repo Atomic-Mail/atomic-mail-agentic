@@ -17,36 +17,26 @@ export function registerJmapTool(
     {
       title: "Send a JMAP request",
       description:
-        "Send a JMAP method-call batch. Auth and JWT rotation are automatic. " +
-        "Provide exactly one of: `ops` (JSON string — methodCalls array or full " +
-        "envelope) or `ops_file` (preset path; relative paths resolve against " +
-        "the credential directory). Tokens `$VAR_NAME` (uppercase `$FOO_BAR`) in " +
-        "either input are replaced: `$ACCOUNT_ID`, `$INBOX`, `$INBOX_MAILBOX_ID`, " +
-        "`$UPLOAD_URL`, and `$DOWNLOAD_URL` come from the JMAP session/credentials; " +
-        "pass other names via `vars`. Optional `attachments`: each file is " +
-        "RFC 8620–uploaded first, then `$ATTACHMENT_0_BLOB_ID`, `$ATTACHMENT_0_NAME`, " +
-        "`$ATTACHMENT_0_TYPE`, … are substituted (see bundled `send_mail_blob_attachment.json`).",
+        "JMAP method-call batch with automatic auth. Exactly one of: `ops` " +
+        "(JSON string: methodCalls array or full envelope) or `ops_file` " +
+        "(preset path; relative to credential directory). `$VAR` substitution " +
+        "and optional file `attachments`: see `help` topics presets and " +
+        "jmap_cheatsheet.",
       inputSchema: z.object({
         using: z
           .array(z.string())
           .default([...DEFAULT_JMAP_USING])
           .describe(
-            "JMAP capability URNs when `ops` omits `using`. Ignored if the " +
-              "JSON body already sets `using`.",
+            "Capability URNs merged when `ops` has no `using` (ignored if ops sets `using`).",
           ),
         ops: z
           .string()
           .optional()
-          .describe(
-            "Inline JSON: methodCalls array or { using, methodCalls }. " +
-              "Mutually exclusive with ops_file.",
-          ),
+          .describe("Inline JSON. Mutually exclusive with ops_file."),
         ops_file: z
           .string()
           .optional()
-          .describe(
-            "Path to a preset JSON file. Mutually exclusive with ops.",
-          ),
+          .describe("Preset path. Mutually exclusive with ops."),
         vars: z
           .record(
             z.string().regex(/^[A-Z][A-Z0-9_]*$/),
@@ -54,11 +44,8 @@ export function registerJmapTool(
           )
           .optional()
           .describe(
-            "Map of placeholder names (no `$`) to string values, e.g. " +
-              '{ "TO": "a@b.com", "SUBJECT": "Hi" } for `$TO` and `$SUBJECT` in ' +
-              "ops or ops_file. Overrides session values for `ACCOUNT_ID`, `INBOX`, " +
-              "`INBOX_MAILBOX_ID`, `UPLOAD_URL`, or `DOWNLOAD_URL` if set. Also " +
-              "overrides auto-injected `ATTACHMENT_*` keys when `attachments` is set.",
+            "String map for `$PLACEHOLDER` values (keys without `$`). " +
+              "Overrides session keys and `ATTACHMENT_*` when attachments are set.",
           ),
         attachments: z
           .array(
@@ -76,9 +63,7 @@ export function registerJmapTool(
           )
           .optional()
           .describe(
-            "Optional local files: each is POSTed to JMAP `uploadUrl` (RFC 8620) " +
-              "before substitution, injecting `$ATTACHMENT_N_BLOB_ID`, `$ATTACHMENT_N_NAME`, " +
-              "`$ATTACHMENT_N_TYPE`, `$ATTACHMENT_N_SIZE`, and `$ATTACHMENT_COUNT`.",
+            "Local files POSTed to session uploadUrl before ops; see help topic presets.",
           ),
       }),
     },

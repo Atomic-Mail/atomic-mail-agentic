@@ -12,10 +12,9 @@ export function registerRegisterTool(
     {
       title: "Register an Atomic Mail inbox",
       description:
-        "Proof-of-work signup; persists credentials. Idempotent when the same " +
-        "username matches the inbox already stored. A different username " +
-        "replaces credentials and creates a new inbox. Returns JSON with " +
-        "inbox, accountId, and apiKey on first signup only.",
+        "PoW signup; writes credentials. Idempotent for the same username " +
+        "and stored inbox; a different username registers a new inbox. " +
+        "Returns inbox, accountId, apiKey (first signup only).",
       inputSchema: z.object({
         username: z
           .string()

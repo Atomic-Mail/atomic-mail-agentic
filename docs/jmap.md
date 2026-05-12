@@ -4,6 +4,8 @@ description: Call Atomic Mail JMAP after auth—session discovery, POST to sessi
 
 # Raw JMAP Requests
 
+> **Using MCP or the AgentSkill CLI?** Start with [Getting started](/getting-started), then use the built-in **`help`** command (or MCP **`help`** tool) for presets and copy-paste JMAP recipes. This page is aimed at **direct HTTP JMAP** once you hold a capability bearer token.
+
 After obtaining `capabilityJwt`, run JMAP directly:
 
 - Session discovery: `GET /.well-known/jmap` (on your API host, e.g.
@@ -108,17 +110,15 @@ server to derive it from the Email’s From/Sender and To/Cc/Bcc. Supplying
 }
 ```
 
-## Backend: Cyrus JMAP
+## If submission fails: identities (Cyrus JMAP)
 
-Atomic Mail’s mail store uses **Cyrus IMAP’s JMAP** implementation. Bundled
-presets and many examples omit **`identityId`** on `EmailSubmission/set`
-create; that matches typical single-address flows where the server can infer
-the sending identity from the draft’s `from` and/or the supplied `envelope`.
-
-Add **`identityId`** explicitly (resolve with `Identity/get` and pick the
-`id` whose `email` matches the address you send as) when you have multiple
-identities, wildcard identities, or if submission fails with
-`invalidProperties` or identity-related errors.
+Atomic Mail’s mail store uses **Cyrus IMAP’s JMAP**. Many flows omit
+**`identityId`** on `EmailSubmission/set` when the server can infer the
+identity from the draft’s `from` and/or `envelope`. If you have multiple
+identities, wildcards, or you see `invalidProperties` / identity-related errors,
+set **`identityId`** explicitly (`Identity/get`, pick the `id` whose `email`
+matches the address you send as). See [RFC 8621](https://www.rfc-editor.org/rfc/rfc8621)
+for submission semantics.
 
 ## Read inbox (query + get)
 
@@ -156,41 +156,20 @@ them unchanged to the session **`apiUrl`** with a capability bearer token.
 
 ## Attachments: RFC 9404 inline blob flow
 
-Use `Blob/upload` and `Blob/get` through the session **`apiUrl`** endpoint by
-adding `urn:ietf:params:jmap:blob`.
+Use `Blob/upload` and `Blob/get` on the session **`apiUrl`** with
+`urn:ietf:params:jmap:blob` in `using`. Each `Blob/upload` `create` value is an
+**UploadObject**: **`data`** is a JSON **array** of **DataSourceObject** entries;
+each entry uses **exactly one** of `data:asText`, `data:asBase64`, or `blobId`
+(+ optional range). Optional **`type`** is a media-type hint. Invalid shapes
+include `data` as a plain string, or `data:asBase64` on the upload object
+instead of **inside** an array element. Attach in `Email/set` with `attachments[]`
+and **`blobId`** (for example `"#b1"` for create key `b1`) plus **`type`** /
+**`name`**.
 
-[RFC 9404](https://www.rfc-editor.org/rfc/rfc9404) **UploadObject** (each value
-under `Blob/upload` → `create`) has:
+**Further reading:** [RFC 9404 §4.1](https://www.rfc-editor.org/rfc/rfc9404#section-4.1).
 
-- **`data`**: a JSON **array** of **DataSourceObject** values (possibly empty).
-  Octets from each element are concatenated in order to form the blob.
-- **`type`**: optional media-type hint (`String|null` in the RFC).
-
-Each **DataSourceObject** must use **exactly one** of the following (see RFC
-9404 §4.1):
-
-1. **UTF-8 text:** `{ "data:asText": "…" }` — the string’s UTF-8 encoding is the
-   octet sequence (invalid UTF-8 is a hard error).
-2. **Base64:** `{ "data:asBase64": "…" }` — decodes to octets (invalid base64 is
-   a hard error).
-3. **Slice of an existing blob:**
-   `{ "blobId": "<id>", "offset": …, "length": … }` — `offset` / `length` may be
-   omitted or `null` per the RFC. In the same batch, use a creation reference
-   such as `"#b4"` when the source blob was created in an earlier `Blob/upload`
-   call.
-
-**Not valid** under the RFC (do not rely on the server “fixing” these): `data`
-as a plain string; a top-level `data:asBase64` (or `data:asText`) on the upload
-object instead of **inside** an element of the `data` array; more than one of
-the above forms in a single array element.
-
-To attach an uploaded blob to a message, `Email/set` → `attachments[]` uses
-**`blobId`** (for example `"#b1"` when the `Blob/upload` create key was `b1`),
-plus **`type`** / **`name`** as in RFC 8621.
-
-Bundled **`send_mail_attachment.json`** uses the common base64-only shape
-`"data": [{ "data:asBase64": "…" }]` plus **`type`**, matching the example
-below.
+Bundled **`send_mail_attachment.json`** uses
+`"data": [{ "data:asBase64": "…" }]` plus **`type`**, as in the example below.
 
 ```json
 {
@@ -273,11 +252,9 @@ Blob retrieval in-band:
 }
 ```
 
-Per [RFC 9404](https://www.rfc-editor.org/rfc/rfc9404) §4.2, **`properties`** may only
-list those names (for example `data:asText`, `data:asBase64`, `data`, `size`, or
-`digest:<algorithm>` where `<algorithm>` appears in the account’s
-`supportedDigestAlgorithms` list, lowercased). Each result object still includes
-`id`; do not request `id` or `type` as `Blob/get` properties.
+For **`properties`**, use only names allowed by [RFC 9404 §4.2](https://www.rfc-editor.org/rfc/rfc9404#section-4.2)
+(for example `data:asBase64`, `size`). Each result still includes `id`; do not
+list `id` or `type` in `properties`.
 
 ## RFC 9404 account blob limits
 

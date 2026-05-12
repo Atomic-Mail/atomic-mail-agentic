@@ -14,18 +14,16 @@ Three operations only:
 1. **register** — Proof-of-work signup (or idempotent replay when the same
    username matches the inbox already on disk). Persists credentials and
    returns \`{ inbox, accountId }\` (and \`apiKey\` on first signup).
-2. **jmap_request** — Send a JMAP method-call batch. Auth and JWT rotation are
-   automatic. Pass inline \`ops\` JSON or an \`ops_file\` preset path (same
-   substitution applies to both). Uppercase tokens like \`$ACCOUNT_ID\`,
-   \`$INBOX\`, \`$UPLOAD_URL\`, \`$DOWNLOAD_URL\`, \`$TO\`, \`$SUBJECT\` are
-   replaced before the request is sent. \`$ACCOUNT_ID\` / \`$INBOX\` /
-   \`$INBOX_MAILBOX_ID\` / \`$UPLOAD_URL\` / \`$DOWNLOAD_URL\` come from the JMAP
-   session and credentials (\`$INBOX\` is always a full mailbox address; see
-   presets topic); pass any other names via MCP \`vars\` or skill
-   \`--vars\`. Optional **local file attachments** (MCP \`attachments\`, skill
-   \`--attachment\`): each file is RFC 8620–uploaded to \`uploadUrl\` first, then
-   \`$ATTACHMENT_0_BLOB_ID\`, \`$ATTACHMENT_0_NAME\`, \`$ATTACHMENT_0_TYPE\`, …
-   are substituted into the same standard JMAP JSON you would hand-write.
+2. **jmap_request** — Send a JMAP method-call batch; auth and JWT rotation are
+   automatic. Pass inline \`ops\` JSON or an \`ops_file\` preset (same
+   substitution for both). Session-backed tokens (\`$ACCOUNT_ID\`, \`$INBOX\`,
+   \`$INBOX_MAILBOX_ID\`, \`$UPLOAD_URL\`, \`$DOWNLOAD_URL\`) resolve from
+   credentials and JMAP session (\`$INBOX\` is always a full mailbox address;
+   \`$INBOX_MAILBOX_ID\` is the inbox **mailbox id** for filters and
+   \`mailboxIds\` — see **presets** topic). Pass any other \`$NAME\` via MCP
+   \`vars\` or \`--vars\`. Optional **attachments** (MCP \`attachments\`, skill
+   \`--attachment\`): each file is uploaded to \`uploadUrl\` (RFC 8620), then
+   \`$ATTACHMENT_0_BLOB_ID\`, … are substituted into your JMAP JSON.
 3. **help** — This documentation (optional \`topic\` / \`--topic\`), or the
    published package README (\`topic\` / \`--topic\` \`readme\`).
 
@@ -64,9 +62,6 @@ npx --package=@atomicmail/agent-skill atomicmail jmap_request \\
 npx --package=@atomicmail/agent-skill atomicmail help
 \`\`\`
 
-From the repo: \`cd ts\` then \`deno run -A src/skill/cli.ts <command> ...\` (see
-repository \`README.md\` for publishing and build tasks).
-
 ## Shared credentials
 
 MCP and the skill use the same directory layout (default \`~/.atomicmail/\`):
@@ -77,19 +72,7 @@ MCP and the skill use the same directory layout (default \`~/.atomicmail/\`):
 
 - Endpoints: \`ATOMIC_MAIL_AUTH_URL\`, \`ATOMIC_MAIL_API_URL\`
 - Credentials path: \`ATOMIC_MAIL_CREDENTIALS_DIR\` (MCP), \`--credentials-dir\` (skill)
-- Optional PoW salt: \`ATOMIC_MAIL_SCRYPT_SALT\`
-
-## From source (development)
-
-From the repository \`ts/\` directory:
-
-\`\`\`bash
-deno run -A src/mcp/main.ts                    # MCP stdio (development)
-deno run -A build_mcp_npm.ts [version]         # MCP npm output -> ./mcp_npm
-deno run -A build_skill_npm.ts [version]       # skill npm output -> ./skill_npm
-\`\`\`
-
-See the repository \`README.md\` for publishing.`,
+- Optional PoW salt: \`ATOMIC_MAIL_SCRYPT_SALT\``,
 
   auth: `\
 # Atomic Mail — Auth flow
@@ -137,36 +120,31 @@ Common URNs:
 - urn:ietf:params:jmap:blob — required for \`Blob/upload\`, \`Blob/get\`, and
   \`Blob/lookup\` (see RFC 9404 §4.3 for reverse blob references).
 
-## Session blob limits (RFC 9404 §3.1)
+## Session blob limits
 
-From \`accounts[accountId].accountCapabilities["urn:ietf:params:jmap:blob"]\`:
-\`maxSizeBlobSet\`, \`maxDataSources\`, \`supportedTypeNames\`,
-\`supportedDigestAlgorithms\`. MCP and AgentSkill **reject before POST** when a
-computable \`Blob/upload\` or an \`attachments\` file would exceed advertised
-\`maxSizeBlobSet\` or \`maxDataSources\` (\`maxSizeBlobSet: null\` = no client
-octet cap). Literal (non-\`#\`) \`blobId\` slices are not pre-sized on the client.
+Per-account limits live under
+\`accounts[accountId].accountCapabilities["urn:ietf:params:jmap:blob"]\` (see
+[RFC 9404 §3.1](https://www.rfc-editor.org/rfc/rfc9404#section-3.1)):
+\`maxSizeBlobSet\`, \`maxDataSources\`, etc. MCP and AgentSkill **reject before
+POST** when a computable \`Blob/upload\` payload or an \`attachments\` file would
+exceed advertised \`maxSizeBlobSet\` or \`maxDataSources\` (\`maxSizeBlobSet:
+null\` means no client octet cap). Literal (non-\`#\`) \`blobId\` slices are not
+pre-sized on the client.
 
 ## \`Blob/upload\` shape (RFC 9404)
 
-Each \`create.<id>\` is an **UploadObject**:
+Each \`Blob/upload\` \`create\` value is an **UploadObject**: required \`data\` is
+an **array** of **DataSourceObject**; each array element uses **exactly one** of
+\`data:asText\`, \`data:asBase64\`, or \`blobId\` (+ optional \`offset\` /
+\`length\`). Optional \`type\` is a media-type hint. In one batch, reference a
+created blob as \`"#b1"\` when the create key was \`b1\`.
 
-- **\`data\`**: required **array** of **DataSourceObject** (concatenated in order;
-  \`[]\` yields an empty blob).
-- **\`type\`**: optional media-type hint (\`String|null\` in the RFC).
+**Invalid shapes** (do not expect servers to fix these): \`data\` as a plain
+string; \`data:asBase64\` / \`data:asText\` on the upload object instead of
+inside an element of the \`data\` array; more than one of the allowed forms inside
+a single array element.
 
-Each **DataSourceObject** must contain **exactly one** of (RFC 9404 §4.1):
-
-- **\`{ "data:asText": "…" }\`** — UTF-8 text (invalid UTF-8 → \`notCreated\`).
-- **\`{ "data:asBase64": "…" }\`** — base64 octets (invalid base64 → \`notCreated\`).
-- **\`{ "blobId": "…", "offset"?, "length"? }\`** — byte range from an existing
-  blob; \`offset\` / \`length\` may be omitted or \`null\` per the RFC. In one
-  batch, use \`"#b4"\` when referring to a blob created earlier in the same
-  request.
-
-**Not RFC-compliant** (do not expect servers to accept them): \`data\` as a
-plain string; \`data:asBase64\` or \`data:asText\` on the **upload object** top
-level instead of **inside** an element of the \`data\` array; more than one of
-the above inside a single array element.
+**Further reading:** [RFC 9404 §4.1](https://www.rfc-editor.org/rfc/rfc9404#section-4.1).
 
 **Email parts:** in \`Email/set\`, \`attachments[]\` references the blob with
 \`blobId\` (e.g. \`"#b1"\` for create key \`b1\`), plus \`type\` / \`name\` per
@@ -330,9 +308,9 @@ parts, add more objects under \`attachments\` referencing \`$ATTACHMENT_1_BLOB_I
 
 ## Blob/get
 
-Request only RFC 9404 §4.2 property names (e.g. \`data:asBase64\`, \`size\`, or
-\`digest:<algorithm>\` from \`supportedDigestAlgorithms\`). Do not list \`id\`
-or \`type\` in \`properties\` — \`id\` is still returned on each result object.
+Use only property names allowed by [RFC 9404 §4.2](https://www.rfc-editor.org/rfc/rfc9404#section-4.2)
+(for example \`data:asBase64\`, \`size\`). Do not list \`id\` or \`type\` in
+\`properties\` — \`id\` is still returned on each result object.
 
 \`\`\`json
 {
@@ -499,12 +477,12 @@ payload; if \`size\`
 stays 0, fix the JMAP/blob implementation on the host before sending
 attachments.
 
-## Site docs vs installed MCP version
+## Installed package vs other documentation
 
-The VitePress site (\`docs/\` in the repo) may be **ahead of** the version
-\`npx -y @atomicmail/mcp\` resolves to until a new package is published. If
-\`help\` or presets disagree with the website, prefer the behavior of your
-installed package or run from source after \`git pull\`.`,
+The version you get from \`npx -y @atomicmail/mcp\` or
+\`npx --package=@atomicmail/agent-skill …\` may lag behind other published docs.
+If something disagrees, trust **your installed package**: run \`help\` (or
+\`help --topic readme\`) and the bundled presets that ship with that version.`,
 };
 
 export const HELP_TOPIC_LIST = Object.keys(HELP_TOPICS);

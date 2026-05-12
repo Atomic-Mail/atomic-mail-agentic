@@ -69,250 +69,51 @@ follow-ups); that is not part of RFC 8620 — see [`Raw JMAP requests`](/jmap)
 
 ## Presets and placeholders
 
-Presets are reusable JSON files for `jmap_request` batches. With MCP, pass
-`vars` on the **tool** input alongside `ops` or `ops_file` (not inside the ops
-JSON string).
+Pass **`vars`** on the **`jmap_request`** tool next to **`ops`** or
+**`ops_file`** (not inside the ops JSON string).
 
-Example tool arguments:
+Examples:
 
 `{ "ops_file": "list_inbox.json" }`
 
 `{ "ops_file": "send_mail.json", "vars": { "TO": "a@b.com", "SUBJECT": "Hi", "BODY": "..." } }`
 
-Resolution order for `ops_file`:
-
-1. Resolve relative to credentials directory (`~/.atomicmail` by default).
-2. If missing, fall back to bundled presets in the npm package.
+**Resolution:** relative `ops_file` paths resolve to the credential directory
+first, then bundled presets in the package.
 
 **Preset shadowing:** a file such as `list_inbox.json` in the credential
-directory **replaces** the bundled preset with the same name. After upgrading
-`@atomicmail/mcp`, errors like **missing `$COUNT`** or **missing
-`$INBOX_MAILBOX_ID`** usually mean an **older copy** of the preset is still on
-disk — delete or update it, or point `ops_file` at an absolute path to a known
-JSON file.
+directory replaces the bundled preset with the same name. After upgrading
+`@atomicmail/mcp`, errors about missing placeholders often mean an **older**
+preset copy on disk — delete or update it, or pass an absolute `ops_file` path.
 
-Placeholder rules:
-
-- Pattern: `$VAR_NAME`, where `VAR_NAME` matches `^[A-Z][A-Z0-9_]*$`.
-- Built-ins: `$ACCOUNT_ID`, `$INBOX`, `$INBOX_MAILBOX_ID`, `$UPLOAD_URL`,
-  `$DOWNLOAD_URL`.
-- **`$INBOX`** is your mailbox **email address** used in `From` / submission.
-  `envelope` / similar. The value comes from `credentials.json` **`inboxId`**;
-  **`$INBOX_MAILBOX_ID`** is the JMAP **mailbox id** for the inbox
-  (`Mailbox/query` with `role: "inbox"`). Use **`$INBOX_MAILBOX_ID`** anywhere
-  the API expects a mailbox id (for example `Email/query` → `filter.inMailbox`,
-  or `Email/set` → `mailboxIds`).
-- Lowercase `$tokens` such as JMAP back-references (`$draft`) are not matched.
-- Custom placeholders: passed in `vars` as string values.
-- Resolution order per variable: `vars` first, then built-in auto-resolvers.
-- Built-ins can be overridden by providing `ACCOUNT_ID`, `INBOX`,
-  `INBOX_MAILBOX_ID`, `UPLOAD_URL`, or `DOWNLOAD_URL` in `vars`.
-- If any referenced variable is unresolved, `jmap_request` fails with a missing
-  variables error.
-- Substitution is single-pass: inserted values are not scanned again for nested
-  `$VAR_NAME` tokens.
-
-Bundled presets:
-
-- `send_mail.json` — `$TO`, `$SUBJECT`, `$BODY` (draft + submit).
-- `list_inbox.json` — latest **50** inbox messages (uses `$INBOX_MAILBOX_ID`; no
-  extra vars).
-- `reply.json` — `$MAIL_ID`, `$BODY` (reply in-thread).
-- `send_mail_attachment.json` — `$TO`, `$SUBJECT`, `$BODY`,
-  `$ATTACHMENT_BASE64`, `$ATTACHMENT_TYPE`, `$ATTACHMENT_NAME` (`Blob/upload` +
-  send in one batch).
-- `send_mail_blob_attachment.json` — `$TO`, `$SUBJECT`, `$BODY`; the attachment
-  **`blobId`** is **`$ATTACHMENT_0_BLOB_ID`** (and further indices for more
-  parts). Use together with MCP **`attachments`** (local file paths) or the
-  skill **`--attachment`**: the client **RFC 8620**-uploads each file to
-  **`uploadUrl`** before substitution and the JMAP batch.
-
-`ops_file` resolves against the credentials directory first, then bundled
-presets inside the package.
-
-Example:
-
-`{ "ops_file": "list_inbox.json" }`
+**Full** placeholder grammar, built-ins (`$INBOX` vs `$INBOX_MAILBOX_ID`,
+attachment tokens, bundled preset names): use the **`help`** tool with topic
+**`presets`**.
 
 ## Credential files and token lifecycle
 
-Mode `0600`:
+Mode `0600`: `credentials.json` (includes `apiKey`, `inboxId`, endpoints, blob
+URL templates), `session.jwt` (session bearer, rotated), `capability.jwt` (JMAP
+bearer, short TTL). MCP and the AgentSkill CLI create and rotate these
+automatically.
 
-- `credentials.json` —
-  `{ apiKey, inboxId, authUrl, apiUrl, scryptSalt, uploadUrl, downloadUrl }`
-- `session.jwt` — 1h TTL, rotated via PoW
-- `capability.jwt` — 2m TTL, rotated before JMAP calls
-
-These files are created and rotated automatically by MCP tool calls. AgentSkill
-CLI uses the same files.
-
-During PoW auth, the challenge JWT is exchanged via `Authorization: Bearer ...`
-for both `POST /api/v1/challenge` (response header) and `POST /api/v1/session`
-(request header), and session JWT is read from the `POST /api/v1/session`
-response header. `POST /api/v1/capability` accepts session JWT via bearer header
-and returns capability JWT in the response bearer header. PoW values (`powHex`,
-`nonce`) remain in the JSON body for session creation.
+For raw HTTP auth steps, see [`REST authentication flow`](/rest-auth).
 
 ## Attachments and blobs
 
-Two blob paths are supported:
+- **In-band (RFC 9404):** `Blob/upload` / `Blob/get` in the same JMAP batch as
+  mail methods. Shapes, limits, and copy-paste JSON:
+  [Raw JMAP requests](./jmap.md#attachments-rfc-9404-inline-blob-flow).
+- **Out-of-band (RFC 8620):** session **`uploadUrl`** / **`downloadUrl`**. MCP
+  **`attachments`** uploads each local file first, then substitutes
+  `$ATTACHMENT_N_BLOB_ID` (and related placeholders) into your ops. Use preset
+  **`send_mail_blob_attachment.json`** with **`attachments`**.
 
-- **RFC 9404 in-band blobs** via `Blob/upload` and `Blob/get` over
-  `jmap_request`.
-- **RFC 8620 out-of-band blobs** via `uploadUrl` and `downloadUrl` templates
-  from JMAP session.
-
-When the session advertises RFC 9404 blob limits (`maxSizeBlobSet`,
-`maxDataSources`), **`jmap_request` enforces them before the HTTP POST** for
-computable in-band `Blob/upload` payloads and for MCP **`attachments`** file
-sizes. If `maxSizeBlobSet` is `null`, no client-side size cap is applied (the
-server may still reject the request).
-
-### Inline blob flow (RFC 9404)
-
-Add `urn:ietf:params:jmap:blob` and upload bytes in the same JMAP batch.
-
-Per [RFC 9404](https://www.rfc-editor.org/rfc/rfc9404) §4.1, each **`Blob/upload`**
-`create` entry is an **UploadObject**: required **`data`** is an **array** of
-**DataSourceObject**; each array element must be **exactly one** of
-`{ "data:asText": "…" }`, `{ "data:asBase64": "…" }`, or
-`{ "blobId": "…", "offset"?, "length"? }` (slice of an existing blob from the same
-batch via `#creationId`). Optional **`type`** is a media-type hint. Invalid shapes
-(for example `data` as a string, or `data:asBase64` on the upload object instead
-of inside the `data` array) are not RFC-compliant and should be rejected.
-
-The created blob’s id is referenced from the same batch as **`#b1`** when the
-create key is `b1`. Bundled **`send_mail_attachment.json`** uses the usual
-base64 part shape `data: [{ "data:asBase64": "…" }]` plus **`type`**.
-
-`Email/set` should include **`mailboxIds`** (map of mailbox id → `true`). Use
-**`$INBOX_MAILBOX_ID`** as the key (see placeholders above).
-**`EmailSubmission/set`** should include an **`envelope`** with **`mailFrom`**
-and **`rcptTo`** (see bundled `send_mail.json`).
-
-The example below uses **`SGVsbG8=`** as sample base64 (UTF-8 `Hello`). For a
-parameterised attachment, use preset **`send_mail_attachment.json`** and pass
-`ATTACHMENT_BASE64`, `ATTACHMENT_NAME`, and `ATTACHMENT_TYPE` in `vars`.
-
-```json
-{
-  "using": [
-    "urn:ietf:params:jmap:core",
-    "urn:ietf:params:jmap:mail",
-    "urn:ietf:params:jmap:submission",
-    "urn:ietf:params:jmap:blob"
-  ],
-  "methodCalls": [
-    [
-      "Blob/upload",
-      {
-        "accountId": "$ACCOUNT_ID",
-        "create": {
-          "b1": {
-            "data": [{ "data:asBase64": "SGVsbG8=" }],
-            "type": "text/plain"
-          }
-        }
-      },
-      "b0"
-    ],
-    [
-      "Email/set",
-      {
-        "accountId": "$ACCOUNT_ID",
-        "create": {
-          "m1": {
-            "mailboxIds": { "$INBOX_MAILBOX_ID": true },
-            "from": [{ "email": "$INBOX" }],
-            "to": [{ "email": "$TO" }],
-            "subject": "With attachment",
-            "bodyValues": {
-              "body1": { "value": "See attachment." }
-            },
-            "textBody": [{ "partId": "body1", "type": "text/plain" }],
-            "attachments": [
-              {
-                "blobId": "#b1",
-                "type": "text/plain",
-                "name": "note.txt"
-              }
-            ]
-          }
-        }
-      },
-      "m0"
-    ],
-    [
-      "EmailSubmission/set",
-      {
-        "accountId": "$ACCOUNT_ID",
-        "create": {
-          "s1": {
-            "emailId": "#m1",
-            "envelope": {
-              "mailFrom": { "email": "$INBOX" },
-              "rcptTo": [{ "email": "$TO" }]
-            }
-          }
-        }
-      },
-      "s0"
-    ]
-  ]
-}
-```
-
-### Separate upload/download flow (RFC 8620)
-
-For **file attachments** without in-band `Blob/upload`, prefer
-**`send_mail_blob_attachment.json`** plus MCP **`attachments`** / skill
-**`--attachment`** (see bundled preset above). The client uploads bytes to
-**`uploadUrl`**, then injects **`$ATTACHMENT_N_BLOB_ID`** (and name, type, size,
-count) into your ops JSON.
-
-Use the templated URLs from session/credentials:
-
-- `$UPLOAD_URL` template contains `{accountId}`.
-- `$DOWNLOAD_URL` template contains `{accountId}`, `{blobId}`, `{name}`, and
-  `{type}`.
-
-Example (MCP flow):
-
-1. Call `jmap_request` to get attachment metadata (for example `Email/get` with
-   `attachments`).
-2. Expand `$DOWNLOAD_URL` template with account/blob metadata and fetch bytes
-   via HTTP bearer auth.
-3. To upload bytes, expand `$UPLOAD_URL` with account id and POST binary content
-   per RFC 8620 upload endpoint.
-
-### Blob retrieval (RFC 9404)
-
-For in-band retrieval, use `Blob/get` with **`urn:ietf:params:jmap:blob`** in
-`using`. Pass the blob id in **`ids`** (for example from **`vars`** as
-`"BLOB_ID": "…"` → `"$BLOB_ID"` in ops).
-
-Atomic Mail may reject some property names in **`properties`**; a minimal set
-that works is **`data:asBase64`** and **`size`**:
-
-```json
-{
-  "using": [
-    "urn:ietf:params:jmap:core",
-    "urn:ietf:params:jmap:blob"
-  ],
-  "methodCalls": [
-    [
-      "Blob/get",
-      {
-        "accountId": "$ACCOUNT_ID",
-        "ids": ["$BLOB_ID"],
-        "properties": ["data:asBase64", "size"]
-      },
-      "g0"
-    ]
-  ]
-}
-```
+When the session advertises blob limits, **`jmap_request`** may **reject before
+POST** computable oversize `Blob/upload` payloads and attachment file sizes (see
+[RFC 9404 §3.1](https://www.rfc-editor.org/rfc/rfc9404#section-3.1)). If
+`maxSizeBlobSet` is `null`, no client octet cap is applied (the server may still
+reject the request).
 
 ## Defaults
 

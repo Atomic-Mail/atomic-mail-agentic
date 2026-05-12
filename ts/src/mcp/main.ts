@@ -26,7 +26,7 @@ WORKFLOW
      $VAR_NAME tokens: $ACCOUNT_ID / $INBOX (full mailbox) / $INBOX_MAILBOX_ID from session;
      pass others in vars. Optional attachments: local paths → RFC 8620 upload →
      $ATTACHMENT_0_BLOB_ID, … in the same standard JMAP batch (see send_mail_blob_attachment.json).
-  3. Call help for full documentation (JMAP cheatsheet, presets, troubleshooting);
+  3. Call help for documentation (topics presets, jmap_cheatsheet, troubleshooting, …);
      topic readme returns the npm package README.
 
 CREDENTIAL DIRECTORY

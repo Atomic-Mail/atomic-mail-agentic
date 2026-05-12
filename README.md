@@ -10,7 +10,14 @@ extensive set of documentation for MCP, AgentSkill, and direct REST/JMAP usage.
 - MCP docs (also npm README source): `docs/mcp.md`
 - AgentSkill docs (also npm README source): `docs/skill-install.md`
 - AgentSkill spec (also npm SKILL source): `docs/SKILL.md`
-- Direct API docs: `docs/additional/rest-auth.md`, `docs/additional/jmap.md`
+- Direct API docs: [`docs/rest-auth.md`](docs/rest-auth.md), [`docs/jmap.md`](docs/jmap.md)
+
+## Documentation vs published packages
+
+Embedded **`help`** text and bundled presets ship with the npm package. Other
+published documentation may describe newer behavior before a release; when in
+doubt, trust the **`help`** output and presets from the same `npx` version you
+are running.
 
 ## Building and publishing packages to npm
 

@@ -22,8 +22,10 @@ presets that ship in both npm packages.
 - \`send_mail_blob_attachment.json\` — one attachment whose \`blobId\` comes from
   \`$ATTACHMENT_0_BLOB_ID\` (etc.). Use with MCP \`attachments\` or skill
   \`--attachment PATH\` so the client uploads files to \`uploadUrl\` before the
-  batch; \`vars\`: \`TO\`, \`SUBJECT\`, \`BODY\`. For several files in one
-  \`Email/set\`, write normal JMAP JSON referencing \`$ATTACHMENT_1_BLOB_ID\`, …
+  batch; \`vars\`: \`TO\`, \`SUBJECT\`, \`BODY\`. For \`text/*\` parts referenced
+  by \`blobId\`, the client adds \`charset\` (default \`utf-8\`) when omitted (RFC
+  8621). For several files in one \`Email/set\`, write normal JMAP JSON
+  referencing \`$ATTACHMENT_1_BLOB_ID\`, …
 
 ## Placeholders
 

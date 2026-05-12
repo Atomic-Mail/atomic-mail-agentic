@@ -198,6 +198,8 @@ substitutes \`$ATTACHMENT_0_BLOB_ID\`, \`$ATTACHMENT_0_NAME\`, \`$ATTACHMENT_0_T
 into your \`ops\` / preset before the \`/jmap/\` batch. Bundled
 \`send_mail_blob_attachment.json\` is a minimal one-file example; for several
 parts, add more objects under \`attachments\` referencing \`$ATTACHMENT_1_BLOB_ID\`, etc.
+Before POST, the client adds \`charset\` (default \`utf-8\`) to any \`Email/set\`
+\`text/*\` body part that uses \`blobId\` without \`charset\`, per RFC 8621.
 
 ## Blob/get
 

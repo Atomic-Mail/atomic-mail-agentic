@@ -16,6 +16,7 @@ import {
   buildVarsFromAttachmentFiles,
   type JmapAttachmentInput,
 } from "./agent-jmap-blob-upload.ts";
+import { ensureTextCharsetOnEmailSetBlobParts } from "./agent-jmap-email-charset.ts";
 import { substituteVars } from "./agent-vars.ts";
 
 export type { JmapAttachmentInput } from "./agent-jmap-blob-upload.ts";
@@ -350,6 +351,8 @@ export async function runJmapRequest(
     input.defaultUsing,
     input.sourceLabel,
   );
+
+  ensureTextCharsetOnEmailSetBlobParts(envelope);
 
   await enforceJmapBlobUploadLimitsIfApplicable(input.session, envelope);
 

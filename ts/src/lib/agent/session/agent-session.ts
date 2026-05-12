@@ -15,8 +15,11 @@ import {
   isJwtExpired,
   SESSION_SAFETY_MARGIN_MS,
 } from "../auth/agent-jwt.ts";
+import type { JmapBlobUploadLimits } from "../jmap/agent-jmap-blob-limits.ts";
 import {
   extractBlobEndpoints,
+  extractBlobUploadLimits,
+  extractJmapApiUrl,
   extractPrimaryMailAccountId,
   fetchJmapWellKnown,
 } from "../jmap/agent-jmap.ts";
@@ -66,6 +69,10 @@ export class AgentSession {
   private cachedMailAccountId: string | undefined;
   private cachedUploadUrl: string | undefined;
   private cachedDownloadUrl: string | undefined;
+  /** RFC 8620 Session `apiUrl` (POST target); from `/.well-known/jmap`. */
+  private cachedJmapPostUrl: string | undefined;
+  /** Last successful GET /.well-known/jmap JSON (for RFC 9404 blob limits). */
+  private cachedJmapSession: Record<string, unknown> | undefined;
 
   constructor(cfg: AgentSessionConfig) {
     this.authUrl = cfg.authUrl.replace(/\/+$/, "");
@@ -118,7 +125,9 @@ export class AgentSession {
     if (
       this.cachedMailAccountId &&
       this.cachedUploadUrl &&
-      this.cachedDownloadUrl
+      this.cachedDownloadUrl &&
+      this.cachedJmapPostUrl &&
+      this.cachedJmapSession
     ) {
       return this.cachedMailAccountId;
     }
@@ -133,15 +142,46 @@ export class AgentSession {
     this.cachedMailAccountId = undefined;
     this.cachedUploadUrl = undefined;
     this.cachedDownloadUrl = undefined;
+    this.cachedJmapPostUrl = undefined;
+    this.cachedJmapSession = undefined;
   }
 
   private async refreshJmapSessionData(): Promise<void> {
     const cap = await this.getCapabilityToken();
     const session = await fetchJmapWellKnown(this.apiUrl, cap);
+    this.cachedJmapSession = session;
     this.cachedMailAccountId = extractPrimaryMailAccountId(session);
     const blobs = extractBlobEndpoints(session);
     this.cachedUploadUrl = blobs.uploadUrl;
     this.cachedDownloadUrl = blobs.downloadUrl;
+    this.cachedJmapPostUrl = extractJmapApiUrl(session);
+  }
+
+  /**
+   * Full URL for JMAP `POST` batches (RFC 8620 Session `apiUrl` from
+   * `GET /.well-known/jmap`).
+   */
+  async getJmapPostUrl(): Promise<string> {
+    if (this.cachedJmapPostUrl && this.cachedJmapSession) {
+      return this.cachedJmapPostUrl;
+    }
+    await this.refreshJmapSessionData();
+    if (!this.cachedJmapPostUrl) {
+      throw new Error("JMAP session missing apiUrl.");
+    }
+    return this.cachedJmapPostUrl;
+  }
+
+  async getBlobUploadLimitsForAccount(
+    accountId: string,
+  ): Promise<JmapBlobUploadLimits | null> {
+    if (!this.cachedJmapSession) {
+      await this.refreshJmapSessionData();
+    }
+    if (!this.cachedJmapSession) {
+      throw new Error("JMAP session cache missing after refresh.");
+    }
+    return extractBlobUploadLimits(this.cachedJmapSession, accountId);
   }
 
   /**
@@ -174,6 +214,10 @@ export class AgentSession {
       this.sessionJWT = undefined;
       this.capabilityJWT = undefined;
       this.cachedMailAccountId = undefined;
+      this.cachedUploadUrl = undefined;
+      this.cachedDownloadUrl = undefined;
+      this.cachedJmapPostUrl = undefined;
+      this.cachedJmapSession = undefined;
     }
 
     const result = await performPoWAndSession({
@@ -202,10 +246,17 @@ export class AgentSession {
     this.cachedMailAccountId = undefined;
     this.cachedUploadUrl = undefined;
     this.cachedDownloadUrl = undefined;
+    this.cachedJmapPostUrl = undefined;
+    this.cachedJmapSession = undefined;
 
     const accountId = await this.getPrimaryMailAccountId();
-    if (!this.cachedUploadUrl || !this.cachedDownloadUrl) {
-      throw new Error("JMAP session did not provide upload/download URLs.");
+    if (
+      !this.cachedUploadUrl || !this.cachedDownloadUrl ||
+      !this.cachedJmapPostUrl
+    ) {
+      throw new Error(
+        "JMAP session did not provide uploadUrl, downloadUrl, or apiUrl.",
+      );
     }
 
     const creds: Credentials = {
@@ -278,6 +329,8 @@ export class AgentSession {
     this.cachedMailAccountId = undefined;
     this.cachedUploadUrl = undefined;
     this.cachedDownloadUrl = undefined;
+    this.cachedJmapPostUrl = undefined;
+    this.cachedJmapSession = undefined;
     await writeJwtFile(this.files.sessionFile, this.sessionJWT);
   }
 

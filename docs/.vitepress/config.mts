@@ -47,6 +47,7 @@ export default defineConfig({
         items: [
           { text: "REST authentication flow", link: "/rest-auth" },
           { text: "Raw JMAP requests", link: "/jmap" },
+          { text: "JMAP `using` and inline ops", link: "/jmap-using" },
           { text: "Code examples", link: "/examples" },
         ],
       },

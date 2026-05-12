@@ -12,7 +12,7 @@
         "accountId": "$ACCOUNT_ID",
         "create": {
           "b1": {
-            "data": "$ATTACHMENT_BASE64",
+            "data": [{ "data:asBase64": "$ATTACHMENT_BASE64" }],
             "type": "$ATTACHMENT_TYPE"
           }
         }

@@ -10,7 +10,7 @@ wrappers.
 - Auth base URL: `https://auth.atomicmail.ai`
 - API base URL: `https://api.atomicmail.ai`
 - Session discovery: `GET /.well-known/jmap`
-- JMAP requests: `POST /jmap`
+- JMAP requests: `POST` to **`apiUrl`** from that JSON (RFC 8620; often under the same API host as discovery)
 
 For full protocol details, see [`REST authentication flow`](/rest-auth) and
 [`Raw JMAP requests`](/jmap).
@@ -130,25 +130,38 @@ def create_capability(session_jwt: str):
     return parse_bearer_token(r.headers.get("Authorization"))
 
 
-def discover_account_id(capability_jwt: str):
+def discover_jmap_context(capability_jwt: str):
     r = requests.get(
         f"{API_BASE}/.well-known/jmap",
         headers={"Authorization": f"Bearer {capability_jwt}"},
     )
     r.raise_for_status()
     session = r.json()
-    return session["primaryAccounts"]["urn:ietf:params:jmap:mail"]
+    account_id = session["primaryAccounts"]["urn:ietf:params:jmap:mail"]
+    jmap_api_url = session["apiUrl"]
+    return account_id, jmap_api_url
 
 
-def read_latest_emails(capability_jwt: str, account_id: str):
+def read_latest_emails(capability_jwt: str, account_id: str, jmap_api_url: str):
     payload = {
         "using": ["urn:ietf:params:jmap:core", "urn:ietf:params:jmap:mail"],
         "methodCalls": [
             [
+                "Mailbox/query",
+                {"accountId": account_id, "filter": {"role": "inbox"}},
+                "mq0",
+            ],
+            [
                 "Email/query",
                 {
                     "accountId": account_id,
-                    "filter": {"inMailbox": "INBOX"},
+                    "filter": {
+                        "inMailbox": {
+                            "resultOf": "mq0",
+                            "name": "Mailbox/query",
+                            "path": "/ids/0",
+                        }
+                    },
                     "sort": [{"property": "receivedAt", "isAscending": False}],
                     "limit": 20,
                 },
@@ -167,7 +180,7 @@ def read_latest_emails(capability_jwt: str, account_id: str):
     }
 
     r = requests.post(
-        f"{API_BASE}/jmap",
+        jmap_api_url,
         headers={"Authorization": f"Bearer {capability_jwt}"},
         json=payload,
     )
@@ -193,10 +206,10 @@ if __name__ == "__main__":
     session_jwt = create_session(challenge_jwt2, nonce2, pow_hex2, api_key)
     capability_jwt = create_capability(session_jwt)
 
-    # 4) discover accountId and read inbox
-    account_id = discover_account_id(capability_jwt)
-    data = read_latest_emails(capability_jwt, account_id)
-    emails = data["methodResponses"][1][1].get("list", [])
+    # 4) discover accountId + JMAP POST URL, then read inbox
+    account_id, jmap_api_url = discover_jmap_context(capability_jwt)
+    data = read_latest_emails(capability_jwt, account_id, jmap_api_url)
+    emails = data["methodResponses"][2][1].get("list", [])
     for e in emails:
         print("-", e.get("subject"), e.get("from"))
 ```
@@ -205,19 +218,62 @@ if __name__ == "__main__":
 
 ## Node.js: send email with JMAP
 
-This example assumes you already have:
-
-- `capabilityJwt` (from auth flow)
-- `accountId` (from `/.well-known/jmap`)
-- Your sender inbox address
+This example assumes you already have `capabilityJwt` (from the auth flow). It
+discovers **`apiUrl`** and **`accountId`** from `GET /.well-known/jmap` (RFC
+8620), then resolves the inbox **mailbox id** with `Mailbox/query` (same pattern
+as [`Raw JMAP requests`](/jmap)).
 
 ```js
-const JMAP_URL = "https://api.atomicmail.ai/jmap";
-const ACCOUNT_ID = "<your accountId>";
-const TOKEN = "<capabilityJwt>";
+const API_BASE = "https://api.atomicmail.ai";
+
+async function discoverJmapContext(capabilityJwt) {
+  const r = await fetch(`${API_BASE}/.well-known/jmap`, {
+    headers: { Authorization: `Bearer ${capabilityJwt}` },
+  });
+  if (!r.ok) throw new Error(await r.text());
+  const session = await r.json();
+  const accountId = session.primaryAccounts["urn:ietf:params:jmap:mail"];
+  const jmapPostUrl = session.apiUrl;
+  return { accountId, jmapPostUrl };
+}
+
+/** JMAP mailbox id for the account inbox (`role: "inbox"`). */
+async function getInboxMailboxId(capabilityJwt, accountId, jmapPostUrl) {
+  const payload = {
+    using: ["urn:ietf:params:jmap:core", "urn:ietf:params:jmap:mail"],
+    methodCalls: [
+      [
+        "Mailbox/query",
+        { accountId, filter: { role: "inbox" } },
+        "mq0",
+      ],
+    ],
+  };
+  const r = await fetch(jmapPostUrl, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${capabilityJwt}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+  if (!r.ok) throw new Error(await r.text());
+  const data = await r.json();
+  const ids = data.methodResponses?.[0]?.[1]?.ids;
+  if (!ids?.length) throw new Error("Mailbox/query returned no inbox id");
+  return ids[0];
+}
+
 const SENDER = "myagent@atomicmail.ai";
 
-async function sendEmail(to, subject, bodyText) {
+async function sendEmail(capabilityJwt, to, subject, bodyText) {
+  const { accountId, jmapPostUrl } = await discoverJmapContext(capabilityJwt);
+  const inboxMailboxId = await getInboxMailboxId(
+    capabilityJwt,
+    accountId,
+    jmapPostUrl,
+  );
+
   const payload = {
     using: [
       "urn:ietf:params:jmap:core",
@@ -228,9 +284,10 @@ async function sendEmail(to, subject, bodyText) {
       [
         "Email/set",
         {
-          accountId: ACCOUNT_ID,
+          accountId,
           create: {
             draft1: {
+              mailboxIds: { [inboxMailboxId]: true },
               from: [{ email: SENDER }],
               to: [{ email: to }],
               subject,
@@ -247,7 +304,7 @@ async function sendEmail(to, subject, bodyText) {
       [
         "EmailSubmission/set",
         {
-          accountId: ACCOUNT_ID,
+          accountId,
           create: {
             sub1: {
               emailId: "#draft1",
@@ -263,10 +320,10 @@ async function sendEmail(to, subject, bodyText) {
     ],
   };
 
-  const res = await fetch(JMAP_URL, {
+  const res = await fetch(jmapPostUrl, {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${TOKEN}`,
+      Authorization: `Bearer ${capabilityJwt}`,
       "Content-Type": "application/json",
     },
     body: JSON.stringify(payload),
@@ -279,7 +336,9 @@ async function sendEmail(to, subject, bodyText) {
   return res.json();
 }
 
-sendEmail("user@example.com", "Hello from Atomic Mail", "This was sent via JMAP.")
+const TOKEN = "<capabilityJwt>";
+
+sendEmail(TOKEN, "user@example.com", "Hello from Atomic Mail", "This was sent via JMAP.")
   .then((data) => console.log(JSON.stringify(data, null, 2)))
   .catch((err) => console.error(err));
 ```

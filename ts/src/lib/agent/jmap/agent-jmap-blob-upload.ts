@@ -5,6 +5,7 @@ import { basename, isAbsolute, resolve } from "node:path";
 import { cwd } from "node:process";
 
 import { readCredentials } from "../session/agent-credentials-store.ts";
+import { assertAttachmentBytesWithinBlobLimit } from "./agent-jmap-blob-limits.ts";
 import type { JmapSessionPort } from "./agent-jmap.ts";
 
 /** One local file to upload before `$ATTACHMENT_*` substitution in ops JSON. */
@@ -89,12 +90,18 @@ export async function buildVarsFromAttachmentFiles(
   if (attachments.length === 0) return {};
 
   const accountId = await session.getPrimaryMailAccountId();
+  const limits = await session.getBlobUploadLimitsForAccount(accountId);
   const capabilityJwt = await session.getCapabilityToken();
   const creds = await readCredentials(session.files.credentialsFile);
   const uploadTemplate = session.currentUploadUrl ?? creds.uploadUrl;
   const uploadUrlExpanded = expandUploadUrl(uploadTemplate, accountId);
 
-  const vars: Record<string, string> = {};
+  const prepared: {
+    bytes: Uint8Array;
+    filename: string;
+    contentType: string;
+  }[] = [];
+
   for (let i = 0; i < attachments.length; i++) {
     const a = attachments[i]!;
     const abs = isAbsolute(a.path) ? a.path : resolve(pathBase, a.path);
@@ -102,6 +109,20 @@ export async function buildVarsFromAttachmentFiles(
     const bytes = buf as Uint8Array;
     const filename = a.filename ?? basename(abs);
     const contentType = a.contentType ?? guessMimeTypeFromFilename(filename);
+    prepared.push({ bytes, filename, contentType });
+  }
+
+  assertAttachmentBytesWithinBlobLimit(
+    prepared.map((p) => ({
+      label: p.filename,
+      byteLength: p.bytes.byteLength,
+    })),
+    limits,
+  );
+
+  const vars: Record<string, string> = {};
+  for (let i = 0; i < prepared.length; i++) {
+    const { bytes, filename, contentType } = prepared[i]!;
     const { blobId, size } = await postBinaryBlobUpload(
       uploadUrlExpanded,
       capabilityJwt,

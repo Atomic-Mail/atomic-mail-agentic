@@ -8,12 +8,18 @@ import { fileURLToPath } from "node:url";
 import { readCredentials } from "../session/agent-credentials-store.ts";
 import { inboxIdToMailboxEmail } from "../session/inbox-id-to-mailbox-email.ts";
 import {
+  assertAttachmentBytesWithinBlobLimit,
+  assertBlobUploadEnvelopeWithinLimits,
+  type JmapBlobUploadLimits,
+} from "./agent-jmap-blob-limits.ts";
+import {
   buildVarsFromAttachmentFiles,
   type JmapAttachmentInput,
 } from "./agent-jmap-blob-upload.ts";
 import { substituteVars } from "./agent-vars.ts";
 
 export type { JmapAttachmentInput } from "./agent-jmap-blob-upload.ts";
+export type { JmapBlobUploadLimits } from "./agent-jmap-blob-limits.ts";
 
 export const DEFAULT_JMAP_USING = [
   "urn:ietf:params:jmap:core",
@@ -30,6 +36,9 @@ export const BUNDLED_OPS_PRESET_NAMES = [
 ] as const;
 
 export const JMAP_MAIL_URN = "urn:ietf:params:jmap:mail" as const;
+
+/** RFC 9404 blob extension URN (Blob/upload, Blob/get, Blob/lookup). */
+export const JMAP_BLOB_URN = "urn:ietf:params:jmap:blob" as const;
 
 export interface JmapEnvelope {
   using: string[];
@@ -181,6 +190,58 @@ export function extractBlobEndpoints(
   return { uploadUrl, downloadUrl };
 }
 
+/** RFC 8620 §2 / §3.1: POST target for JMAP API calls from the Session object. */
+export function extractJmapApiUrl(session: Record<string, unknown>): string {
+  const u = session["apiUrl"];
+  if (typeof u !== "string" || u.length === 0) {
+    throw new Error("JMAP session missing apiUrl.");
+  }
+  return u;
+}
+
+function asNonNegativeInt(v: unknown): number | undefined {
+  if (typeof v !== "number" || !Number.isFinite(v)) return undefined;
+  if (!Number.isInteger(v) || v < 0 || v > Number.MAX_SAFE_INTEGER) {
+    return undefined;
+  }
+  return v;
+}
+
+/**
+ * RFC 9404 §3.1 blob limits for one account from GET /.well-known/jmap JSON.
+ * Returns null when the account does not advertise `urn:ietf:params:jmap:blob`.
+ */
+export function extractBlobUploadLimits(
+  session: Record<string, unknown>,
+  accountId: string,
+): JmapBlobUploadLimits | null {
+  const accounts = session["accounts"];
+  if (!accounts || typeof accounts !== "object") return null;
+  const acc = (accounts as Record<string, unknown>)[accountId];
+  if (!acc || typeof acc !== "object") return null;
+  const caps = (acc as Record<string, unknown>)["accountCapabilities"];
+  if (!caps || typeof caps !== "object") return null;
+  const blob = (caps as Record<string, unknown>)[JMAP_BLOB_URN];
+  if (!blob || typeof blob !== "object") return null;
+
+  const b = blob as Record<string, unknown>;
+  let maxSizeBlobSet: number | null = null;
+  const rawMax = b["maxSizeBlobSet"];
+  if (rawMax === null) {
+    maxSizeBlobSet = null;
+  } else {
+    const n = asNonNegativeInt(rawMax);
+    maxSizeBlobSet = n === undefined ? null : n;
+  }
+
+  const maxDs = asNonNegativeInt(b["maxDataSources"]);
+  const out: JmapBlobUploadLimits = { maxSizeBlobSet };
+  if (maxDs !== undefined) {
+    out.maxDataSources = maxDs;
+  }
+  return out;
+}
+
 export async function fetchJmapWellKnown(
   apiUrl: string,
   capabilityJwt: string,
@@ -202,13 +263,20 @@ export async function fetchJmapWellKnown(
 
 /** Minimal surface for JMAP execution (implemented by AgentSession). */
 export interface JmapSessionPort {
+  /** Base used for `GET /.well-known/jmap` (configured `ATOMIC_MAIL_API_URL` / credentials). */
   readonly apiUrl: string;
   readonly files: { credentialsFile: string };
+  /** RFC 8620 Session `apiUrl` — full URL for `POST` JMAP batches. */
+  getJmapPostUrl(): Promise<string>;
   getPrimaryMailAccountId(): Promise<string>;
   getCapabilityToken(): Promise<string>;
   readonly currentInboxId?: string;
   readonly currentUploadUrl?: string;
   readonly currentDownloadUrl?: string;
+  /** RFC 9404 §3.1 limits from cached session; null if blob capability not advertised for the account. */
+  getBlobUploadLimitsForAccount(
+    accountId: string,
+  ): Promise<JmapBlobUploadLimits | null>;
 }
 
 export interface RunJmapRequestInput {
@@ -261,15 +329,15 @@ export async function runJmapRequest(
     autoResolvers: {
       ACCOUNT_ID: () => input.session.getPrimaryMailAccountId(),
       INBOX: async () => {
-        const raw =
-          input.session.currentInboxId ??
+        const raw = input.session.currentInboxId ??
           (await readCredentials(input.session.files.credentialsFile)).inboxId;
         return inboxIdToMailboxEmail(raw);
       },
       INBOX_MAILBOX_ID: () => fetchInboxMailboxId(input.session),
       UPLOAD_URL: async () =>
         input.session.currentUploadUrl ??
-          (await readCredentials(input.session.files.credentialsFile)).uploadUrl,
+          (await readCredentials(input.session.files.credentialsFile))
+            .uploadUrl,
       DOWNLOAD_URL: async () =>
         input.session.currentDownloadUrl ??
           (await readCredentials(input.session.files.credentialsFile))
@@ -283,6 +351,10 @@ export async function runJmapRequest(
     input.sourceLabel,
   );
 
+  await enforceJmapBlobUploadLimitsIfApplicable(input.session, envelope);
+
+  const jmapPostUrl = await input.session.getJmapPostUrl();
+
   if (input.dryRun) {
     return {
       ok: true,
@@ -290,7 +362,7 @@ export async function runJmapRequest(
       bodyText: JSON.stringify(
         {
           dryRun: true,
-          url: `${input.session.apiUrl.replace(/\/+$/, "")}/jmap/`,
+          url: jmapPostUrl,
           envelope,
         },
         null,
@@ -301,7 +373,7 @@ export async function runJmapRequest(
 
   const capabilityJwt = await input.session.getCapabilityToken();
   const { ok, status, bodyText } = await postJmap(
-    input.session.apiUrl,
+    jmapPostUrl,
     capabilityJwt,
     envelope,
   );
@@ -334,8 +406,9 @@ export async function fetchInboxMailboxId(
       ],
     ],
   };
+  const jmapPostUrl = await port.getJmapPostUrl();
   const { ok, status, bodyText } = await postJmap(
-    port.apiUrl,
+    jmapPostUrl,
     capabilityJwt,
     envelope,
   );
@@ -365,13 +438,45 @@ export async function fetchInboxMailboxId(
   return id;
 }
 
+function collectBlobUploadAccountIds(envelope: JmapEnvelope): string[] {
+  const ids = new Set<string>();
+  for (const call of envelope.methodCalls) {
+    if (!Array.isArray(call) || call[0] !== "Blob/upload") continue;
+    const arg = call[1];
+    if (!arg || typeof arg !== "object") continue;
+    const aid = (arg as Record<string, unknown>)["accountId"];
+    if (typeof aid === "string" && aid.length > 0) ids.add(aid);
+  }
+  return [...ids];
+}
+
+async function enforceJmapBlobUploadLimitsIfApplicable(
+  session: JmapSessionPort,
+  envelope: JmapEnvelope,
+): Promise<void> {
+  if (!envelope.using.includes(JMAP_BLOB_URN)) return;
+  const hasUpload = envelope.methodCalls.some(
+    (c) => Array.isArray(c) && c[0] === "Blob/upload",
+  );
+  if (!hasUpload) return;
+
+  const accountIds = collectBlobUploadAccountIds(envelope);
+  const limitsByAccount = new Map<string, JmapBlobUploadLimits | null>();
+  for (const id of accountIds) {
+    limitsByAccount.set(
+      id,
+      await session.getBlobUploadLimitsForAccount(id),
+    );
+  }
+  assertBlobUploadEnvelopeWithinLimits(envelope, limitsByAccount);
+}
+
 export async function postJmap(
-  apiUrl: string,
+  jmapPostUrl: string,
   capabilityJwt: string,
   envelope: JmapEnvelope,
 ): Promise<{ ok: boolean; status: number; bodyText: string }> {
-  const base = apiUrl.replace(/\/+$/, "");
-  const res = await fetch(`${base}/jmap/`, {
+  const res = await fetch(jmapPostUrl, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

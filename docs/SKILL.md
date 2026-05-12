@@ -106,9 +106,20 @@ npx --package=@atomicmail/agent-skill atomicmail help --topic jmap_cheatsheet
 ### Inline blobs in JMAP (RFC 9404)
 
 Use `Blob/upload` and `Blob/get` through `jmap_request` by adding
-`urn:ietf:params:jmap:blob` to `using`. On Atomic Mail, **`Blob/upload`** uses a
-**`data`** field with **base64** bytes (not `data:asText`). Prefer bundled
-preset **`send_mail_attachment.json`** for upload + send in one batch.
+`urn:ietf:params:jmap:blob` to `using`. Per RFC 9404, **`Blob/upload` → `create`**
+values must have **`data`** as an **array** of **DataSourceObject**; each element
+is exactly one of **`data:asText`**, **`data:asBase64`**, or a **`blobId`** slice
+(see RFC 9404 §4.1). Optional **`type`** hints the media type. Bundled
+**`send_mail_attachment.json`** is the usual base64 example: **`data`** is
+**`[{ "data:asBase64": "<base64>" }]`** plus **`type`** for upload + send in one
+batch. **`help --topic jmap_cheatsheet`** lists the full rules and mistakes to
+avoid.
+
+When the JMAP session includes RFC 9404 blob limits, **`jmap_request` and
+`--attachment` uploads reject oversize payloads before POST** (computable
+`Blob/upload` and attachment file bytes against `maxSizeBlobSet`, and `data`
+length against `maxDataSources` when advertised). A `null` `maxSizeBlobSet`
+means no advertised octet cap on the client.
 
 ```bash
 npx --package=@atomicmail/agent-skill atomicmail jmap_request \

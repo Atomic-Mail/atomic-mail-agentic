@@ -134,7 +134,46 @@ Common URNs:
 - urn:ietf:params:jmap:core
 - urn:ietf:params:jmap:mail
 - urn:ietf:params:jmap:submission — required for \`EmailSubmission/set\`
-- urn:ietf:params:jmap:blob — required for \`Blob/upload\` / \`Blob/get\`
+- urn:ietf:params:jmap:blob — required for \`Blob/upload\`, \`Blob/get\`, and
+  \`Blob/lookup\` (see RFC 9404 §4.3 for reverse blob references).
+
+## Session blob limits (RFC 9404 §3.1)
+
+From \`accounts[accountId].accountCapabilities["urn:ietf:params:jmap:blob"]\`:
+\`maxSizeBlobSet\`, \`maxDataSources\`, \`supportedTypeNames\`,
+\`supportedDigestAlgorithms\`. MCP and AgentSkill **reject before POST** when a
+computable \`Blob/upload\` or an \`attachments\` file would exceed advertised
+\`maxSizeBlobSet\` or \`maxDataSources\` (\`maxSizeBlobSet: null\` = no client
+octet cap). Literal (non-\`#\`) \`blobId\` slices are not pre-sized on the client.
+
+## \`Blob/upload\` shape (RFC 9404)
+
+Each \`create.<id>\` is an **UploadObject**:
+
+- **\`data\`**: required **array** of **DataSourceObject** (concatenated in order;
+  \`[]\` yields an empty blob).
+- **\`type\`**: optional media-type hint (\`String|null\` in the RFC).
+
+Each **DataSourceObject** must contain **exactly one** of (RFC 9404 §4.1):
+
+- **\`{ "data:asText": "…" }\`** — UTF-8 text (invalid UTF-8 → \`notCreated\`).
+- **\`{ "data:asBase64": "…" }\`** — base64 octets (invalid base64 → \`notCreated\`).
+- **\`{ "blobId": "…", "offset"?, "length"? }\`** — byte range from an existing
+  blob; \`offset\` / \`length\` may be omitted or \`null\` per the RFC. In one
+  batch, use \`"#b4"\` when referring to a blob created earlier in the same
+  request.
+
+**Not RFC-compliant** (do not expect servers to accept them): \`data\` as a
+plain string; \`data:asBase64\` or \`data:asText\` on the **upload object** top
+level instead of **inside** an element of the \`data\` array; more than one of
+the above inside a single array element.
+
+**Email parts:** in \`Email/set\`, \`attachments[]\` references the blob with
+\`blobId\` (e.g. \`"#b1"\` for create key \`b1\`), plus \`type\` / \`name\` per
+RFC 8621.
+
+**Out-of-band:** RFC 8620 \`POST\` to \`uploadUrl\` (MCP \`attachments\` / skill
+\`--attachment\`) then use \`$ATTACHMENT_N_BLOB_ID\` in the same JMAP JSON.
 
 ## Placeholders
 
@@ -228,12 +267,13 @@ Same pattern as bundled \`send_mail.json\`: \`Email/set\` includes
 
 ## Attachment in one batch (\`Blob/upload\` + send)
 
-Atomic Mail expects blob bytes in a \`data\` property (**base64** string), not
-\`data:asText\`. Prefer preset \`send_mail_attachment.json\` with \`vars\`:
+\`Blob/upload\` must follow RFC 9404 (see **\`Blob/upload\` shape** above). The
+bundled preset \`send_mail_attachment.json\` uses base64 parts:
+\`"data": [{ "data:asBase64": "$ATTACHMENT_BASE64" }]\` plus \`type\`. Vars:
 \`TO\`, \`SUBJECT\`, \`BODY\`, \`ATTACHMENT_BASE64\`, \`ATTACHMENT_TYPE\`,
 \`ATTACHMENT_NAME\`.
 
-Minimal inline shape (replace base64 and addresses):
+Minimal inline example (base64 for UTF-8 \`Hello\`; replace addresses):
 
 \`\`\`json
 {
@@ -246,7 +286,7 @@ Minimal inline shape (replace base64 and addresses):
   "methodCalls": [
     ["Blob/upload", {
       "accountId": "$ACCOUNT_ID",
-      "create": {"b1": {"data": "SGVsbG8=", "type": "text/plain"}}
+      "create": {"b1": {"data": [{ "data:asBase64": "SGVsbG8=" }], "type": "text/plain"}}
     }, "b0"],
     ["Email/set", {
       "accountId": "$ACCOUNT_ID",
@@ -290,6 +330,10 @@ parts, add more objects under \`attachments\` referencing \`$ATTACHMENT_1_BLOB_I
 
 ## Blob/get
 
+Request only RFC 9404 §4.2 property names (e.g. \`data:asBase64\`, \`size\`, or
+\`digest:<algorithm>\` from \`supportedDigestAlgorithms\`). Do not list \`id\`
+or \`type\` in \`properties\` — \`id\` is still returned on each result object.
+
 \`\`\`json
 {
   "using": ["urn:ietf:params:jmap:core", "urn:ietf:params:jmap:blob"],
@@ -302,6 +346,11 @@ parts, add more objects under \`attachments\` referencing \`$ATTACHMENT_1_BLOB_I
   ]
 }
 \`\`\`
+
+## Blob/lookup
+
+Reverse lookup: which mail objects reference a blob. Parameters \`typeNames\`,
+\`ids\`; errors include \`unknownDataType\`. See RFC 9404 §4.3.
 
 ## Tips
 
@@ -428,10 +477,13 @@ strings. Ensure \`register\` completed so \`$ACCOUNT_ID\` / \`$INBOX\` can resol
 \`$INBOX_MAILBOX_ID\` placeholder (or run \`Mailbox/get\` / \`Mailbox/query\` and
 paste the id into \`vars\`).
 
-## \`invalidProperties\` on \`Blob/upload\` (\`data:asText\`, etc.)
+## \`invalidProperties\` / \`notCreated\` on \`Blob/upload\`
 
-On Atomic Mail, put base64 content in a \`data\` field. See \`help\` topic
-\`jmap_cheatsheet\` or preset \`send_mail_attachment.json\`.
+RFC 9404 requires \`data\` as an **array** of objects, each with **exactly one**
+of \`data:asText\`, \`data:asBase64\`, or a \`blobId\` slice. Typical mistakes:
+\`data\` as a raw string; \`data:asBase64\` on the upload object instead of
+inside an array element; mixing two forms in one object. See topic
+\`jmap_cheatsheet\` (\`Blob/upload\` shape) and preset \`send_mail_attachment.json\`.
 
 ## RFC 8620 binary \`POST\` to \`uploadUrl\` returns 404
 
@@ -442,7 +494,8 @@ on the server — use \`Blob/upload\` in JMAP instead, or fix the API gateway.
 ## \`Blob/upload\` succeeds but \`size\` is 0 (or \`Email/set\` rejects the blob)
 
 The server accepted the method but did not persist octets (broken or
-incomplete \`Blob/upload\`). Verify with a tiny \`data\` payload; if \`size\`
+incomplete \`Blob/upload\`). Verify with a tiny \`data: [{ "data:asBase64": "QQ==" }]\`
+payload; if \`size\`
 stays 0, fix the JMAP/blob implementation on the host before sending
 attachments.
 

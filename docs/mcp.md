@@ -60,7 +60,12 @@ merges the tool’s default capability list — today
 **`urn:ietf:params:jmap:core`** and **`urn:ietf:params:jmap:mail`** only. For
 **`EmailSubmission/set`**, **`Blob/upload`**, or **`Blob/get`**, either pass a
 full envelope that includes the right URNs in `using`, or rely on your MCP host
-passing an extended `using` array on the tool call (when supported).
+passing an extended `using` array on the tool call (when supported). See
+[`JMAP using and inline ops`](/jmap-using) for the full picture.
+
+Successful responses may include a top-level **`_next`** field (suggested
+follow-ups); that is not part of RFC 8620 — see [`Raw JMAP requests`](/jmap)
+(“Successful responses and `_next`”).
 
 ## Presets and placeholders
 
@@ -157,13 +162,28 @@ Two blob paths are supported:
 - **RFC 8620 out-of-band blobs** via `uploadUrl` and `downloadUrl` templates
   from JMAP session.
 
+When the session advertises RFC 9404 blob limits (`maxSizeBlobSet`,
+`maxDataSources`), **`jmap_request` enforces them before the HTTP POST** for
+computable in-band `Blob/upload` payloads and for MCP **`attachments`** file
+sizes. If `maxSizeBlobSet` is `null`, no client-side size cap is applied (the
+server may still reject the request).
+
 ### Inline blob flow (RFC 9404)
 
 Add `urn:ietf:params:jmap:blob` and upload bytes in the same JMAP batch.
 
-On Atomic Mail, **`Blob/upload`** expects base64 in a **`data`** property (not
-`data:asText` / `data:asBase64`). The created blob’s id is referenced from the
-same batch as **`#b1`** when the create key is `b1`.
+Per [RFC 9404](https://www.rfc-editor.org/rfc/rfc9404) §4.1, each **`Blob/upload`**
+`create` entry is an **UploadObject**: required **`data`** is an **array** of
+**DataSourceObject**; each array element must be **exactly one** of
+`{ "data:asText": "…" }`, `{ "data:asBase64": "…" }`, or
+`{ "blobId": "…", "offset"?, "length"? }` (slice of an existing blob from the same
+batch via `#creationId`). Optional **`type`** is a media-type hint. Invalid shapes
+(for example `data` as a string, or `data:asBase64` on the upload object instead
+of inside the `data` array) are not RFC-compliant and should be rejected.
+
+The created blob’s id is referenced from the same batch as **`#b1`** when the
+create key is `b1`. Bundled **`send_mail_attachment.json`** uses the usual
+base64 part shape `data: [{ "data:asBase64": "…" }]` plus **`type`**.
 
 `Email/set` should include **`mailboxIds`** (map of mailbox id → `true`). Use
 **`$INBOX_MAILBOX_ID`** as the key (see placeholders above).
@@ -189,7 +209,7 @@ parameterised attachment, use preset **`send_mail_attachment.json`** and pass
         "accountId": "$ACCOUNT_ID",
         "create": {
           "b1": {
-            "data": "SGVsbG8=",
+            "data": [{ "data:asBase64": "SGVsbG8=" }],
             "type": "text/plain"
           }
         }

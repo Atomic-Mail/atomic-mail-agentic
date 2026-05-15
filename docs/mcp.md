@@ -29,13 +29,15 @@ Your MCP host spawns this process; see configuration below.
 
 | Tool           | Description                                                                                                                                                                                                       |
 | -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `register`     | PoW signup; persists credentials. Idempotent when username matches inbox.                                                                                                                                         |
+| `register`     | PoW signup; persists credentials. Idempotent when username matches inbox. A different username is rejected unless `forced: true` is passed.                                                                      |
 | `jmap_request` | JMAP batch via `ops` or `ops_file`. Uppercase `$VAR_NAME` tokens are substituted (`$ACCOUNT_ID` / `$INBOX` / `$INBOX_MAILBOX_ID` / `$UPLOAD_URL` / `$DOWNLOAD_URL` from session; others via optional `vars` map). |
 | `help`         | Built-in docs (`topic` optional); use `topic: "readme"` for the published package `README.md`.                                                                                                                    |
 
 ## Typical MCP workflow
 
 1. Call `register` with a username (or rely on existing `credentials.json`).
+   If credentials already exist for a different username, pass `forced: true`
+   only after backing up the credential directory.
 2. `jmap_request` with `ops` or `ops_file` (optional `vars` for `$TO`,
    `$SUBJECT`, etc.).
 3. `help` when stuck.

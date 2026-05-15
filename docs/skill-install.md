@@ -24,6 +24,9 @@ npx --package=@atomicmail/agent-skill atomicmail jmap_request \
   --ops '[["Mailbox/get", {"accountId": "$ACCOUNT_ID"}, "m0"]]'
 ```
 
+If credentials already exist for a different username, `register` fails by
+default. Pass `--forced` only after backing up the credential directory.
+
 ## `jmap_request`, presets, and placeholders
 
 `jmap_request` accepts inline `--ops` JSON or `--ops-file` (same shapes as MCP:

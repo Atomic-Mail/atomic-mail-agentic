@@ -44,6 +44,10 @@ npx --package=@atomicmail/agent-skill atomicmail register \
 Writes `credentials.json`, `session.jwt`, `capability.jwt`. Prints JSON
 including `inbox` and `accountId`.
 
+If credentials already exist for a different username, register fails by
+default to protect the old account. Use `--forced` only after backing up the
+credential directory.
+
 ### 2. Register (existing API key, in case losing the credentials file)
 
 ```bash

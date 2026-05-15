@@ -63,6 +63,7 @@ async function cmdRegister(argv: string[]): Promise<void> {
         username: { type: "string" },
         "api-key": { type: "string" },
         "credentials-dir": { type: "string" },
+        forced: { type: "boolean" },
         quiet: { type: "boolean" },
         help: { type: "boolean", short: "h" },
       },
@@ -85,6 +86,7 @@ Options:
   --username NAME      New account (mutually exclusive with --api-key)
   --api-key KEY        Existing API key (mutually exclusive with --username)
   --credentials-dir DIR  Credential directory (default: ~/.atomicmail)
+  --forced             Allow replacing existing credentials with a new account
   --quiet              Less stderr output
   --help, -h           This message
 `);
@@ -124,7 +126,9 @@ Options:
       credentialDir,
       files,
     });
-    const result = await session.register(username);
+    const result = await session.register(username, {
+      forced: parsed.values.forced === true,
+    });
     log(`Wrote credentials under ${credentialDir}`);
     process.stdout.write(JSON.stringify(result, null, 2) + "\n");
     return;

@@ -16,7 +16,8 @@ export function registerRegisterTool(
       title: "Register an Atomic Mail inbox",
       description:
         "PoW signup; writes credentials. Idempotent for the same username " +
-        "and stored inbox; a different username registers a new inbox. " +
+        "and stored inbox; a different username is rejected unless " +
+        "`forced: true` is provided. " +
         "Returns inbox, accountId, apiKey (first signup only).",
       inputSchema: z.object({
         username: z
@@ -25,15 +26,22 @@ export function registerRegisterTool(
           .describe(
             "Desired username (local-part of your @atomicmail.ai address).",
           ),
+        forced: z
+          .boolean()
+          .optional()
+          .describe(
+            "Allow replacing existing credentials if username does not " +
+              "match the stored inbox.",
+          ),
       }),
       annotations: {
         idempotentHint: true,
         destructiveHint: false,
       },
     },
-    async ({ username }) => {
+    async ({ username, forced }) => {
       try {
-        const result = await session.register(username);
+        const result = await session.register(username, { forced });
         return mcpText(JSON.stringify(result, null, 2));
       } catch (error) {
         return mcpError(

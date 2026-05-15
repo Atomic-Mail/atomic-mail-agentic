@@ -23,7 +23,10 @@ import {
   extractPrimaryMailAccountId,
   fetchJmapWellKnown,
 } from "../jmap/agent-jmap.ts";
-import { fetchCapability, performPoWAndSession } from "../auth/agent-auth-http.ts";
+import {
+  fetchCapability,
+  performPoWAndSession,
+} from "../auth/agent-auth-http.ts";
 
 export interface AgentSessionConfig {
   authUrl: string;
@@ -41,6 +44,14 @@ export interface RegisterResult {
   /** Present only on first-time signup (not idempotent replay). */
   apiKey?: string;
   idempotent?: boolean;
+}
+
+export interface RegisterOptions {
+  /**
+   * Allows replacing credentials in the current credential directory when the
+   * requested username differs from the stored inbox local-part.
+   */
+  forced?: boolean;
 }
 
 function normalizeUsername(u: string): string {
@@ -186,9 +197,13 @@ export class AgentSession {
 
   /**
    * Register or return existing inbox when username matches (idempotent).
-   * Different username replaces on-disk credentials and creates a new inbox.
+   * Different username requires explicit force to replace credentials and
+   * create a new inbox.
    */
-  async register(username: string): Promise<RegisterResult> {
+  async register(
+    username: string,
+    options: RegisterOptions = {},
+  ): Promise<RegisterResult> {
     const want = normalizeUsername(username);
 
     if (this.hasApiKey && !this.inboxId) {
@@ -207,6 +222,16 @@ export class AgentSession {
           accountId,
           idempotent: true,
         };
+      }
+      if (options.forced !== true) {
+        throw new Error(
+          "Register refused because credentials already belong to " +
+            `"${this.inboxId}" and requested username is "${want}". ` +
+            "If you want a new account, first back up your credential " +
+            `directory (${this.credentialDir}) and remember where you copied ` +
+            "it, otherwise you may lose access to your old account. Then " +
+            "retry with forced=true (MCP) or --forced (AgentSkill).",
+        );
       }
       await unlinkCredentialArtifacts(this.files);
       this.apiKey = undefined;

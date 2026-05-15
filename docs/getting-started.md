@@ -9,6 +9,8 @@ is:
 
 1. Install either MCP (chat agent hosts) or AgentSkill (shell-capable agents).
 2. Run `register` once to create or recover an inbox.
+   If a different username is requested while credentials already exist,
+   registration fails unless you explicitly force replacement.
 3. Use `jmap_request` for send/read flows.
 4. Use `help` for built-in docs.
 
@@ -20,6 +22,8 @@ If wrappers are not usable in your environment, use the direct HTTP docs:
 1. **Register**
    - Create account with PoW (`register --username <name>`) or recover via API
      key.
+   - Different username over existing credentials is blocked by default; force
+     replacement only after backing up the credential directory.
 2. **Persist credentials**
    - `credentials.json`, `session.jwt`, `capability.jwt` under `~/.atomicmail`.
 3. **Execute JMAP**

@@ -21,6 +21,8 @@ CLI / AgentSkill entrypoint `atomicmail`. Derived from `docs/SKILL.md`, `docs/sk
 - [ ] `atomicmail register --credentials-dir "$CRED_DIR" --username "skill-qa-<random-num>"` (`docs/SKILL.md` / `docs/skill-install.md`). Confirm the inbox is **`skill-qa-<random-num>@atomicmail.ai`**.
 - [ ] Confirm JSON output includes inbox / account identifiers as documented.
 - [ ] Confirm `credentials.json`, `session.jwt`, `capability.jwt` exist under **`$CRED_DIR`** (not `~/.atomicmail/`) with `0600`.
+- [ ] `atomicmail register --credentials-dir "$CRED_DIR" --username "skill-qa-other-<random-num>"` and confirm it fails with guidance to back up credentials before creating a new account.
+- [ ] Retry with `atomicmail register --credentials-dir "$CRED_DIR" --username "skill-qa-other-<random-num>" --forced` and confirm credentials are replaced and the new inbox is returned.
 - [ ] (Optional) Repeat `register --credentials-dir "$CRED_DIR" --api-key "..."` recovery path from `docs/SKILL.md` on a copy of credentials.
 
 ## 3. Send a simple email to `sasha@atomicmail.ai`

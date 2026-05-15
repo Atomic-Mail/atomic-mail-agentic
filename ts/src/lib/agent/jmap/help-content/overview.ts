@@ -11,8 +11,11 @@ manage mail over JMAP (RFC 8620 + RFC 8621).
 Three operations only:
 
 1. **register** — Proof-of-work signup (or idempotent replay when the same
-   username matches the inbox already on disk). Persists credentials and
-   returns \`{ inbox, accountId }\` (and \`apiKey\` on first signup).
+   username matches the inbox already on disk). When a different username is
+   requested and credentials already exist, register fails unless forced
+   explicitly (\`forced: true\` in MCP / \`--forced\` in AgentSkill). Persists
+   credentials and returns \`{ inbox, accountId }\` (and \`apiKey\` on first
+   signup).
 2. **jmap_request** — Send a JMAP method-call batch; auth and JWT rotation are
    automatic. Pass inline \`ops\` JSON or an \`ops_file\` preset (same
    substitution for both). Session-backed tokens (\`$ACCOUNT_ID\`, \`$INBOX\`,

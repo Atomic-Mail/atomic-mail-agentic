@@ -5,12 +5,14 @@ export const helpTopicTools = `\
 
 ## register
 
-**MCP input:** \`{ "username": string }\`  
-**Skill:** \`register --username NAME\` (or \`--api-key KEY\`).
+**MCP input:** \`{ "username": string, "forced"?: boolean }\`  
+**Skill:** \`register --username NAME [--forced]\` (or \`--api-key KEY\`).
 
 Creates an inbox or returns the same \`{ inbox, accountId }\` when the
 username matches the stored inbox local-part. A **different** username
-replaces credentials in the directory and registers a new inbox.
+fails by default to protect existing credentials. To replace credentials in the
+directory and register a new inbox, pass **\`forced: true\`** (MCP) or
+**\`--forced\`** (skill) explicitly.
 
 ## jmap_request
 

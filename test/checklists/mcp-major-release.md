@@ -35,6 +35,7 @@ Stdio MCP server for chat-based agents. Derived from `docs/mcp.md`, `docs/gettin
 
 - [ ] **Path A (in-band `Blob/upload`):** `send_mail_attachment.json` with `vars` including `TO` = `sasha@atomicmail.ai`, `SUBJECT` = **`MCP QA TEST - attachment path A`**, `ATTACHMENT_BASE64`, `ATTACHMENT_TYPE`, `ATTACHMENT_NAME` (small payload). Confirm send succeeds; if `Blob/upload` returns `size: 0` for non-empty data, record as server/proxy defect (see troubleshooting in shipped `help`).
 - [ ] **Path B (RFC 8620, recommended for large files):** `jmap_request` with `ops_file` `send_mail_blob_attachment.json`, `vars` for `TO` = `sasha@atomicmail.ai`, `SUBJECT` = **`MCP QA TEST - attachment path B`**, `BODY`, and tool input `attachments`: `[{ "path": "<local file>" }]` (and optional `filename` / `content_type`). Confirm upload + send succeeds.
+- [ ] **Path C (large single file, ~1 MiB RFC 8620):** From a checkout of this repo, use fixture **`test/fixtures/checklist-large-attachment-1mb.bin`** (exactly **1 048 576** bytes; SHA-256 **`0e7476fa3598c70bc06c64bcccc1ae91667467962836998418ee1af05c298278`**). Same as Path B with `SUBJECT` = **`MCP QA TEST - attachment 1mb`** and `attachments`: `[{ "path": "<repo>/test/fixtures/checklist-large-attachment-1mb.bin" }]` (one path only). Confirm upload + send completes without timeout; recipient receives the full file (verify size or SHA-256).
 - [ ] Confirm recipient receives the attachment with expected name and bytes.
 
 ## 5. Read inbox messages (including attachments and validity)
@@ -44,14 +45,47 @@ Stdio MCP server for chat-based agents. Derived from `docs/mcp.md`, `docs/gettin
 - [ ] Retrieve bytes: either **`Blob/get`** with `urn:ietf:params:jmap:blob` and minimal `properties` as in `docs/jmap.md`, **or** expand `$DOWNLOAD_URL` and `GET` with bearer capability JWT (RFC 8620 out-of-band path in `docs/jmap.md`).
 - [ ] Base64-decode or compare downloaded bytes to a known fixture (checksum or byte equality).
 
-## 6. SMTP to the QA inbox, then fetch with MCP
+## 6. Inbound mail to the QA inbox, then fetch with MCP
 
-Exercises **inbound SMTP** into the **same** mailbox the MCP server uses for this run, then **read it back** via the `jmap_request` tool. Use when your stack exposes a plain SMTP listener (for example `<QA_SMTP_HOST>:25` with no auth).
+Exercises **inbound delivery** into the **same** mailbox the MCP server uses for this run, then **read it back** via `jmap_request`. Run **both** paths below when your environment allows.
 
-- [ ] From `register` output or `credentials.json` on the MCP host, determine the full mailbox address for **RCPT TO** (typically `inboxId` + `@` + inbox domain for that deployment).
-- [ ] Send via SMTP as if from another user (for example **curl** on the MCP host): `MAIL FROM` an unrelated address, `RCPT TO` that QA inbox (`mcp-qa-<random-num>@atomicmail.ai`), minimal RFC 5322 `DATA` with **Subject:** **`MCP QA TEST - SMTP inbound`**. Confirm the MTA accepts the message (for example `250` / queued id in the SMTP transcript).
-- [ ] Call `jmap_request` with `ops_file`: `list_inbox.json` and confirm the new message appears (check **from**, **subject**, **preview**, or **receivedAt** in `methodResponses`).
-- [ ] Follow with a second `jmap_request` using `Email/get` (and `Blob/get` on the text **blobId** if **bodyValues** is empty) to confirm the body matches what you injected. Note any header normalization (for example restricted characters in **Subject**) as environment-specific behavior.
+### 6a. Delivery from a real MX (production-style)
+
+- [ ] From `register` output or `credentials.json`, note the full mailbox address (**RCPT TO** / **To:**), e.g. `mcp-qa-<random-num>@atomicmail.ai`.
+- [ ] From a **real mailbox on a major provider** (Gmail, Outlook, etc. — not the QA credential dir), send one message **To:** that QA inbox with **Subject:** **`MCP QA TEST - SMTP inbound (real MX)`** and a plain body you can recognize later.
+- [ ] Confirm the provider accepted the send (sent folder / no bounce within a few minutes).
+
+### 6b. Direct SMTP session to Haraka (lab / staging)
+
+Use when your stack exposes a plain SMTP listener (Haraka on `<QA_SMTP_HOST>:25`, often no auth). Haraka runs the **`early_talker`** plugin against bots — the client must behave like a normal MTA:
+
+- **Wait for the `220` banner** before sending any command (do not pipe `EHLO`/`MAIL` before the server speaks).
+- **Use a FQDN for `EHLO`/`HELO`** (e.g. `mail.gmail.com`), not a bare hostname like `My-MacBook`.
+- **If you get `554`, do not rapid-retry** — karma may keep you in the bad tier (~15 minutes).
+
+- [ ] Connect to `<QA_SMTP_HOST>:25` and complete a proper session: `220` → `EHLO <fqdn>` → `MAIL FROM:<sender@example.com>` (use a real-looking address, e.g. `you@gmail.com`) → `RCPT TO:` the QA inbox → `DATA` → minimal RFC 5322 message with **Subject:** **`MCP QA TEST - SMTP inbound (direct)`** → `.` → `QUIT`. Confirm `250` (or queued id) in the transcript — not `554`.
+- [ ] Example with **curl** (reads the banner before `EHLO`; set `--local-hostname` to your FQDN):
+
+```bash
+curl -v --url "smtp://${QA_SMTP_HOST}:25" \
+  --local-hostname mail.gmail.com \
+  --mail-from "you@gmail.com" \
+  --mail-rcpt "mcp-qa-<random-num>@atomicmail.ai" \
+  --upload-file - <<'EOF'
+From: you@gmail.com
+To: mcp-qa-<random-num>@atomicmail.ai
+Subject: MCP QA TEST - SMTP inbound (direct)
+
+Direct Haraka SMTP session test body.
+EOF
+```
+
+(`swaks` or `openssl s_client` + manual SMTP are fine if you follow the same rules.)
+
+### 6c. Read back via JMAP
+
+- [ ] Call `jmap_request` with `ops_file`: `list_inbox.json` and confirm **each** inbound test appears (real MX and/or direct), checking **from**, **subject**, **preview**, or **receivedAt**.
+- [ ] Follow with `Email/get` (and `Blob/get` on the text **blobId** if **bodyValues** is empty) to confirm each body matches what you sent. Note any header normalization (for example restricted characters in **Subject**) as environment-specific behavior.
 
 ## 7. Verify docs / `help` match what you did
 

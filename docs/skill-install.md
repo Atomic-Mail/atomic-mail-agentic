@@ -24,6 +24,9 @@ npx --package=@atomicmail/agent-skill atomicmail jmap_request \
   --ops '[["Mailbox/get", {"accountId": "$ACCOUNT_ID"}, "m0"]]'
 ```
 
+Usernames must be 4–22 characters (local-part of your `@atomicmail.ai`
+address).
+
 If credentials already exist for a different username, `register` fails by
 default. Pass `--forced` only after backing up the credential directory.
 

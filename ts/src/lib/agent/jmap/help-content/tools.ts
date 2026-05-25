@@ -8,6 +8,9 @@ export const helpTopicTools = `\
 **MCP input:** \`{ "username": string, "forced"?: boolean }\`  
 **Skill:** \`register --username NAME [--forced]\` (or \`--api-key KEY\`).
 
+Usernames must be 4–22 characters (local-part of your \`@atomicmail.ai\`
+address).
+
 Creates an inbox or returns the same \`{ inbox, accountId }\` when the
 username matches the stored inbox local-part. A **different** username
 fails by default to protect existing credentials. To replace credentials in the

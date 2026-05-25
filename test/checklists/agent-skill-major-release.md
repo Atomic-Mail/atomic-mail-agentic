@@ -34,6 +34,7 @@ CLI / AgentSkill entrypoint `atomicmail`. Derived from `docs/SKILL.md`, `docs/sk
 
 - [ ] **Path A (documented):** `atomicmail jmap_request --credentials-dir "$CRED_DIR" --ops-file send_mail_attachment.json` with full `--vars` including `TO`, `SUBJECT` **`SKILL QA TEST - attachment path A`**, and base64 attachment fields (`docs/SKILL.md` example; `Blob/upload` rules in shipped `help --topic jmap_cheatsheet`).
 - [ ] **Path B (RFC 8620 file upload):** `atomicmail jmap_request --credentials-dir "$CRED_DIR" --ops-file send_mail_blob_attachment.json --attachment /path/to/file --vars '{"TO":"sasha@atomicmail.ai","SUBJECT":"SKILL QA TEST - attachment path B",...}'` (verify against `atomicmail jmap_request --help` on the release build).
+- [ ] **Path C (large single file, ~1 MiB RFC 8620):** From a checkout of this repo, use fixture **`test/fixtures/checklist-large-attachment-1mb.bin`** (exactly **1 048 576** bytes; SHA-256 **`0e7476fa3598c70bc06c64bcccc1ae91667467962836998418ee1af05c298278`**). `atomicmail jmap_request --credentials-dir "$CRED_DIR" --ops-file send_mail_blob_attachment.json --attachment test/fixtures/checklist-large-attachment-1mb.bin --vars '{"TO":"sasha@atomicmail.ai","SUBJECT":"SKILL QA TEST - attachment 1mb","BODY":"See 1 MiB attachment."}'` (run from repo root, or pass an absolute path to the fixture). Confirm upload + send completes without timeout; recipient receives the full file (verify size or SHA-256).
 - [ ] Confirm attachment arrives correctly at the recipient.
 
 ## 5. Read inbox messages (including attachments and validity)
@@ -42,14 +43,47 @@ CLI / AgentSkill entrypoint `atomicmail`. Derived from `docs/SKILL.md`, `docs/sk
 - [ ] Follow with `Email/get` / `Blob/get` or RFC 8620 download via expanded URLs (same logical steps as the MCP checklist; build `--ops` or a small local JSON file with `$BLOB_ID` in `--vars` if needed).
 - [ ] Validate downloaded attachment bytes against the source file or a checksum.
 
-## 6. SMTP to the QA inbox, then fetch with the skill
+## 6. Inbound mail to the QA inbox, then fetch with the skill
 
-Exercises **inbound SMTP** (no JMAP on the send path) into the **same** mailbox you registered for this run, then **read it back** over JMAP with `atomicmail`. Use when your stack exposes a plain SMTP listener (for example Haraka on `<QA_SMTP_HOST>:25` with no auth).
+Exercises **inbound delivery** into the **same** mailbox you registered for this run, then **read it back** over JMAP with `atomicmail`. Run **both** paths below when your environment allows.
 
-- [ ] From `register` / `credentials.json`, determine the full mailbox address for **RCPT TO** (typically `inboxId` + `@` + inbox domain for that deployment).
-- [ ] Send via SMTP as if from another user (for example **curl**): `MAIL FROM` an unrelated address, `RCPT TO` that QA inbox (`skill-qa-<random-num>@atomicmail.ai`), minimal RFC 5322 `DATA` with **Subject:** **`SKILL QA TEST - SMTP inbound`** (plain body). Confirm the MTA accepts the message (for example `250` / queued id in the SMTP transcript).
-- [ ] `atomicmail jmap_request --credentials-dir "$CRED_DIR" --ops-file list_inbox.json` and confirm the new message appears (check **from**, **subject**, **preview**, or **receivedAt**).
-- [ ] Follow with `Email/get` and, if needed, `Blob/get` on the text part **blobId** to confirm the body matches what you injected. Note any header normalization (for example restricted characters in **Subject**) as environment-specific behavior.
+### 6a. Delivery from a real MX (production-style)
+
+- [ ] From `register` / `credentials.json`, note the full mailbox address (**RCPT TO** / **To:**), e.g. `skill-qa-<random-num>@atomicmail.ai`.
+- [ ] From a **real mailbox on a major provider** (Gmail, Outlook, etc. — not the QA credential dir), send one message **To:** that QA inbox with **Subject:** **`SKILL QA TEST - SMTP inbound (real MX)`** and a plain body you can recognize later.
+- [ ] Confirm the provider accepted the send (sent folder / no bounce within a few minutes).
+
+### 6b. Direct SMTP session to Haraka (lab / staging)
+
+Use when your stack exposes a plain SMTP listener (Haraka on `<QA_SMTP_HOST>:25`, often no auth). Haraka runs the **`early_talker`** plugin against bots — the client must behave like a normal MTA:
+
+- **Wait for the `220` banner** before sending any command (do not pipe `EHLO`/`MAIL` before the server speaks).
+- **Use a FQDN for `EHLO`/`HELO`** (e.g. `mail.gmail.com`), not a bare hostname like `My-MacBook`.
+- **If you get `554`, do not rapid-retry** — karma may keep you in the bad tier (~15 minutes).
+
+- [ ] Connect to `<QA_SMTP_HOST>:25` and complete a proper session: `220` → `EHLO <fqdn>` → `MAIL FROM:<sender@example.com>` (use a real-looking address, e.g. `you@gmail.com`) → `RCPT TO:` the QA inbox → `DATA` → minimal RFC 5322 message with **Subject:** **`SKILL QA TEST - SMTP inbound (direct)`** → `.` → `QUIT`. Confirm `250` (or queued id) in the transcript — not `554`.
+- [ ] Example with **curl** (reads the banner before `EHLO`; set `--local-hostname` to your FQDN):
+
+```bash
+curl -v --url "smtp://${QA_SMTP_HOST}:25" \
+  --local-hostname mail.gmail.com \
+  --mail-from "you@gmail.com" \
+  --mail-rcpt "skill-qa-<random-num>@atomicmail.ai" \
+  --upload-file - <<'EOF'
+From: you@gmail.com
+To: skill-qa-<random-num>@atomicmail.ai
+Subject: SKILL QA TEST - SMTP inbound (direct)
+
+Direct Haraka SMTP session test body.
+EOF
+```
+
+(`swaks` or `openssl s_client` + manual SMTP are fine if you follow the same rules.)
+
+### 6c. Read back via JMAP
+
+- [ ] `atomicmail jmap_request --credentials-dir "$CRED_DIR" --ops-file list_inbox.json` and confirm **each** inbound test appears (real MX and/or direct), checking **from**, **subject**, **preview**, or **receivedAt**.
+- [ ] Follow with `Email/get` and, if needed, `Blob/get` on the text part **blobId** to confirm each body matches what you sent. Note any header normalization (for example restricted characters in **Subject**) as environment-specific behavior.
 
 ## 7. Verify docs / `help` match what you did
 

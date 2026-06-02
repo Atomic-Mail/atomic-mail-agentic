@@ -21,7 +21,7 @@ const INSTRUCTIONS = `\
 Atomic Mail MCP — programmable inbox for AI agents.
 
 WORKFLOW
-  1. Call register with a desired username (4–22 characters; PoW signup; credentials on disk).
+  1. Call register with a desired username (5–21 characters; PoW signup; credentials on disk).
   2. Call jmap_request with JMAP method calls (inline ops JSON or ops_file preset).
      $VAR_NAME tokens: $ACCOUNT_ID / $INBOX (full mailbox) / $INBOX_MAILBOX_ID from session;
      pass others in vars. Optional attachments: local paths → RFC 8620 upload →

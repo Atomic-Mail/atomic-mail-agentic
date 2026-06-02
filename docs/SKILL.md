@@ -44,7 +44,7 @@ npx --package=@atomicmail/agent-skill atomicmail register \
 Writes `credentials.json`, `session.jwt`, `capability.jwt`. Prints JSON
 including `inbox` and `accountId`.
 
-Usernames must be 4–22 characters (local-part of your `@atomicmail.ai`
+Usernames must be 5–21 characters (local-part of your `@atomicmail.ai`
 address).
 
 If credentials already exist for a different username, register fails by

@@ -15,7 +15,7 @@ export function registerRegisterTool(
     {
       title: "Register an Atomic Mail inbox",
       description:
-        "PoW signup; writes credentials. Usernames are 4–22 characters. " +
+        "PoW signup; writes credentials. Usernames are 5–21 characters. " +
         "Idempotent for the same username " +
         "and stored inbox; a different username is rejected unless " +
         "`forced: true` is provided. " +
@@ -23,9 +23,10 @@ export function registerRegisterTool(
       inputSchema: z.object({
         username: z
           .string()
-          .min(1)
+          .min(5)
+          .max(21)
           .describe(
-            "Desired username (4–22 characters; local-part of your @atomicmail.ai address).",
+            "Desired username (5–21 characters; local-part of your @atomicmail.ai address).",
           ),
         forced: z
           .boolean()

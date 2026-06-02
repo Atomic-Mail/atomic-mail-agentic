@@ -29,7 +29,7 @@ Your MCP host spawns this process; see configuration below.
 
 | Tool           | Description                                                                                                                                                                                                       |
 | -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `register`     | PoW signup; persists credentials. Usernames are 4–22 characters (local-part of your `@atomicmail.ai` address). Idempotent when username matches inbox. A different username is rejected unless `forced: true` is passed. |
+| `register`     | PoW signup; persists credentials. Usernames are 5–21 characters (local-part of your `@atomicmail.ai` address). Idempotent when username matches inbox. A different username is rejected unless `forced: true` is passed. |
 | `jmap_request` | JMAP batch via `ops` or `ops_file`. Uppercase `$VAR_NAME` tokens are substituted (`$ACCOUNT_ID` / `$INBOX` / `$INBOX_MAILBOX_ID` / `$UPLOAD_URL` / `$DOWNLOAD_URL` from session; others via optional `vars` map). |
 | `help`         | Built-in docs (`topic` optional); use `topic: "readme"` for the published package `README.md`.                                                                                                                    |
 

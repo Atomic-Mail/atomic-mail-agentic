@@ -205,6 +205,9 @@ export class AgentSession {
     options: RegisterOptions = {},
   ): Promise<RegisterResult> {
     const want = normalizeUsername(username);
+    if (want.length < 5 || want.length > 21) {
+      throw new Error("Username must be 5–21 characters.");
+    }
 
     if (this.hasApiKey && !this.inboxId) {
       throw new Error(

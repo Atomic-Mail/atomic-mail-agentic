@@ -11,7 +11,7 @@ manage mail over JMAP (RFC 8620 + RFC 8621).
 Three operations only:
 
 1. **register** — Proof-of-work signup (or idempotent replay when the same
-   username matches the inbox already on disk). Usernames are 4–22 characters
+   username matches the inbox already on disk). Usernames are 5–21 characters
    (local-part of \`@atomicmail.ai\`). When a different username is
    requested and credentials already exist, register fails unless forced
    explicitly (\`forced: true\` in MCP / \`--forced\` in AgentSkill). Persists
@@ -32,7 +32,7 @@ Three operations only:
 
 ## Typical workflow
 
-1. \`register\` with a username (4–22 characters).
+1. \`register\` with a username (5–21 characters).
 2. \`jmap_request\` with JMAP method calls (presets may use \`$VAR_NAME\`; pass
    custom values in \`vars\` / \`--vars\`).
 3. If stuck, read error hints and call \`help\`.

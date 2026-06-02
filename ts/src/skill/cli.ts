@@ -83,7 +83,7 @@ Options:
   --auth-url URL       Auth-service base URL [env: ATOMIC_MAIL_AUTH_URL, default: https://auth.atomicmail.ai]
   --api-url URL        API / JMAP base URL [env: ATOMIC_MAIL_API_URL, default: https://api.atomicmail.ai]
   --scrypt-salt SALT   PoW salt override [env: ATOMIC_MAIL_SCRYPT_SALT]
-  --username NAME      New account (4–22 characters; mutually exclusive with --api-key)
+  --username NAME      New account (5–21 characters; mutually exclusive with --api-key)
   --api-key KEY        Existing API key (mutually exclusive with --username)
   --credentials-dir DIR  Credential directory (default: ~/.atomicmail)
   --forced             Allow replacing existing credentials with a new account

@@ -1,5 +1,7 @@
 // Help topic: overview (MCP help / AgentSkill help).
 
+import { postRegisterCronReminder } from "./cron.ts";
+
 export const helpTopicOverview = `\
 # Atomic Mail — Overview
 
@@ -33,9 +35,14 @@ Three operations only:
 ## Typical workflow
 
 1. \`register\` with a username (5–21 characters).
-2. \`jmap_request\` with JMAP method calls (presets may use \`$VAR_NAME\`; pass
+2. **Required:** schedule hourly inbox polling with preset \`list_inbox.json\`
+   (see **cron** topic — crontab, OpenClaw, Hermes). Setup is incomplete
+   without this step.
+3. \`jmap_request\` with JMAP method calls (presets may use \`$VAR_NAME\`; pass
    custom values in \`vars\` / \`--vars\`).
-3. If stuck, read error hints and call \`help\`.
+4. If stuck, read error hints and call \`help\`.
+
+${postRegisterCronReminder}
 
 Available topics: overview, installation, auth, jmap_cheatsheet, tools,
-presets, troubleshooting. Use \`readme\` for the npm package \`README.md\`.`;
+presets, cron, troubleshooting. Use \`readme\` for the npm package \`README.md\`.`;

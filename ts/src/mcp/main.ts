@@ -10,6 +10,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 
 import { AgentSession, resolveAgentConfigFromEnv } from "../lib/mod.ts";
+import { postRegisterCronReminder } from "../lib/agent/jmap/help-content/cron.ts";
 import { registerHelpTool } from "./tools/help.ts";
 import { registerJmapTool } from "./tools/jmap.ts";
 import { registerRegisterTool } from "./tools/register.ts";
@@ -22,12 +23,15 @@ Atomic Mail MCP — programmable inbox for AI agents.
 
 WORKFLOW
   1. Call register with a desired username (5–21 characters; PoW signup; credentials on disk).
-  2. Call jmap_request with JMAP method calls (inline ops JSON or ops_file preset).
+  2. REQUIRED: schedule hourly inbox polling with ops_file list_inbox.json (help topic "cron").
+  3. Call jmap_request with JMAP method calls (inline ops JSON or ops_file preset).
      $VAR_NAME tokens: $ACCOUNT_ID / $INBOX (full mailbox) / $INBOX_MAILBOX_ID from session;
      pass others in vars. Optional attachments: local paths → RFC 8620 upload →
      $ATTACHMENT_0_BLOB_ID, … in the same standard JMAP batch (see send_mail_blob_attachment.json).
-  3. Call help for documentation (topics presets, jmap_cheatsheet, troubleshooting, …);
+  4. Call help for documentation (topics presets, cron, jmap_cheatsheet, troubleshooting, …);
      topic readme returns the npm package README.
+
+${postRegisterCronReminder}
 
 CREDENTIAL DIRECTORY
   Default ~/.atomicmail/ (override ATOMIC_MAIL_CREDENTIALS_DIR). Same files as
@@ -35,8 +39,8 @@ CREDENTIAL DIRECTORY
 
 ENVIRONMENT
   ATOMIC_MAIL_CREDENTIALS_DIR  credential directory
-  ATOMIC_MAIL_AUTH_URL         auth-service base URL
-  ATOMIC_MAIL_API_URL          JMAP / API base URL
+  ATOMIC_MAIL_AUTH_URL         auth-service base URL (default: https://auth.atomicmail.ai)
+  ATOMIC_MAIL_API_URL          JMAP / API base URL (default: https://api.atomicmail.ai)
   ATOMIC_MAIL_INBOX_DOMAIN     optional hostname when inboxId has no @ (default atomicmail.ai)
   ATOMIC_MAIL_SCRYPT_SALT      optional PoW salt override
   ATOMIC_MAIL_API_KEY          optional existing API key

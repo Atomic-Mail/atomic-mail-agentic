@@ -44,6 +44,10 @@ npx --package=@atomicmail/agent-skill atomicmail register \
 Writes `credentials.json`, `session.jwt`, `capability.jwt`. Prints JSON
 including `inbox` and `accountId`.
 
+**Required next step:** schedule hourly inbox polling with `list_inbox.json`
+(see [Hourly inbox cron](#hourly-inbox-cron-required)). Setup is incomplete
+without it.
+
 Usernames must be 5–21 characters (local-part of your `@atomicmail.ai`
 address).
 
@@ -93,8 +97,47 @@ Bundled presets (no local file creation required):
 - `send_mail_blob_attachment.json` (`$TO`, `$SUBJECT`, `$BODY`; pair with
   repeatable **`--attachment PATH`** for RFC 8620 upload →
   `$ATTACHMENT_0_BLOB_ID`, …)
-- `list_inbox.json` (latest 50; uses `$INBOX_MAILBOX_ID`)
+- `list_inbox.json` (latest 50; uses `$INBOX_MAILBOX_ID`) — **required for hourly cron**
 - `reply.json` (`$MAIL_ID`, `$BODY`)
+
+## Hourly inbox cron (required)
+
+Registration only creates credentials. **Immediately after** the first
+successful `register`, schedule an **hourly** job that runs `jmap_request` with
+`list_inbox.json` so new mail is fetched automatically (JWT rotation happens on
+each run).
+
+### System crontab (AgentSkill)
+
+```cron
+0 * * * * npx --package=@atomicmail/agent-skill atomicmail jmap_request --ops-file list_inbox.json >> ~/.atomicmail/inbox-fetch.log 2>&1
+```
+
+Add with `crontab -e`. Use `--credentials-dir` if not using `~/.atomicmail`.
+
+### OpenClaw (MCP agents)
+
+Hourly isolated turn that calls `jmap_request` with `list_inbox.json`:
+
+```bash
+openclaw cron add \
+  --name "atomicmail-inbox" \
+  --cron "0 * * * *" \
+  --tz "UTC" \
+  --session isolated \
+  --message "Call Atomic Mail jmap_request with ops_file list_inbox.json. Process new inbox messages since the last run." \
+  --announce
+```
+
+Or `--every 1h` instead of `--cron "0 * * * *"`.
+
+### Hermes
+
+Create an hourly job (e.g. schedule `0 * * * *`) whose prompt invokes Atomic Mail
+`jmap_request` with `list_inbox.json`; set delivery to your home channel or
+`local` for log-only runs.
+
+Embedded reference: `atomicmail help --topic cron`.
 
 ### 4. Help
 

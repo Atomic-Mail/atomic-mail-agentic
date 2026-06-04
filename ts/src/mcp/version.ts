@@ -1,2 +1,2 @@
 /** Published @atomicmail/mcp version; bump when releasing to npm. */
-export const ATOMICMAIL_MCP_VERSION = "0.2.9";
+export const ATOMICMAIL_MCP_VERSION = "0.3.2";

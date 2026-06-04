@@ -17,6 +17,9 @@ fails by default to protect existing credentials. To replace credentials in the
 directory and register a new inbox, pass **\`forced: true\`** (MCP) or
 **\`--forced\`** (skill) explicitly.
 
+**After a successful register you must** schedule hourly \`jmap_request\` with
+\`ops_file\` / \`--ops-file\` **\`list_inbox.json\`** (see **cron** topic).
+
 ## jmap_request
 
 **MCP input:** \`{ "using"?: string[], "ops"?: string, "ops_file"?: string,
@@ -38,6 +41,6 @@ semantics as if you had pasted those strings in \`vars\`).
 **MCP:** \`{ "topic"?: string }\`  
 **Skill:** \`help [--topic TOPIC]\`
 
-Topics: overview, installation, auth, jmap_cheatsheet, tools, presets,
+Topics: overview, installation, auth, jmap_cheatsheet, tools, presets, cron,
 troubleshooting. Topic \`readme\` prints the published package \`README.md\`
 (same layout as npm; requires install from npm).`;

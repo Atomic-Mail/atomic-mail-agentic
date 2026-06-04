@@ -4,7 +4,11 @@ import { homedir } from "node:os";
 import process from "node:process";
 import { resolve } from "node:path";
 
-import { DEFAULT_POW_SCRYPT_SALT_HEX } from "../../core/consts.ts";
+import {
+  DEFAULT_API_URL,
+  DEFAULT_AUTH_URL,
+  DEFAULT_POW_SCRYPT_SALT_HEX,
+} from "../../core/consts.ts";
 import {
   defaultFilesFromOutDir,
   type SkillFiles,
@@ -15,7 +19,7 @@ export type ConfigSource =
   | "credentials-file"
   | "env"
   | "mixed"
-  | "incomplete";
+  | "defaults";
 
 export interface ResolvedAgentConfig {
   authUrl: string;
@@ -58,7 +62,7 @@ export function expandCredentialDirInput(dir?: string): string {
 
 /**
  * Merge credentials.json with ATOMIC_MAIL_* env (env wins per field).
- * authUrl and apiUrl must resolve from at least one source.
+ * authUrl and apiUrl fall back to production defaults when unset.
  */
 export async function resolveAgentConfigFromEnv(): Promise<
   ResolvedAgentConfig
@@ -74,25 +78,12 @@ export async function resolveAgentConfigFromEnv(): Promise<
   const envSalt = env.ATOMIC_MAIL_SCRYPT_SALT;
   const envApiKey = env.ATOMIC_MAIL_API_KEY;
 
-  const authUrl = envAuthUrl ?? fileCreds?.authUrl;
-  const apiUrl = envApiUrl ?? fileCreds?.apiUrl;
+  const authUrl = envAuthUrl ?? fileCreds?.authUrl ?? DEFAULT_AUTH_URL;
+  const apiUrl = envApiUrl ?? fileCreds?.apiUrl ?? DEFAULT_API_URL;
   const scryptSalt = envSalt ?? fileCreds?.scryptSalt ??
     DEFAULT_POW_SCRYPT_SALT_HEX;
   const apiKey = envApiKey ?? fileCreds?.apiKey;
   const inboxId = fileCreds?.inboxId;
-
-  const missing: string[] = [];
-  if (!authUrl) missing.push("ATOMIC_MAIL_AUTH_URL");
-  if (!apiUrl) missing.push("ATOMIC_MAIL_API_URL");
-
-  if (missing.length > 0) {
-    throw new Error(
-      `Missing required configuration: ${missing.join(", ")}. ` +
-        `Provide these via environment variables, or place a populated ` +
-        `credentials.json in '${credentialDir}' (run register first, or set ` +
-        `ATOMIC_MAIL_CREDENTIALS_DIR).`,
-    );
-  }
 
   const usingFile = fileCreds !== undefined;
   const usingEnv = !!(envAuthUrl || envApiUrl || envSalt || envApiKey);
@@ -102,11 +93,11 @@ export async function resolveAgentConfigFromEnv(): Promise<
     ? "credentials-file"
     : usingEnv
     ? "env"
-    : "incomplete";
+    : "defaults";
 
   return {
-    authUrl: authUrl!.replace(/\/+$/, ""),
-    apiUrl: apiUrl!.replace(/\/+$/, ""),
+    authUrl: authUrl.replace(/\/+$/, ""),
+    apiUrl: apiUrl.replace(/\/+$/, ""),
     scryptSalt: scryptSalt!,
     apiKey,
     inboxId,

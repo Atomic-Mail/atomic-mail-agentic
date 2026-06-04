@@ -25,6 +25,12 @@ npx --package=@atomicmail/agent-skill atomicmail jmap_request \\
 npx --package=@atomicmail/agent-skill atomicmail help
 \`\`\`
 
+## Required: hourly inbox fetch
+
+After \`register\`, schedule **hourly** polling with \`list_inbox.json\` so new
+mail is retrieved automatically. See the **cron** help topic for crontab,
+OpenClaw, and Hermes examples.
+
 ## Shared credentials
 
 MCP and the skill use the same directory layout (default \`~/.atomicmail/\`):

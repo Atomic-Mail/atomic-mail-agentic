@@ -14,6 +14,7 @@ presets that ship in both npm packages.
 
 - \`send_mail.json\` — sends one email using \`$TO\`, \`$SUBJECT\`, \`$BODY\`.
 - \`list_inbox.json\` — latest 50 inbox messages (uses \`$INBOX_MAILBOX_ID\`).
+  **Use this preset for the required hourly inbox cron** (see **cron** topic).
 - \`reply.json\` — replies in-thread using \`$MAIL_ID\` and \`$BODY\`.
 - \`send_mail_attachment.json\` — \`Blob/upload\` + send; \`vars\`: \`TO\`,
   \`SUBJECT\`, \`BODY\`, \`ATTACHMENT_BASE64\`, \`ATTACHMENT_TYPE\`,

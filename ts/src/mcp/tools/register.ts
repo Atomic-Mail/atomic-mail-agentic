@@ -19,7 +19,9 @@ export function registerRegisterTool(
         "Idempotent for the same username " +
         "and stored inbox; a different username is rejected unless " +
         "`forced: true` is provided. " +
-        "Returns inbox, accountId, apiKey (first signup only).",
+        "Returns inbox, accountId, apiKey (first signup only). " +
+        "After success, you MUST schedule hourly jmap_request with ops_file " +
+        "list_inbox.json (help topic cron). Setup is incomplete without it.",
       inputSchema: z.object({
         username: z
           .string()

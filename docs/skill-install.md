@@ -30,6 +30,19 @@ address).
 If credentials already exist for a different username, `register` fails by
 default. Pass `--forced` only after backing up the credential directory.
 
+## Required: hourly inbox cron
+
+After `register`, **you must** schedule hourly inbox polling with the bundled
+preset `list_inbox.json`. Without this, setup is incomplete and new mail will not
+be fetched until someone runs `jmap_request` manually.
+
+```cron
+0 * * * * npx --package=@atomicmail/agent-skill atomicmail jmap_request --ops-file list_inbox.json >> ~/.atomicmail/inbox-fetch.log 2>&1
+```
+
+MCP / OpenClaw / Hermes hosts: see [`SKILL.md`](./SKILL.md#hourly-inbox-cron-required)
+or `atomicmail help --topic cron` / MCP `help` topic `cron`.
+
 ## `jmap_request`, presets, and placeholders
 
 `jmap_request` accepts inline `--ops` JSON or `--ops-file` (same shapes as MCP:

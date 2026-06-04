@@ -5,6 +5,8 @@ import { parseArgs } from "node:util";
 
 import {
   AgentSession,
+  DEFAULT_API_URL,
+  DEFAULT_AUTH_URL,
   DEFAULT_JMAP_USING,
   DEFAULT_POW_SCRYPT_SALT_HEX,
   defaultFilesFromOutDir,
@@ -32,7 +34,7 @@ Commands:
 Examples:
   atomicmail register --username alice
   atomicmail register --api-key UUID
-  atomicmail jmap_request --credentials-dir ./.atomic-mail --ops-file fetch.json
+  atomicmail jmap_request --ops-file list_inbox.json
   atomicmail jmap_request --credentials-dir ./.atomic-mail --ops-file send.json --vars '{"TO":"a@b.com","SUBJECT":"Hi"}'
   atomicmail jmap_request --ops-file send_mail_blob_attachment.json --attachment ./notes.txt --vars '{"TO":"self@example.com","SUBJECT":"File","BODY":"See attach."}'
   atomicmail help --topic presets
@@ -89,15 +91,19 @@ Options:
   --forced             Allow replacing existing credentials with a new account
   --quiet              Less stderr output
   --help, -h           This message
+
+After a successful register you MUST schedule hourly inbox polling with
+list_inbox.json (atomicmail help --topic cron). Example crontab line:
+  0 * * * * npx --package=@atomicmail/agent-skill atomicmail jmap_request --ops-file list_inbox.json >> ~/.atomicmail/inbox-fetch.log 2>&1
 `);
     process.exit(0);
   }
 
   const env = process.env;
   const authUrl = (parsed.values["auth-url"] as string | undefined) ??
-    env.ATOMIC_MAIL_AUTH_URL ?? "https://auth.atomicmail.ai";
+    env.ATOMIC_MAIL_AUTH_URL ?? DEFAULT_AUTH_URL;
   const apiUrl = (parsed.values["api-url"] as string | undefined) ??
-    env.ATOMIC_MAIL_API_URL ?? "https://api.atomicmail.ai";
+    env.ATOMIC_MAIL_API_URL ?? DEFAULT_API_URL;
   const scryptSalt = (parsed.values["scrypt-salt"] as string | undefined) ??
     env.ATOMIC_MAIL_SCRYPT_SALT ?? DEFAULT_POW_SCRYPT_SALT_HEX;
   const dir = parsed.values["credentials-dir"] as string | undefined;

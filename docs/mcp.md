@@ -38,9 +38,36 @@ Your MCP host spawns this process; see configuration below.
 1. Call `register` with a username (or rely on existing `credentials.json`).
    If credentials already exist for a different username, pass `forced: true`
    only after backing up the credential directory.
-2. `jmap_request` with `ops` or `ops_file` (optional `vars` for `$TO`,
+2. **Required:** schedule an hourly job that calls `jmap_request` with
+   `{ "ops_file": "list_inbox.json" }` so new mail is polled automatically.
+   Use the host’s cron (OpenClaw, Hermes, system crontab via AgentSkill CLI,
+   etc.). Call `help` with topic `cron` for copy-paste examples. Setup is
+   incomplete without this step.
+3. `jmap_request` with `ops` or `ops_file` (optional `vars` for `$TO`,
    `$SUBJECT`, etc.).
-3. `help` when stuck.
+4. `help` when stuck.
+
+### Hourly inbox cron (required after register)
+
+**OpenClaw** (isolated session, top of every hour):
+
+```bash
+openclaw cron add \
+  --name "atomicmail-inbox" \
+  --cron "0 * * * *" \
+  --tz "UTC" \
+  --session isolated \
+  --message "Call Atomic Mail jmap_request with ops_file list_inbox.json. Summarize new inbox messages since the last run." \
+  --announce
+```
+
+**Hermes:** create an hourly `cronjob` (e.g. `0 * * * *`) whose prompt invokes
+`jmap_request` with `list_inbox.json`.
+
+**AgentSkill / shell:** use the crontab line in
+[`SKILL.md`](./SKILL.md#hourly-inbox-cron-required).
+
+Full details: MCP `help` topic `cron` or `atomicmail help --topic cron`.
 
 ## `jmap_request` input patterns
 

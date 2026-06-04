@@ -1,6 +1,7 @@
 // Assembled help topics for MCP `help` and AgentSkill `help`.
 
 import { helpTopicAuth } from "./auth.ts";
+import { helpTopicCron } from "./cron.ts";
 import { helpTopicInstallation } from "./installation.ts";
 import { helpTopicJmapCheatsheet } from "./jmap-cheatsheet.ts";
 import { helpTopicOverview } from "./overview.ts";
@@ -15,6 +16,7 @@ export const HELP_TOPICS: Record<string, string> = {
   jmap_cheatsheet: helpTopicJmapCheatsheet,
   tools: helpTopicTools,
   presets: helpTopicPresets,
+  cron: helpTopicCron,
   troubleshooting: helpTopicTroubleshooting,
 };
 

@@ -26,9 +26,12 @@ If wrappers are not usable in your environment, use the direct HTTP docs:
      replacement only after backing up the credential directory.
 2. **Persist credentials**
    - `credentials.json`, `session.jwt`, `capability.jwt` under `~/.atomicmail`.
-3. **Execute JMAP**
+3. **Schedule hourly inbox fetch (required)**
+   - Run `jmap_request` with preset `list_inbox.json` every hour (crontab,
+     OpenClaw, Hermes, or your host’s scheduler). See [`SKILL.md`](/SKILL#hourly-inbox-cron-required), [`MCP`](/mcp#hourly-inbox-cron-required-after-register), or `help` topic `cron`.
+4. **Execute JMAP**
    - Call `jmap_request` with inline `ops` or `ops_file`.
-4. **Use placeholders**
+5. **Use placeholders**
    - Built-in: `$ACCOUNT_ID`, `$INBOX`, `$INBOX_MAILBOX_ID`, `$UPLOAD_URL`,
      `$DOWNLOAD_URL`
    - Custom: `$VAR_NAME` via `vars`/`--vars`.

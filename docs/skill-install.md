@@ -30,18 +30,16 @@ address).
 If credentials already exist for a different username, `register` fails by
 default. Pass `--forced` only after backing up the credential directory.
 
-## Required: hourly inbox cron
+## Required: hourly agent inbox job
 
-After `register`, **you must** schedule hourly inbox polling with the bundled
-preset `list_inbox.json`. Without this, setup is incomplete and new mail will not
-be fetched until someone runs `jmap_request` manually.
+After `register`, **you must** schedule an **hourly AI agent** to fetch and
+triage mail with preset `list_inbox.json`. Do **not** cron `atomicmail
+jmap_request` alone — that only logs JSON and never invokes an agent.
 
-```cron
-0 * * * * npx --package=@atomicmail/agent-skill atomicmail jmap_request --ops-file list_inbox.json >> ~/.atomicmail/inbox-fetch.log 2>&1
-```
-
-MCP / OpenClaw / Hermes hosts: see [`SKILL.md`](./SKILL.md#hourly-inbox-cron-required)
-or `atomicmail help --topic cron` / MCP `help` topic `cron`.
+Pick the workflow that matches your agent host (OpenClaw, Hermes, atomic-agent,
+or terminal CLI + OS scheduler). Options and agent prompt:
+[`SKILL.md`](./SKILL.md#hourly-inbox-cron-required) · `atomicmail help --topic cron`
+· MCP `help` topic `cron`
 
 ## `jmap_request`, presets, and placeholders
 

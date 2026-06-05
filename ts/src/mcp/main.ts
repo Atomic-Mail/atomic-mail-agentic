@@ -23,7 +23,7 @@ Atomic Mail MCP — programmable inbox for AI agents.
 
 WORKFLOW
   1. Call register with a desired username (5–21 characters; PoW signup; credentials on disk).
-  2. REQUIRED: schedule hourly inbox polling with ops_file list_inbox.json (help topic "cron").
+  2. REQUIRED: schedule hourly AGENT inbox job (ops_file list_inbox.json inside agent prompt; help topic "cron"). Do NOT cron atomicmail jmap_request alone.
   3. Call jmap_request with JMAP method calls (inline ops JSON or ops_file preset).
      $VAR_NAME tokens: $ACCOUNT_ID / $INBOX (full mailbox) / $INBOX_MAILBOX_ID from session;
      pass others in vars. Optional attachments: local paths → RFC 8620 upload →

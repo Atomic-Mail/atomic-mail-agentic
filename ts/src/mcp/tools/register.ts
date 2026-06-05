@@ -20,8 +20,9 @@ export function registerRegisterTool(
         "and stored inbox; a different username is rejected unless " +
         "`forced: true` is provided. " +
         "Returns inbox, accountId, apiKey (first signup only). " +
-        "After success, you MUST schedule hourly jmap_request with ops_file " +
-        "list_inbox.json (help topic cron). Setup is incomplete without it.",
+        "After success, you MUST schedule an hourly AGENT job that fetches " +
+        "inbox mail via ops_file list_inbox.json (help topic cron). Do NOT " +
+        "cron atomicmail jmap_request alone. Setup is incomplete without it.",
       inputSchema: z.object({
         username: z
           .string()

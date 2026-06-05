@@ -38,36 +38,29 @@ Your MCP host spawns this process; see configuration below.
 1. Call `register` with a username (or rely on existing `credentials.json`).
    If credentials already exist for a different username, pass `forced: true`
    only after backing up the credential directory.
-2. **Required:** schedule an hourly job that calls `jmap_request` with
-   `{ "ops_file": "list_inbox.json" }` so new mail is polled automatically.
-   Use the host’s cron (OpenClaw, Hermes, system crontab via AgentSkill CLI,
-   etc.). Call `help` with topic `cron` for copy-paste examples. Setup is
-   incomplete without this step.
+2. **Required:** schedule an hourly **agent** job whose prompt fetches inbox
+   mail via `{ "ops_file": "list_inbox.json" }`. Use the host’s cron (OpenClaw,
+   Hermes, atomic-agent) or OS scheduler for terminal agents (Claude, Pi,
+   Cursor). Do **not** cron `atomicmail jmap_request` alone. Call `help` with
+   topic `cron` for examples. Setup is incomplete without this step.
 3. `jmap_request` with `ops` or `ops_file` (optional `vars` for `$TO`,
    `$SUBJECT`, etc.).
 4. `help` when stuck.
 
 ### Hourly inbox cron (required after register)
 
-**OpenClaw** (isolated session, top of every hour):
+Invoke a **full agent turn** so you can reply, forward, or follow up — not a
+raw CLI log or headless one-shot.
 
-```bash
-openclaw cron add \
-  --name "atomicmail-inbox" \
-  --cron "0 * * * *" \
-  --tz "UTC" \
-  --session isolated \
-  --message "Call Atomic Mail jmap_request with ops_file list_inbox.json. Summarize new inbox messages since the last run." \
-  --announce
-```
+| Setup | Workflow |
+| --- | --- |
+| OpenClaw | `openclaw cron add` + `--announce` |
+| Hermes | `hermes cron create` + `--deliver` |
+| Atomic Bot | OpenClaw or Hermes |
+| atomic-agent | `atomic-agent task create --cron` |
+| Terminal CLI | OS scheduler + interactive launch (`claude "…"`, `pi "…"`, …) |
 
-**Hermes:** create an hourly `cronjob` (e.g. `0 * * * *`) whose prompt invokes
-`jmap_request` with `list_inbox.json`.
-
-**AgentSkill / shell:** use the crontab line in
-[`SKILL.md`](./SKILL.md#hourly-inbox-cron-required).
-
-Full details: MCP `help` topic `cron` or `atomicmail help --topic cron`.
+Workflow options and agent prompt: MCP `help` topic `cron`, [`SKILL.md`](./SKILL.md#hourly-inbox-cron-required), or `atomicmail help --topic cron`.
 
 ## `jmap_request` input patterns
 

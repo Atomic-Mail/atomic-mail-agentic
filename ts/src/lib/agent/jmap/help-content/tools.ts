@@ -17,8 +17,9 @@ fails by default to protect existing credentials. To replace credentials in the
 directory and register a new inbox, pass **\`forced: true\`** (MCP) or
 **\`--forced\`** (skill) explicitly.
 
-**After a successful register you must** schedule hourly \`jmap_request\` with
-\`ops_file\` / \`--ops-file\` **\`list_inbox.json\`** (see **cron** topic).
+**After a successful register you must** schedule an hourly **agent** job that
+calls \`jmap_request\` / \`--ops-file\` **\`list_inbox.json\`** (see **cron**
+topic — do not cron the CLI alone).
 
 ## jmap_request
 

@@ -44,9 +44,10 @@ npx --package=@atomicmail/agent-skill atomicmail register \
 Writes `credentials.json`, `session.jwt`, `capability.jwt`. Prints JSON
 including `inbox` and `accountId`.
 
-**Required next step:** schedule hourly inbox polling with `list_inbox.json`
-(see [Hourly inbox cron](#hourly-inbox-cron-required)). Setup is incomplete
-without it.
+**Required next step:** schedule an hourly **agent** job that fetches inbox mail
+via `list_inbox.json` (see [Hourly inbox cron](#hourly-inbox-cron-required)).
+Do not cron `atomicmail jmap_request` alone. Setup is incomplete without the
+agent job.
 
 Usernames must be 5–21 characters (local-part of your `@atomicmail.ai`
 address).
@@ -97,47 +98,54 @@ Bundled presets (no local file creation required):
 - `send_mail_blob_attachment.json` (`$TO`, `$SUBJECT`, `$BODY`; pair with
   repeatable **`--attachment PATH`** for RFC 8620 upload →
   `$ATTACHMENT_0_BLOB_ID`, …)
-- `list_inbox.json` (latest 50; uses `$INBOX_MAILBOX_ID`) — **required for hourly cron**
+- `list_inbox.json` (latest 50; uses `$INBOX_MAILBOX_ID`) — **used by the hourly agent inbox job**
 - `reply.json` (`$MAIL_ID`, `$BODY`)
 
 ## Hourly inbox cron (required)
 
 Registration only creates credentials. **Immediately after** the first
-successful `register`, schedule an **hourly** job that runs `jmap_request` with
-`list_inbox.json` so new mail is fetched automatically (JWT rotation happens on
-each run).
+successful `register`, schedule an **hourly job that invokes your AI agent** to
+fetch and triage mail (`list_inbox.json` inside the agent prompt). You need a
+conversation where you can reply, forward, or ask follow-ups — not a log file.
 
-### System crontab (AgentSkill)
+**Do not** cron `atomicmail jmap_request` alone (no agent). **Do not** use
+headless one-shot CLIs (`claude -p`, `pi -p`, `codex exec`) if you want to
+continue the thread.
 
-```cron
-0 * * * * npx --package=@atomicmail/agent-skill atomicmail jmap_request --ops-file list_inbox.json >> ~/.atomicmail/inbox-fetch.log 2>&1
+### Pick a workflow
+
+| Your setup | Approach |
+| --- | --- |
+| OpenClaw | `openclaw cron add` with `--announce` |
+| Hermes | `hermes cron create` or `/cron` with `--deliver` |
+| Atomic Bot | Same as OpenClaw or Hermes |
+| atomic-agent | `atomic-agent task create --cron` |
+| Terminal CLI (Claude, Pi, Cursor, …) | OS scheduler + interactive agent launch |
+
+Full options, agent prompt, and patterns: `atomicmail help --topic cron` or MCP
+`help` topic `cron`.
+
+### Agent prompt (all workflows)
+
+```text
+Use Atomic Mail to fetch my inbox (MCP jmap_request with ops_file list_inbox.json, or atomicmail jmap_request --ops-file list_inbox.json). Summarize new messages, highlight what needs a reply, and stay available — I may ask you to reply, forward, search, or dig into something important.
 ```
 
-Add with `crontab -e`. Use `--credentials-dir` if not using `~/.atomicmail`.
+### Built-in cron examples
 
-### OpenClaw (MCP agents)
+**OpenClaw** — [cron docs](https://docs.openclaw.ai/automation/cron-jobs): isolated
+session, `--announce` for delivery.
 
-Hourly isolated turn that calls `jmap_request` with `list_inbox.json`:
+**Hermes** — [cron docs](https://hermes-agent.nousresearch.com/docs/user-guide/features/cron):
+`--deliver origin` (or `telegram`, `discord`, `email`, …); not `--no-agent`.
 
-```bash
-openclaw cron add \
-  --name "atomicmail-inbox" \
-  --cron "0 * * * *" \
-  --tz "UTC" \
-  --session isolated \
-  --message "Call Atomic Mail jmap_request with ops_file list_inbox.json. Process new inbox messages since the last run." \
-  --announce
-```
+**atomic-agent** — `atomic-agent task create --cron "0 * * * *" --message "<prompt>"`
 
-Or `--every 1h` instead of `--cron "0 * * * *"`.
+### Terminal agents
 
-### Hermes
-
-Create an hourly job (e.g. schedule `0 * * * *`) whose prompt invokes Atomic Mail
-`jmap_request` with `list_inbox.json`; set delivery to your home channel or
-`local` for log-only runs.
-
-Embedded reference: `atomicmail help --topic cron`.
+Start **interactively** with the prompt: `claude "…"`, `pi "…"`, `agent "…"`,
+`gemini -i "…"`. Use a wrapper script + crontab, macOS LaunchAgent, or Linux
+systemd user timer — see `help --topic cron` for the decision guide.
 
 ### 4. Help
 

@@ -25,11 +25,12 @@ npx --package=@atomicmail/agent-skill atomicmail jmap_request \\
 npx --package=@atomicmail/agent-skill atomicmail help
 \`\`\`
 
-## Required: hourly inbox fetch
+## Required: hourly agent inbox job
 
-After \`register\`, schedule **hourly** polling with \`list_inbox.json\` so new
-mail is retrieved automatically. See the **cron** help topic for crontab,
-OpenClaw, and Hermes examples.
+After \`register\`, schedule an **hourly agent** (not raw \`atomicmail
+jmap_request\` in crontab) to fetch mail with \`list_inbox.json\`. See the
+**cron** help topic for OpenClaw, Hermes, atomic-agent, and terminal CLI
+examples.
 
 ## Shared credentials
 

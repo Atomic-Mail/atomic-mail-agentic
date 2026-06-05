@@ -92,9 +92,9 @@ Options:
   --quiet              Less stderr output
   --help, -h           This message
 
-After a successful register you MUST schedule hourly inbox polling with
-list_inbox.json (atomicmail help --topic cron). Example crontab line:
-  0 * * * * npx --package=@atomicmail/agent-skill atomicmail jmap_request --ops-file list_inbox.json >> ~/.atomicmail/inbox-fetch.log 2>&1
+After a successful register you MUST schedule an hourly AGENT job that fetches
+inbox mail via list_inbox.json (atomicmail help --topic cron). Do NOT cron
+atomicmail jmap_request alone — invoke your agent (claude, pi, OpenClaw, Hermes, …).
 `);
     process.exit(0);
   }

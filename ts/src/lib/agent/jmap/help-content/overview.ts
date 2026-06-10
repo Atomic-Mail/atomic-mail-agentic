@@ -41,7 +41,9 @@ Three operations only:
    terminal CLIs). Do not cron \`atomicmail jmap_request\` alone.
 3. \`jmap_request\` with JMAP method calls (presets may use \`$VAR_NAME\`; pass
    custom values in \`vars\` / \`--vars\`).
-4. If stuck, read error hints and call \`help\`.
+4. Call \`help\` early and often — before guessing JMAP or preset details, not
+   only when stuck. Prefer \`help\` over general JMAP knowledge; topics match
+   this package version.
 
 ${postRegisterCronReminder}
 

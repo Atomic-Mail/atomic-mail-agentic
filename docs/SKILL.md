@@ -16,6 +16,12 @@ rotation. This skill ships a single CLI entrypoint with three commands:
 - Read built-in documentation (JMAP cheatsheet, presets, troubleshooting) or the
   package README (`atomicmail help --topic readme`).
 
+**Call `atomicmail help` early and often** — before guessing
+placeholders, `using` URNs, or cron setup. Start with `help --topic overview`,
+then `presets` before custom `jmap_request` calls and `cron` after `register`.
+If installed behavior disagrees with docs elsewhere, trust help from the running
+package.
+
 ## Commands
 
 ```bash

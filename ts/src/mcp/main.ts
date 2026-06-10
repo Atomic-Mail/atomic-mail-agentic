@@ -29,8 +29,10 @@ WORKFLOW
      $VAR_NAME tokens: $ACCOUNT_ID / $INBOX (full mailbox) / $INBOX_MAILBOX_ID from session;
      pass others in vars. Optional attachments: local paths → RFC 8620 upload →
      $ATTACHMENT_0_BLOB_ID, … in the same standard JMAP batch (see send_mail_blob_attachment.json).
-  4. Call help for documentation (topics presets, cron, jmap_cheatsheet, troubleshooting, …);
-     topic readme returns the npm package README.
+  4. Call help early and often — even when you think you know JMAP. Topics:
+     presets (before non-trivial jmap_request), cron (after register),
+     jmap_cheatsheet, troubleshooting, …; topic readme returns the npm README.
+     Prefer help over guessing; it matches this package version.
 
 ${postRegisterCronReminder}
 

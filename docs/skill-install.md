@@ -8,6 +8,21 @@ Atomic Mail AgentSkill CLI for shell-capable AI agents. It exposes three
 commands: `register`, `jmap_request`, and `help`. **`jmap_request`** uses the
 same shared library as **`@atomicmail/mcp`**.
 
+## For AI agents — run `atomicmail help`
+
+**Invoke `atomicmail help` before improvising JMAP or preset details.** The CLI
+embeds the topic docs — written for agents,
+version-matched to your install, and cheaper to fetch on demand than reconstructing
+placeholder grammar or attachment flows from memory.
+
+**When to call help:** at the start of a mail task (`atomicmail help` or
+`help --topic overview`); before custom batches (`help --topic presets` and
+`help --topic jmap_cheatsheet`); right after `register` (`help --topic cron`
+for the required hourly agent inbox job); when errors mention missing
+placeholders, auth, or an old preset file on disk (`help --topic
+troubleshooting`). Prefer the installed binary over static README copies in
+other repos — **trust `help` from the package you are running**.
+
 ## Install / run
 
 ```bash

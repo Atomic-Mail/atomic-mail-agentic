@@ -17,9 +17,11 @@ export function registerHelpTool(server: McpServer): void {
     {
       title: "Atomic Mail documentation",
       description:
-        "Built-in docs (topics: " +
+        "Built-in agent docs — call early and often, even if you know JMAP. " +
+        "Topics: " +
         HELP_TOPIC_LIST.join(", ") +
-        ", readme). Omit topic for overview.",
+        ", readme. Omit topic for overview; use presets before jmap_request, " +
+        "cron after register, troubleshooting when stuck.",
       inputSchema: z.object({
         topic: z
           .string()

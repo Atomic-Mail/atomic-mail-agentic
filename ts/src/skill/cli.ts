@@ -40,6 +40,9 @@ Examples:
   atomicmail help --topic presets
   atomicmail help --topic readme
 
+Call  atomicmail help  early and often — topics match this install; prefer help
+over guessing JMAP or preset details.
+
 Run  atomicmail <command> --help  for command-specific flags.
 `;
 

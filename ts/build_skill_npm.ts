@@ -23,7 +23,7 @@ const PRESET_FILES = [
 
 const DIR = "skill_npm";
 const SHARED_PRESET_DIR = "./src/lib/agent/jmap/presets";
-const LICENCE_FILE = { path: "../LICENCE", targetPath: "LICENCE" };
+const LICENSE_FILE = { path: "../LICENSE", targetPath: "LICENSE" };
 const README_FILE = {
   path: "../docs/skill-install.md",
   targetPath: "README.md",
@@ -78,7 +78,7 @@ await build({
     },
   },
   async postBuild() {
-    for (const file of [README_FILE, SKILL_FILE, LICENCE_FILE]) {
+    for (const file of [README_FILE, SKILL_FILE, LICENSE_FILE]) {
       try {
         await Deno.copyFile(file.path, `${DIR}/${file.targetPath}`);
       } catch (err) {

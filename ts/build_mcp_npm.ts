@@ -32,7 +32,7 @@ const PRESET_FILES = [
 
 const DIR = "mcp_npm";
 const SHARED_PRESET_DIR = "./src/lib/agent/jmap/presets";
-const LICENCE_FILE = { path: "../LICENCE", targetPath: "LICENCE" };
+const LICENSE_FILE = { path: "../LICENSE", targetPath: "LICENSE" };
 const README_FILE = { path: "../docs/mcp.md", targetPath: "README.md" };
 
 await emptyDir(DIR);
@@ -92,7 +92,7 @@ await build({
   // Copy human-readable assets next to the published package so npm and JSR
   // viewers render them.
   async postBuild() {
-    for (const file of [LICENCE_FILE, README_FILE]) {
+    for (const file of [LICENSE_FILE, README_FILE]) {
       try {
         await Deno.copyFile(file.path, `${DIR}/${file.targetPath}`);
       } catch (err) {

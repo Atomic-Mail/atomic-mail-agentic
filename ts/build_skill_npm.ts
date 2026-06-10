@@ -9,6 +9,7 @@
 
 import { build, emptyDir } from "@deno/dnt";
 
+import { ATOMICMAIL_NPM_PACKAGE_META } from "./npm_package_meta.ts";
 import { ATOMICMAIL_MCP_VERSION } from "./src/mcp/version.ts";
 
 const version = (Deno.args[0] ?? ATOMICMAIL_MCP_VERSION).replace(/^v/, "");
@@ -56,6 +57,7 @@ await build({
     description:
       "Atomic Mail AgentSkill — register, jmap_request, and help CLI for AI agents.",
     license: "MIT",
+    ...ATOMICMAIL_NPM_PACKAGE_META,
     keywords: [
       "atomic-mail",
       "atomicmail",
@@ -68,18 +70,8 @@ await build({
       "mcp",
       "proof-of-work",
     ],
-    repository: {
-      type: "git",
-      url: "git+https://github.com/atomic-mail/agentic-clients.git",
-    },
-    bugs: {
-      url: "https://github.com/atomic-mail/agentic-clients/issues",
-    },
     engines: {
       node: ">=20",
-    },
-    publishConfig: {
-      access: "public",
     },
     devDependencies: {
       "@types/node": "^20.12.0",

@@ -1,0 +1,15 @@
+/** Shared npm package.json fields for @atomicmail/* releases. */
+export const ATOMICMAIL_NPM_PACKAGE_META = {
+  author: "Atomic Mail",
+  homepage: "https://atomicmail.ai",
+  repository: {
+    type: "git" as const,
+    url: "git+https://github.com/Atomic-Mail/agentic-clients.git",
+  },
+  bugs: {
+    url: "https://github.com/Atomic-Mail/agentic-clients/issues",
+  },
+  publishConfig: {
+    access: "public" as const,
+  },
+};

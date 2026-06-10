@@ -24,6 +24,8 @@ Deno.test(
       Error,
     );
     assertStringIncludes(err.message, "Register refused");
+    assertStringIncludes(err.message, "credentials_dir in MCP");
+    assertStringIncludes(err.message, "--credentials-dir in AgentSkill");
     assertStringIncludes(err.message, "forced=true (MCP)");
     assertStringIncludes(err.message, "--forced (AgentSkill)");
   },

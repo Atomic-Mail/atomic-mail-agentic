@@ -11,6 +11,7 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 
 import { AgentSession, resolveAgentConfigFromEnv } from "../lib/mod.ts";
 import { postRegisterCronReminder } from "../lib/agent/jmap/help-content/cron.ts";
+import type { McpSessionContext } from "./mcp-session-context.ts";
 import { registerHelpTool } from "./tools/help.ts";
 import { registerJmapTool } from "./tools/jmap.ts";
 import { registerRegisterTool } from "./tools/register.ts";
@@ -36,6 +37,8 @@ ${postRegisterCronReminder}
 CREDENTIAL DIRECTORY
   Default ~/.atomicmail/ (override ATOMIC_MAIL_CREDENTIALS_DIR). Same files as
   the @atomicmail/agent-skill CLI: credentials.json, session.jwt, capability.jwt.
+  Optional credentials_dir on register and jmap_request selects a different directory
+  per call (multi-account / multi-agent). See help topic multi_account.
 
 ENVIRONMENT
   ATOMIC_MAIL_CREDENTIALS_DIR  credential directory
@@ -91,8 +94,10 @@ async function main(): Promise<void> {
     { instructions: INSTRUCTIONS },
   );
 
-  registerRegisterTool(server, session);
-  registerJmapTool(server, session);
+  const mcpCtx: McpSessionContext = { defaultConfig: config, defaultSession: session };
+
+  registerRegisterTool(server, mcpCtx);
+  registerJmapTool(server, mcpCtx);
   registerHelpTool(server);
 
   const cleanup = () => {

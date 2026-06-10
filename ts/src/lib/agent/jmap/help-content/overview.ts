@@ -15,8 +15,9 @@ Three operations only:
 1. **register** — Proof-of-work signup (or idempotent replay when the same
    username matches the inbox already on disk). Usernames are 5–21 characters
    (local-part of \`@atomicmail.ai\`). When a different username is
-   requested and credentials already exist, register fails unless forced
-   explicitly (\`forced: true\` in MCP / \`--forced\` in AgentSkill). Persists
+   requested and credentials already exist, register fails unless you use a
+   separate \`credentials_dir\` / \`--credentials-dir\` or pass \`forced: true\`
+   / \`--forced\` to replace the current directory. Persists
    credentials and returns \`{ inbox, accountId }\` (and \`apiKey\` on first
    signup).
 2. **jmap_request** — Send a JMAP method-call batch; auth and JWT rotation are
@@ -45,4 +46,4 @@ Three operations only:
 ${postRegisterCronReminder}
 
 Available topics: overview, installation, auth, jmap_cheatsheet, tools,
-presets, cron, troubleshooting. Use \`readme\` for the npm package \`README.md\`.`;
+presets, cron, multi_account, troubleshooting. Use \`readme\` for the npm package \`README.md\`.`;

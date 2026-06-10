@@ -78,6 +78,8 @@ That is the shortest path from zero to a working agent inbox.
   troubleshooting
 - **One shared core**: same auth, JMAP, presets, and help power both MCP and
   AgentSkill
+- **Multi-account**: separate credential directories per inbox via MCP
+  `credentials_dir` or CLI `--credentials-dir` (one server, many agents)
 - **Thin wrappers**: the repo stays small on purpose; the core workflow is 3
   commands
 
@@ -114,7 +116,7 @@ Under the hood:
 - `jmap_request` loads a preset or inline JMAP payload, substitutes `$VAR_NAME`
   placeholders, and sends it with fresh JWTs
 - `help` ships embedded docs with topics like `cron`, `presets`,
-  `troubleshooting`, and `readme`
+  `multi_account`, `troubleshooting`, and `readme`
 
 ## 📨 Examples
 

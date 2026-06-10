@@ -4,6 +4,7 @@ import { helpTopicAuth } from "./auth.ts";
 import { helpTopicCron } from "./cron.ts";
 import { helpTopicInstallation } from "./installation.ts";
 import { helpTopicJmapCheatsheet } from "./jmap-cheatsheet.ts";
+import { helpTopicMultiAccount } from "./multi-account.ts";
 import { helpTopicOverview } from "./overview.ts";
 import { helpTopicPresets } from "./presets.ts";
 import { helpTopicTools } from "./tools.ts";
@@ -17,6 +18,7 @@ export const HELP_TOPICS: Record<string, string> = {
   tools: helpTopicTools,
   presets: helpTopicPresets,
   cron: helpTopicCron,
+  multi_account: helpTopicMultiAccount,
   troubleshooting: helpTopicTroubleshooting,
 };
 

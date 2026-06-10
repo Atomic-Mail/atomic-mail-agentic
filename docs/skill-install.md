@@ -62,13 +62,17 @@ attachments): see [@atomicmail/mcp](./mcp.md) and the embedded **`help`** topic
 
 ## Shared state
 
-Credential files in `~/.atomicmail` (mode `0600`):
+Each credential **directory** is an isolated account (default `~/.atomicmail`,
+mode `0600` files):
 
 - `credentials.json`
 - `session.jwt`
 - `capability.jwt`
 
-This is the on-disk state used by the CLI (and MCP).
+The CLI and MCP read and write the directory you select per command
+(`--credentials-dir` / `credentials_dir`) or the default from
+`ATOMIC_MAIL_CREDENTIALS_DIR`. Multiple accounts = multiple directories; see
+MCP `help` topic `multi_account` or [mcp.md](./mcp.md#multiple-accounts--agents).
 
 ## Defaults
 

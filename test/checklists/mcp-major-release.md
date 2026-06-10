@@ -22,8 +22,10 @@ Stdio MCP server for chat-based agents. Derived from `docs/mcp.md`, `docs/gettin
 - [ ] Call tool `register` with username **`mcp-qa-<random-num>`** (same suffix as above; PoW path per “Typical MCP workflow” in `docs/mcp.md`). Confirm the inbox is **`mcp-qa-<random-num>@atomicmail.ai`**.
 - [ ] Confirm success response and that under **`$CRED_DIR`** (not `~/.atomicmail/`) you have `credentials.json`, `session.jwt`, and `capability.jwt` with mode `0600` (as documented).
 - [ ] Call `register` again with the **same** username and confirm idempotent behavior (per tool table in `docs/mcp.md`).
-- [ ] Call `register` with a **different** username and confirm it fails with guidance to back up credentials before creating a new account.
-- [ ] Call `register` with that different username plus `forced: true` and confirm credentials are replaced and the new inbox is returned.
+- [ ] Call `register` with a **different** username and confirm it fails with guidance to use a separate `credentials_dir` or back up before `forced: true`.
+- [ ] Create `CRED_DIR_B="$(mktemp -d)/atomicmail-mcp-qa-b"` and call `register` with a different username and `"credentials_dir": "$CRED_DIR_B"`; confirm credentials land under **`$CRED_DIR_B`** and **`$CRED_DIR`** is unchanged.
+- [ ] `jmap_request` with `"credentials_dir": "$CRED_DIR_B"` and `ops_file`: `list_inbox.json`; confirm it uses the second account.
+- [ ] Call `register` with that different username plus `forced: true` (default dir) and confirm credentials are replaced and the new inbox is returned.
 
 ## 3. Send a simple email to `sasha@atomicmail.ai`
 

@@ -41,5 +41,7 @@ MCP and the skill use the same directory layout (default \`~/.atomicmail/\`):
 ## Overriding defaults
 
 - Endpoints: \`ATOMIC_MAIL_AUTH_URL\`, \`ATOMIC_MAIL_API_URL\`
-- Credentials path: \`ATOMIC_MAIL_CREDENTIALS_DIR\` (MCP), \`--credentials-dir\` (skill)
+- Default credentials path: \`ATOMIC_MAIL_CREDENTIALS_DIR\` (MCP host \`env\`),
+  \`--credentials-dir\` (skill), or per-call \`credentials_dir\` (MCP) /
+  \`--credentials-dir\` (skill) — see **multi_account** topic
 - Optional PoW salt: \`ATOMIC_MAIL_SCRYPT_SALT\``;

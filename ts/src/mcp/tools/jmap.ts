@@ -4,17 +4,22 @@ import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp";
 
 import {
-  type AgentSession,
   DEFAULT_JMAP_USING,
   readOpsFile,
   runJmapRequest,
   USER_VAR_KEY_RE,
 } from "../../lib/mod.ts";
+import type { McpSessionContext } from "../mcp-session-context.ts";
+import { resolveMcpToolSession } from "../mcp-session-context.ts";
 import { mcpError, mcpText } from "../mcp-result.ts";
+
+const CREDENTIALS_DIR_DESC =
+  "Credential directory for this call (default: ATOMIC_MAIL_CREDENTIALS_DIR " +
+  "or ~/.atomicmail). Use separate paths per account; see help topic multi_account.";
 
 export function registerJmapTool(
   server: McpServer,
-  session: AgentSession,
+  ctx: McpSessionContext,
 ): void {
   server.registerTool(
     "jmap_request",
@@ -27,6 +32,10 @@ export function registerJmapTool(
         "and optional file `attachments`: see `help` topics presets and " +
         "jmap_cheatsheet.",
       inputSchema: z.object({
+        credentials_dir: z
+          .string()
+          .optional()
+          .describe(CREDENTIALS_DIR_DESC),
         using: z
           .array(z.string())
           .default([...DEFAULT_JMAP_USING])
@@ -71,7 +80,7 @@ export function registerJmapTool(
           ),
       }),
     },
-    async ({ using, ops, ops_file, vars, attachments }) => {
+    async ({ credentials_dir, using, ops, ops_file, vars, attachments }) => {
       try {
         if (ops && ops_file) {
           return mcpError(
@@ -81,6 +90,12 @@ export function registerJmapTool(
         if (!ops && !ops_file) {
           return mcpError("Provide either ops or ops_file.");
         }
+
+        const session = await resolveMcpToolSession(
+          ctx,
+          credentials_dir,
+          "jmap",
+        );
 
         let raw: string;
         let sourceLabel: string;

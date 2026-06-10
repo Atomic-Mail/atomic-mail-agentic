@@ -230,10 +230,13 @@ export class AgentSession {
         throw new Error(
           "Register refused because credentials already belong to " +
             `"${this.inboxId}" and requested username is "${want}". ` +
-            "If you want a new account, first back up your credential " +
-            `directory (${this.credentialDir}) and remember where you copied ` +
-            "it, otherwise you may lose access to your old account. Then " +
-            "retry with forced=true (MCP) or --forced (AgentSkill).",
+            "Alternatively, use a separate credential directory " +
+            "(credentials_dir in MCP / --credentials-dir in AgentSkill) to " +
+            "register another account without replacing the current one. " +
+            "If you want to replace credentials in this directory, first " +
+            "back it up and remember where you copied it, otherwise you may " +
+            "lose access to your old account. Then retry with forced=true " +
+            "(MCP) or --forced (AgentSkill).",
         );
       }
       await unlinkCredentialArtifacts(this.files);

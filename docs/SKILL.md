@@ -53,8 +53,10 @@ Usernames must be 5–21 characters (local-part of your `@atomicmail.ai`
 address).
 
 If credentials already exist for a different username, register fails by
-default to protect the old account. Use `--forced` only after backing up the
-credential directory.
+default to protect the old account. To add another inbox without replacing the
+current one, pass a separate `--credentials-dir` (MCP: `credentials_dir` on
+`register` / `jmap_request`). Use `--forced` only when you intend to replace
+credentials in the **same** directory (after backing it up).
 
 ### 2. Register (existing API key, in case losing the credentials file)
 

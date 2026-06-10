@@ -5,17 +5,19 @@ export const helpTopicTools = `\
 
 ## register
 
-**MCP input:** \`{ "username": string, "forced"?: boolean }\`  
-**Skill:** \`register --username NAME [--forced]\` (or \`--api-key KEY\`).
+**MCP input:** \`{ "username": string, "credentials_dir"?: string, "forced"?: boolean }\`  
+**Skill:** \`register --username NAME [--credentials-dir DIR] [--forced]\` (or \`--api-key KEY\`).
 
 Usernames must be 5–21 characters (local-part of your \`@atomicmail.ai\`
 address).
 
 Creates an inbox or returns the same \`{ inbox, accountId }\` when the
 username matches the stored inbox local-part. A **different** username
-fails by default to protect existing credentials. To replace credentials in the
-directory and register a new inbox, pass **\`forced: true\`** (MCP) or
-**\`--forced\`** (skill) explicitly.
+fails by default to protect existing credentials. To add another account without
+replacing the current one, pass a **separate** \`credentials_dir\` (MCP) or
+\`--credentials-dir\` (skill) — see **multi_account** topic. To replace
+credentials in the **same** directory, pass **\`forced: true\`** (MCP) or
+**\`--forced\`** (skill) explicitly after backing up.
 
 **After a successful register you must** schedule an hourly **agent** job that
 calls \`jmap_request\` / \`--ops-file\` **\`list_inbox.json\`** (see **cron**
@@ -23,7 +25,7 @@ topic — do not cron the CLI alone).
 
 ## jmap_request
 
-**MCP input:** \`{ "using"?: string[], "ops"?: string, "ops_file"?: string,
+**MCP input:** \`{ "credentials_dir"?: string, "using"?: string[], "ops"?: string, "ops_file"?: string,
 "vars"?: Record<string, string>, "attachments"?: { path, filename?, content_type? }[] }\` —
 keys in \`vars\` are names without \`$\` (e.g. \`TO\` for \`$TO\`). Exactly one of
 \`ops\` or \`ops_file\`. When \`attachments\` is non-empty, each path is read on
@@ -43,5 +45,5 @@ semantics as if you had pasted those strings in \`vars\`).
 **Skill:** \`help [--topic TOPIC]\`
 
 Topics: overview, installation, auth, jmap_cheatsheet, tools, presets, cron,
-troubleshooting. Topic \`readme\` prints the published package \`README.md\`
+multi_account, troubleshooting. Topic \`readme\` prints the published package \`README.md\`
 (same layout as npm; requires install from npm).`;

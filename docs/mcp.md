@@ -29,15 +29,17 @@ Your MCP host spawns this process; see configuration below.
 
 | Tool           | Description                                                                                                                                                                                                       |
 | -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `register`     | PoW signup; persists credentials. Usernames are 5–21 characters (local-part of your `@atomicmail.ai` address). Idempotent when username matches inbox. A different username is rejected unless `forced: true` is passed. |
-| `jmap_request` | JMAP batch via `ops` or `ops_file`. Uppercase `$VAR_NAME` tokens are substituted (`$ACCOUNT_ID` / `$INBOX` / `$INBOX_MAILBOX_ID` / `$UPLOAD_URL` / `$DOWNLOAD_URL` from session; others via optional `vars` map). |
-| `help`         | Built-in docs (`topic` optional); use `topic: "readme"` for the published package `README.md`.                                                                                                                    |
+| `register`     | PoW signup; persists credentials. Usernames are 5–21 characters (local-part of your `@atomicmail.ai` address). Idempotent when username matches inbox. A different username is rejected unless you pass a separate `credentials_dir` or `forced: true`. Optional `credentials_dir` per call (parity with AgentSkill `--credentials-dir`). |
+| `jmap_request` | JMAP batch via `ops` or `ops_file`. Optional `credentials_dir` per call. Uppercase `$VAR_NAME` tokens are substituted (`$ACCOUNT_ID` / `$INBOX` / `$INBOX_MAILBOX_ID` / `$UPLOAD_URL` / `$DOWNLOAD_URL` from session; others via optional `vars` map). |
+| `help`         | Built-in docs (`topic` optional); use `topic: "readme"` for the published package `README.md`. Use `topic: "multi_account"` for multiple inboxes on one MCP server.                                                                                                                    |
 
 ## Typical MCP workflow
 
 1. Call `register` with a username (or rely on existing `credentials.json`).
-   If credentials already exist for a different username, pass `forced: true`
-   only after backing up the credential directory.
+   If credentials already exist for a different username, pass a **separate**
+   `credentials_dir` to add another account, or pass `forced: true` only when
+   you intend to replace credentials in the **same** directory (after backing
+   it up).
 2. **Required:** schedule an hourly **agent** job whose prompt fetches inbox
    mail via `{ "ops_file": "list_inbox.json" }`. Use the host’s cron (OpenClaw,
    Hermes, atomic-agent) or OS scheduler for terminal agents (Claude, Pi,
@@ -136,6 +138,26 @@ POST** computable oversize `Blob/upload` payloads and attachment file sizes (see
 [RFC 9404 §3.1](https://www.rfc-editor.org/rfc/rfc9404#section-3.1)). If
 `maxSizeBlobSet` is `null`, no client octet cap is applied (the server may still
 reject the request).
+
+## Multiple accounts / agents
+
+One MCP server can manage several isolated inboxes. Pass optional
+`credentials_dir` on **`register`** and **`jmap_request`** (same idea as
+AgentSkill `--credentials-dir`). When omitted, the default directory applies
+(`ATOMIC_MAIL_CREDENTIALS_DIR` or `~/.atomicmail`).
+
+```json
+{ "username": "alice", "credentials_dir": "~/.atomicmail/alice" }
+{ "ops_file": "list_inbox.json", "credentials_dir": "~/.atomicmail/bob" }
+```
+
+- **Add a second account** without touching the first: use a new path on
+  `register`, not `forced: true`.
+- **Replace** credentials in one directory: back it up, then `forced: true`.
+- **Concurrency:** do not run parallel tool calls against the same
+  `credentials_dir` (JWT files have no locking).
+
+Full details: MCP `help` topic **`multi_account`**.
 
 ## Defaults
 

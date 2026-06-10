@@ -16,6 +16,21 @@ welcome at
 Please open an issue first for large features or API changes so we can align on
 scope before you invest heavily in a PR.
 
+## Branching and pull requests
+
+Open pull requests against the **`develop`** branch (the default integration
+branch). `main` is reserved for stable releases.
+
+```bash
+git checkout develop
+git pull origin develop
+git checkout -b your-feature-branch
+# ... make changes, commit ...
+git push -u origin your-feature-branch
+```
+
+Then open a PR targeting **`develop`**, not `main`.
+
 ## Development setup
 
 **Prerequisites**

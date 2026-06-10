@@ -1,6 +1,8 @@
 # dnt build output
 *_npm/
 **/*_npm/
+*_npm_*/
+**/*_npm_*/
 
 # Node leftovers (legacy tsc build)
 node_modules/

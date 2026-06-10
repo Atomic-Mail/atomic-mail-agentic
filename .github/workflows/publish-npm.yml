@@ -1,0 +1,57 @@
+name: Publish npm packages
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Semver to publish (e.g. 0.1.2 or v1.0.0)
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish-npm-${{ github.event.release.tag_name || inputs.version || github.run_id }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    env:
+      NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Resolve and validate version
+        id: version
+        working-directory: ts
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name || inputs.version }}
+        run: |
+          VERSION=$(deno run -A resolve_release_version.ts "$RELEASE_TAG")
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Publishing version: $VERSION"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+
+      - name: Build all npm channel variants
+        working-directory: ts
+        run: deno run -A build_all_npm.ts "${{ steps.version.outputs.version }}"
+
+      - name: Publish to npm
+        working-directory: ts
+        run: deno run -A publish_all_npm.ts

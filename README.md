@@ -2,10 +2,10 @@
 
 **Not AI for your email. Email for your AI.**
 
-[Website](https://atomicmail.ai) · [Docs](docs/getting-started.md) · [Issues](https://github.com/Atomic-Mail/agentic-clients/issues) · [@atomicmail/mcp](https://www.npmjs.com/package/@atomicmail/mcp) · [@atomicmail/agent-skill](https://www.npmjs.com/package/@atomicmail/agent-skill)
+[Website](https://atomicmail.ai) · [Docs](docs/getting-started.md) · [Issues](https://github.com/Atomic-Mail/agentic-clients/issues) · [@atomicmail/mcp-github](https://www.npmjs.com/package/@atomicmail/mcp-github) · [@atomicmail/agent-skill-github](https://www.npmjs.com/package/@atomicmail/agent-skill-github)
 
 This repository ships the two client integrations for the Atomic Mail ESP:
-`@atomicmail/mcp` for MCP hosts and `@atomicmail/agent-skill` for shell agents.
+`@atomicmail/mcp-github` for MCP hosts and `@atomicmail/agent-skill-github` for shell agents.
 Both wrap the same hosted Atomic Mail APIs with a tiny but powerful surface area: `register`,
 `jmap_request`, and `help`.
 
@@ -28,7 +28,7 @@ Add this to your MCP host config:
   "mcpServers": {
     "atomicmail": {
       "command": "npx",
-      "args": ["-y", "@atomicmail/mcp"]
+      "args": ["-y", "@atomicmail/mcp-github"]
     }
   }
 }
@@ -39,9 +39,9 @@ Then restart the host and call: `register` → `jmap_request` → `help`.
 ### 💻 AgentSkill
 
 ```bash
-npx --package=@atomicmail/agent-skill atomicmail register --username "myagent"
-npx --package=@atomicmail/agent-skill atomicmail jmap_request --ops-file list_inbox.json
-npx --package=@atomicmail/agent-skill atomicmail help
+npx --package=@atomicmail/agent-skill-github atomicmail register --username "myagent"
+npx --package=@atomicmail/agent-skill-github atomicmail jmap_request --ops-file list_inbox.json
+npx --package=@atomicmail/agent-skill-github atomicmail help
 ```
 
 ## ✅ Verify in 2 Minutes
@@ -87,8 +87,8 @@ That is the shortest path from zero to a working agent inbox.
 
 | Package                   | Best for                                                  | Surface                                            |
 | ------------------------- | --------------------------------------------------------- | -------------------------------------------------- |
-| `@atomicmail/mcp`         | Cursor, Claude Desktop, OpenClaw, Hermes, other MCP hosts | MCP server with `register`, `jmap_request`, `help` |
-| `@atomicmail/agent-skill` | Shell agents, cron, CI, scripts                           | CLI with the same 3 commands                       |
+| `@atomicmail/mcp-github`         | Cursor, Claude Desktop, OpenClaw, Hermes, other MCP hosts | MCP server with `register`, `jmap_request`, `help` |
+| `@atomicmail/agent-skill-github` | Shell agents, cron, CI, scripts                           | CLI with the same 3 commands                       |
 
 Shared presets bundled into both packages:
 
@@ -102,7 +102,7 @@ Shared presets bundled into both packages:
 
 ```text
 Agent host / shell
-  -> @atomicmail/mcp or @atomicmail/agent-skill
+  -> @atomicmail/mcp-github or @atomicmail/agent-skill-github
   -> shared TypeScript runtime
   -> auth.atomicmail.ai (challenge -> session -> capability)
   -> api.atomicmail.ai (JMAP)
@@ -142,7 +142,7 @@ Under the hood:
 ### AgentSkill equivalent
 
 ```bash
-npx --package=@atomicmail/agent-skill atomicmail jmap_request \
+npx --package=@atomicmail/agent-skill-github atomicmail jmap_request \
   --ops-file send_mail.json \
   --vars '{"TO":"alice@example.com","SUBJECT":"Hello","BODY":"Hi there"}'
 ```
@@ -169,8 +169,7 @@ installed package version you are running.
 ```bash
 git clone https://github.com/Atomic-Mail/agentic-clients.git
 cd agentic-clients/ts
-deno run -A build_mcp_npm.ts <version>
-deno run -A build_skill_npm.ts <version>
+
 deno test --allow-read --allow-env --allow-write
 ```
 

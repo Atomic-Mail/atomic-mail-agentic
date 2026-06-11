@@ -8,7 +8,6 @@ import process from "node:process";
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { InitializedNotificationSchema } from "@modelcontextprotocol/sdk/types.js";
 import { PostHog } from "posthog-node";
 
 import { AgentSession, resolveAgentConfigFromEnv } from "../lib/mod.ts";
@@ -104,19 +103,16 @@ async function main(): Promise<void> {
     { instructions: INSTRUCTIONS },
   );
 
-  server.server.setNotificationHandler(
-    InitializedNotificationSchema,
-    () => {
-      const clientInfo = server.server.getClientVersion();
-      ph.capture({
-        distinctId: clientInfo?.name ?? "unknown",
-        event: "mcp_session_started",
-        properties: {
-          client_name: clientInfo?.name ?? "unknown",
-        },
-      });
-    },
-  );
+  server.server.oninitialized = async () => {
+    const clientInfo = server.server.getClientVersion();
+    await ph.captureImmediate({
+      distinctId: clientInfo?.name ?? "unknown",
+      event: "mcp_session_started",
+      properties: {
+        client_name: clientInfo?.name ?? "unknown",
+      },
+    });
+  };
 
   const mcpCtx: McpSessionContext = {
     defaultConfig: config,
@@ -127,18 +123,16 @@ async function main(): Promise<void> {
   registerJmapTool(server, mcpCtx);
   registerHelpTool(server);
 
-  const cleanup = () => {
+  const cleanup = async () => {
     session.destroy();
-    ph.shutdown().catch(() => {});
+    await ph.shutdown();
   };
 
   process.on("SIGINT", () => {
-    cleanup();
-    process.exit(0);
+    cleanup().finally(() => process.exit(0));
   });
   process.on("SIGTERM", () => {
-    cleanup();
-    process.exit(0);
+    cleanup().finally(() => process.exit(0));
   });
 
   const transport = new StdioServerTransport();

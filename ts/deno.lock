@@ -12,6 +12,7 @@
     "jsr:@ts-morph/bootstrap@0.27": "0.27.0",
     "jsr:@ts-morph/common@0.27": "0.27.0",
     "npm:@modelcontextprotocol/sdk@^1.29.0": "1.29.0_zod@4.4.1",
+    "npm:posthog-node@^5.36.13": "5.36.17",
     "npm:zod@^4.3.6": "4.4.1"
   },
   "jsr": {
@@ -95,6 +96,15 @@
         "zod",
         "zod-to-json-schema"
       ]
+    },
+    "@posthog/core@1.32.3": {
+      "integrity": "sha512-vwOEMfZvGv5XxNWV7p9I52NSmvFNMhyW2IHpIoUHW5jLkgUrknzJW1H/qxVGSIrNNVQkfsoaDFzDhJdg10pgrA==",
+      "dependencies": [
+        "@posthog/types"
+      ]
+    },
+    "@posthog/types@1.386.3": {
+      "integrity": "sha512-LqJoiQi2eyWn7rCUgnn+D+F3Efp6+04o72bjSX6kWHx0nFaYNC/nJuAIRliDTY/X7GPIUAaHAcSjbMI/9wfX1Q=="
     },
     "accepts@2.0.0": {
       "integrity": "sha512-5cvg6CtKwfgdmVqY1WIiXKc3Q1bkRqGLi+2W/6ao+6Y7gu/RCwRuAhGEzh5B4KlszSuTLgZYuqFqo5bImjNKng==",
@@ -426,6 +436,12 @@
     "pkce-challenge@5.0.1": {
       "integrity": "sha512-wQ0b/W4Fr01qtpHlqSqspcj3EhBvimsdh0KlHhH8HRZnMsEa0ea2fTULOXOS9ccQr3om+GcGRk4e+isrZWV8qQ=="
     },
+    "posthog-node@5.36.17": {
+      "integrity": "sha512-ed1LT4a9hhiFJizB6XX7dkYYLVPAFHfUpkQSns7BRxoUyhFnvMq15QENKeAOUEKQgPmnaq2I+xNLdAHN0o9eAA==",
+      "dependencies": [
+        "@posthog/core"
+      ]
+    },
     "proxy-addr@2.0.7": {
       "integrity": "sha512-llQsMLSUDUPT44jdrU/O37qlnifitDP+ZwrmmZcoSKyLKvtZxpyV0n2/bD/N4tBAAZ/gJEdZU7KMraoK1+XYAg==",
       "dependencies": [
@@ -585,6 +601,7 @@
       "jsr:@deno/dnt@~0.42.3",
       "jsr:@std/assert@1",
       "npm:@modelcontextprotocol/sdk@^1.29.0",
+      "npm:posthog-node@^5.36.13",
       "npm:zod@^4.3.6"
     ]
   }

@@ -16,6 +16,13 @@ credentials.json
 *.jwt
 **/*.jwt
 
+# Generated integration artifacts and local package tarballs
+integrations_dist/
+/openclaw/
+/openclaw_dist/
+*.tgz
+**/*.tgz
+
 # Logs
 *.log
 **/*.log

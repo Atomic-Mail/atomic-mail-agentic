@@ -1,1 +1,8 @@
-["github", "modelcontextprotocol"]
+[
+  "github",
+  "modelcontextprotocol",
+  {
+    "name": "clawhub",
+    "products": ["mcp"]
+  }
+]

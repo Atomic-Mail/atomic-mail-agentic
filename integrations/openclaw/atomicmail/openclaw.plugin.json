@@ -1,0 +1,11 @@
+{
+  "id": "atomicmail",
+  "name": "Atomic Mail",
+  "description": "Thin OpenClaw wrapper that points users at the @atomicmail/mcp-clawhub MCP runtime.",
+  "version": "0.3.4",
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {}
+  }
+}

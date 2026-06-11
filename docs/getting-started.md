@@ -54,6 +54,19 @@ Add to your MCP host configuration:
 
 Then call tools in this order: `register` -> `jmap_request` -> `help`.
 
+For ClawHub, use the MCP-only channel package:
+
+```json
+{
+  "mcpServers": {
+    "atomicmail": {
+      "command": "npx",
+      "args": ["-y", "@atomicmail/mcp-clawhub"]
+    }
+  }
+}
+```
+
 Continue with full docs: [`MCP in-depth`](/mcp).
 
 ## Install for shell-capable agents (AgentSkill)

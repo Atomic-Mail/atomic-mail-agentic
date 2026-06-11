@@ -2,10 +2,12 @@
 
 **Not AI for your email. Email for your AI.**
 
-[Website](https://atomicmail.ai) · [Docs](docs/getting-started.md) · [Issues](https://github.com/Atomic-Mail/agentic-clients/issues) · [@atomicmail/mcp-github](https://www.npmjs.com/package/@atomicmail/mcp-github) · [@atomicmail/agent-skill-github](https://www.npmjs.com/package/@atomicmail/agent-skill-github)
+[Website](https://atomicmail.ai) · [Docs](docs/getting-started.md) · [Issues](https://github.com/Atomic-Mail/agentic-clients/issues) · [@atomicmail/mcp-github](https://www.npmjs.com/package/@atomicmail/mcp-github) · [@atomicmail/mcp-clawhub](https://www.npmjs.com/package/@atomicmail/mcp-clawhub)
 
 This repository ships the two client integrations for the Atomic Mail ESP:
 `@atomicmail/mcp-github` for MCP hosts and `@atomicmail/agent-skill-github` for shell agents.
+For ClawHub installs, use the MCP-only channel package
+`@atomicmail/mcp-clawhub`.
 Both wrap the same hosted Atomic Mail APIs with a tiny but powerful surface area: `register`,
 `jmap_request`, and `help`.
 
@@ -33,6 +35,19 @@ Add this to your MCP host config:
 ```
 
 Then restart the host and call: `register` → `jmap_request` → `help`.
+
+For ClawHub, install the MCP-only channel package instead:
+
+```json
+{
+  "mcpServers": {
+    "atomicmail": {
+      "command": "npx",
+      "args": ["-y", "@atomicmail/mcp-clawhub"]
+    }
+  }
+}
+```
 
 ### 💻 AgentSkill
 
@@ -86,6 +101,7 @@ That is the shortest path from zero to a working agent inbox.
 | Package                   | Best for                                                  | Surface                                            |
 | ------------------------- | --------------------------------------------------------- | -------------------------------------------------- |
 | `@atomicmail/mcp-github`         | Cursor, Claude Desktop, OpenClaw, Hermes, other MCP hosts | MCP server with `register`, `jmap_request`, `help` |
+| `@atomicmail/mcp-clawhub`        | ClawHub                                                  | MCP server with `register`, `jmap_request`, `help` |
 | `@atomicmail/agent-skill-github` | Shell agents, cron, CI, scripts                           | CLI with the same 3 commands                       |
 
 Shared presets bundled into both packages:
@@ -100,7 +116,7 @@ Shared presets bundled into both packages:
 
 ```text
 Agent host / shell
-  -> @atomicmail/mcp-github or @atomicmail/agent-skill-github
+  -> @atomicmail/mcp-github, @atomicmail/mcp-clawhub, or @atomicmail/agent-skill-github
   -> shared TypeScript runtime
   -> auth.atomicmail.ai (challenge -> session -> capability)
   -> api.atomicmail.ai (JMAP)

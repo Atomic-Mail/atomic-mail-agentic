@@ -6,6 +6,10 @@ import {
 } from "../npm_package_meta.ts";
 
 export type NpmProduct = "mcp" | "skill";
+export interface NpmChannelConfig {
+  name: string;
+  products?: NpmProduct[];
+}
 
 const PRESET_FILES = [
   "send_mail.json",
@@ -74,11 +78,45 @@ const GITHUB_PACKAGES = {
   },
 } as const;
 
-export function loadChannels(): string[] {
+function normalizeChannelConfig(
+  channel: string | NpmChannelConfig,
+): NpmChannelConfig {
+  if (typeof channel === "string") {
+    return { name: channel };
+  }
+  return channel;
+}
+
+export function loadChannels(): NpmChannelConfig[] {
   const text = Deno.readTextFileSync(
     new URL("../npm_channels.json", import.meta.url),
   );
-  return JSON.parse(text) as string[];
+  const parsed = JSON.parse(text) as Array<string | NpmChannelConfig>;
+  return parsed.map(normalizeChannelConfig);
+}
+
+export function supportsChannelProduct(
+  channel: NpmChannelConfig,
+  product: NpmProduct,
+): boolean {
+  return !channel.products || channel.products.includes(product);
+}
+
+export function assertChannelSupported(
+  product: NpmProduct,
+  channel?: string,
+): void {
+  if (!channel) return;
+
+  const config = loadChannels().find((entry) => entry.name === channel);
+  if (!config) {
+    throw new Error(`Unknown npm channel: ${channel}`);
+  }
+  if (!supportsChannelProduct(config, product)) {
+    throw new Error(
+      `Unsupported npm channel for ${product}: ${channel}`,
+    );
+  }
 }
 
 export function getOutputDir(product: NpmProduct, channel?: string): string {
@@ -147,6 +185,7 @@ export async function buildNpmPackage(
   options: BuildNpmPackageOptions,
 ): Promise<string> {
   const { product, version, channel, overrides } = options;
+  assertChannelSupported(product, channel);
   const config = PRODUCT_CONFIG[product];
   const dir = overrides?.outDir ?? getOutputDir(product, channel);
   const packageName = overrides?.packageName ??

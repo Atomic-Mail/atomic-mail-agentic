@@ -41,6 +41,19 @@ preset shadowing. If anything disagrees with docs you read elsewhere, **trust
 
 Your MCP host spawns this process; see configuration below.
 
+For ClawHub, use the MCP-only channel package:
+
+```json
+{
+  "mcpServers": {
+    "atomicmail": {
+      "command": "npx",
+      "args": ["-y", "@atomicmail/mcp-clawhub"]
+    }
+  }
+}
+```
+
 ## Tools exposed
 
 | Tool           | Description                                                                                                                                                                                                       |

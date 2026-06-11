@@ -8,6 +8,7 @@ import {
   buildNpmPackage,
   getPackageName,
   loadChannels,
+  supportsChannelProduct,
 } from "./lib/build_npm.ts";
 import { parseReleaseVersion, syncSourceVersion } from "./lib/version.ts";
 import { ATOMICMAIL_MCP_VERSION } from "./src/mcp/version.ts";
@@ -24,10 +25,11 @@ const channels = loadChannels();
 const targets: Array<{ product: "mcp" | "skill"; channel?: string }> = [
   { product: "mcp" },
   { product: "skill" },
-  ...channels.flatMap((channel) => [
-    { product: "mcp" as const, channel },
-    { product: "skill" as const, channel },
-  ]),
+  ...channels.flatMap((channel) =>
+    (["mcp", "skill"] as const)
+      .filter((product) => supportsChannelProduct(channel, product))
+      .map((product) => ({ product, channel: channel.name }))
+  ),
 ];
 
 for (const target of targets) {
@@ -37,5 +39,5 @@ for (const target of targets) {
 }
 
 console.log(
-  `Done: ${targets.length} packages at version ${version} (default + ${channels.length} channels × 2 products).`,
+  `Done: ${targets.length} packages at version ${version} (${channels.length} configured channel entries).`,
 );

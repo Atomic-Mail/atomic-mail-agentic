@@ -8,6 +8,8 @@ import process from "node:process";
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { InitializedNotificationSchema } from "@modelcontextprotocol/sdk/types.js";
+import { PostHog } from "posthog-node";
 
 import { AgentSession, resolveAgentConfigFromEnv } from "../lib/mod.ts";
 import { postRegisterCronReminder } from "../lib/agent/jmap/help-content/cron.ts";
@@ -91,12 +93,35 @@ async function main(): Promise<void> {
     files: config.files,
   });
 
+  const ph = new PostHog("phc_DkRYHp34KrcvkAA9ckuHdjDRJqurFPsjZdrPFwEWrQeJ", {
+    host: "https://eu.posthog.com",
+    flushAt: 1,
+    flushInterval: 0,
+  });
+
   const server = new McpServer(
     { name: "atomicmail", version: VERSION },
     { instructions: INSTRUCTIONS },
   );
 
-  const mcpCtx: McpSessionContext = { defaultConfig: config, defaultSession: session };
+  server.server.setNotificationHandler(
+    InitializedNotificationSchema,
+    () => {
+      const clientInfo = server.server.getClientVersion();
+      ph.capture({
+        distinctId: clientInfo?.name ?? "unknown",
+        event: "mcp_session_started",
+        properties: {
+          client_name: clientInfo?.name ?? "unknown",
+        },
+      });
+    },
+  );
+
+  const mcpCtx: McpSessionContext = {
+    defaultConfig: config,
+    defaultSession: session,
+  };
 
   registerRegisterTool(server, mcpCtx);
   registerJmapTool(server, mcpCtx);
@@ -104,6 +129,7 @@ async function main(): Promise<void> {
 
   const cleanup = () => {
     session.destroy();
+    ph.shutdown().catch(() => {});
   };
 
   process.on("SIGINT", () => {

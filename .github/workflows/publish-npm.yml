@@ -12,6 +12,7 @@ on:
 
 permissions:
   contents: read
+  packages: write
 
 concurrency:
   group: publish-npm-${{ github.event.release.tag_name || inputs.version || github.run_id }}
@@ -55,3 +56,20 @@ jobs:
       - name: Publish to npm
         working-directory: ts
         run: deno run -A publish_all_npm.ts
+
+      - name: Build GitHub Packages variants
+        working-directory: ts
+        run: deno run -A build_github_packages_npm.ts "${{ steps.version.outputs.version }}"
+
+      - name: Setup Node.js for GitHub Packages
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://npm.pkg.github.com
+          scope: "@atomic-mail"
+
+      - name: Publish to GitHub Packages
+        working-directory: ts
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: deno run -A publish_github_packages_npm.ts

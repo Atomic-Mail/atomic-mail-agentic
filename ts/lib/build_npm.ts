@@ -1,6 +1,9 @@
 import { build, emptyDir } from "@deno/dnt";
 
-import { ATOMICMAIL_NPM_PACKAGE_META } from "../npm_package_meta.ts";
+import {
+  ATOMICMAIL_GITHUB_PACKAGES_PUBLISH_CONFIG,
+  ATOMICMAIL_NPM_PACKAGE_META,
+} from "../npm_package_meta.ts";
 
 export type NpmProduct = "mcp" | "skill";
 
@@ -60,6 +63,17 @@ const PRODUCT_CONFIG = {
   },
 } as const;
 
+const GITHUB_PACKAGES = {
+  mcp: {
+    packageName: "@atomic-mail/mcp",
+    outDir: "mcp_npm_gpr",
+  },
+  skill: {
+    packageName: "@atomic-mail/agent-skill",
+    outDir: "skill_npm_gpr",
+  },
+} as const;
+
 export function loadChannels(): string[] {
   const text = Deno.readTextFileSync(
     new URL("../npm_channels.json", import.meta.url),
@@ -113,19 +127,30 @@ async function prependChannelReadme(
   await Deno.writeTextFile(readmePath, note + existing);
 }
 
+export interface BuildNpmPackageOverrides {
+  packageName?: string;
+  outDir?: string;
+  description?: string;
+  homepage?: string;
+  publishConfig?: typeof ATOMICMAIL_NPM_PACKAGE_META.publishConfig;
+  atomicmail?: { channel: string };
+}
+
 export interface BuildNpmPackageOptions {
   product: NpmProduct;
   version: string;
   channel?: string;
+  overrides?: BuildNpmPackageOverrides;
 }
 
 export async function buildNpmPackage(
   options: BuildNpmPackageOptions,
 ): Promise<string> {
-  const { product, version, channel } = options;
+  const { product, version, channel, overrides } = options;
   const config = PRODUCT_CONFIG[product];
-  const dir = getOutputDir(product, channel);
-  const packageName = getPackageName(product, channel);
+  const dir = overrides?.outDir ?? getOutputDir(product, channel);
+  const packageName = overrides?.packageName ??
+    getPackageName(product, channel);
 
   await emptyDir(dir);
 
@@ -151,12 +176,17 @@ export async function buildNpmPackage(
     package: {
       name: packageName,
       version,
-      description: channelDescription(config.description, channel),
+      description: overrides?.description ??
+        channelDescription(config.description, channel),
       license: "MIT",
       ...ATOMICMAIL_NPM_PACKAGE_META,
-      homepage: buildHomepage(channel),
+      ...(overrides?.publishConfig && {
+        publishConfig: overrides.publishConfig,
+      }),
+      homepage: overrides?.homepage ?? buildHomepage(channel),
       keywords: buildKeywords(config.keywords, channel),
-      atomicmail: channel ? { channel } : { channel: "default" },
+      atomicmail: overrides?.atomicmail ??
+        (channel ? { channel } : { channel: "default" }),
       engines: {
         node: ">=20",
       },
@@ -194,6 +224,33 @@ export async function buildNpmPackage(
   return dir;
 }
 
+export async function buildGithubPackagesNpm(
+  version: string,
+): Promise<string[]> {
+  const dirs: string[] = [];
+  for (const product of ["mcp", "skill"] as const) {
+    const gpr = GITHUB_PACKAGES[product];
+    const config = PRODUCT_CONFIG[product];
+    const dir = await buildNpmPackage({
+      product,
+      version,
+      overrides: {
+        packageName: gpr.packageName,
+        outDir: gpr.outDir,
+        description: config.description,
+        homepage: buildHomepage("github-packages"),
+        publishConfig: ATOMICMAIL_GITHUB_PACKAGES_PUBLISH_CONFIG,
+      },
+    });
+    dirs.push(dir);
+  }
+  return dirs;
+}
+
+export function listGithubPackagesDirs(): string[] {
+  return ["mcp_npm_gpr", "skill_npm_gpr"];
+}
+
 export interface ParsedBuildArgs {
   version?: string;
   channel?: string;
@@ -221,6 +278,7 @@ export function listBuiltPackageDirs(): string[] {
   const dirs: string[] = [];
   for (const entry of Deno.readDirSync(".")) {
     if (!entry.isDirectory) continue;
+    if (entry.name.endsWith("_npm_gpr")) continue;
     if (
       entry.name === "mcp_npm" ||
       entry.name === "skill_npm" ||

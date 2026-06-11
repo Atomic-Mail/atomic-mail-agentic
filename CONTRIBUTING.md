@@ -93,6 +93,15 @@ cd ts && deno test --allow-read --allow-env --allow-write
 cd ts
 deno run -A build_mcp_npm.ts <version>    # -> ts/mcp_npm/
 deno run -A build_skill_npm.ts <version>  # -> ts/skill_npm/
+deno run -A build_all_npm.ts <version>    # default + all channel variants
+```
+
+GitHub Packages (`@atomic-mail/*` on `npm.pkg.github.com`):
+
+```bash
+cd ts
+deno run -A build_github_packages_npm.ts <version>  # -> ts/mcp_npm_gpr/, ts/skill_npm_gpr/
+deno run -A publish_github_packages_npm.ts          # publish built GPR dirs
 ```
 
 Omit `<version>` to use `ts/src/mcp/version.ts`. Manual QA checklists for

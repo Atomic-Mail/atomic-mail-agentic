@@ -17,8 +17,6 @@ Both wrap the same hosted Atomic Mail APIs with a tiny but powerful surface area
 
 ## 🚀 Quick Start
 
-**Prerequisites:** Node.js 20+ for `npx`.
-
 ### 🔌 MCP
 
 Add this to your MCP host config:
@@ -165,6 +163,8 @@ If repo docs and installed behavior ever drift, trust `help` from the same
 installed package version you are running.
 
 ## 🛠️ Local Development
+
+**Prerequisites:** Node.js 20+, Deno 2.7+.
 
 ```bash
 git clone https://github.com/Atomic-Mail/agentic-clients.git

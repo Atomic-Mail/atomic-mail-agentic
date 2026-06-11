@@ -13,3 +13,8 @@ export const ATOMICMAIL_NPM_PACKAGE_META = {
     access: "public" as const,
   },
 };
+
+export const ATOMICMAIL_GITHUB_PACKAGES_PUBLISH_CONFIG = {
+  registry: "https://npm.pkg.github.com",
+  access: "public" as const,
+} as const;

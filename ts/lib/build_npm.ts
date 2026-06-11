@@ -187,6 +187,7 @@ export async function buildNpmPackage(
       keywords: buildKeywords(config.keywords, channel),
       atomicmail: overrides?.atomicmail ??
         (channel ? { channel } : { channel: "default" }),
+      ...(product === "mcp" && { mcpName: "io.github.Atomic-Mail/mcp" }),
       engines: {
         node: ">=20",
       },

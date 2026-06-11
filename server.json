@@ -1,0 +1,54 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.Atomic-Mail/mcp",
+  "title": "Atomic Mail",
+  "description": "Programmable email inbox for AI agents — JMAP, PoW auth, stdio MCP server.",
+  "version": "0.3.4",
+  "repository": {
+    "url": "https://github.com/Atomic-Mail/agentic-clients",
+    "source": "github"
+  },
+  "websiteUrl": "https://atomicmail.ai",
+  "packages": [
+    {
+      "registryType": "npm",
+      "identifier": "@atomicmail/mcp-modelcontextprotocol",
+      "version": "0.3.4",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "name": "ATOMIC_MAIL_CREDENTIALS_DIR",
+          "description": "Override default credential directory (~/.atomicmail/)",
+          "isRequired": false,
+          "isSecret": false
+        },
+        {
+          "name": "ATOMIC_MAIL_API_KEY",
+          "description": "Existing API key — skips PoW registration",
+          "isRequired": false,
+          "isSecret": true
+        },
+        {
+          "name": "ATOMIC_MAIL_AUTH_URL",
+          "description": "Override auth service base URL",
+          "isRequired": false,
+          "isSecret": false
+        },
+        {
+          "name": "ATOMIC_MAIL_API_URL",
+          "description": "Override JMAP API base URL",
+          "isRequired": false,
+          "isSecret": false
+        },
+        {
+          "name": "ATOMIC_MAIL_INBOX_DOMAIN",
+          "description": "Default inbox domain when inboxId has no @ (default: atomicmail.ai)",
+          "isRequired": false,
+          "isSecret": false
+        }
+      ]
+    }
+  ]
+}

@@ -13,6 +13,7 @@ on:
 permissions:
   contents: read
   packages: write
+  id-token: write
 
 concurrency:
   group: publish-npm-${{ github.event.release.tag_name || inputs.version || github.run_id }}
@@ -73,3 +74,29 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: deno run -A publish_github_packages_npm.ts
+
+      - name: Install mcp-publisher
+        run: |
+          curl -L "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_linux_amd64.tar.gz" | tar xz mcp-publisher
+          sudo mv mcp-publisher /usr/local/bin/mcp-publisher
+
+      - name: Stamp version into server.json
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          jq --arg v "$VERSION" '.version = $v | .packages[0].version = $v' server.json > server.json.tmp
+          mv server.json.tmp server.json
+
+      - name: Publish to MCP Registry
+        run: |
+          mcp-publisher login github-oidc
+          if ! OUTPUT=$(mcp-publisher publish 2>&1); then
+            echo "$OUTPUT"
+            if echo "$OUTPUT" | grep -qi "already\|conflict\|duplicate\|exists"; then
+              echo "MCP Registry: version already published, skipping."
+            else
+              echo "MCP Registry publish failed."
+              exit 1
+            fi
+          else
+            echo "$OUTPUT"
+          fi

@@ -31,6 +31,7 @@ export function registerHelpTool(server: McpServer): void {
           ),
       }),
       annotations: {
+        destructiveHint: false,
         readOnlyHint: true,
         idempotentHint: true,
       },

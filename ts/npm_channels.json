@@ -2,6 +2,14 @@
   "github",
   "modelcontextprotocol",
   {
+    "name": "anthropic",
+    "products": ["mcp"],
+    "publish": false,
+    "mcpb": {
+      "artifactBaseName": "atomicmail-anthropic"
+    }
+  },
+  {
     "name": "clawhub",
     "products": ["mcp"]
   }

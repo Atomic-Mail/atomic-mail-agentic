@@ -55,7 +55,7 @@ async function publishPackage(dir: string): Promise<"published" | "skipped"> {
   return "published";
 }
 
-const dirs = listBuiltPackageDirs();
+const dirs = listBuiltPackageDirs({ publishableOnly: true });
 if (dirs.length === 0) {
   console.error("No built npm dirs found. Run build_all_npm.ts first.");
   Deno.exit(1);

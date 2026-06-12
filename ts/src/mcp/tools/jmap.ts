@@ -31,6 +31,12 @@ export function registerJmapTool(
         "(preset path; relative to credential directory). `$VAR` substitution " +
         "and optional file `attachments`: see `help` topics presets and " +
         "jmap_cheatsheet.",
+      annotations: {
+        openWorldHint: true,
+        destructiveHint: true,
+        readOnlyHint: false,
+        idempotentHint: false,
+      },
       inputSchema: z.object({
         credentials_dir: z
           .string()

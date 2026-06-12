@@ -1,0 +1,29 @@
+{
+  "manifest_version": "0.4",
+  "name": "__PACKAGE_NAME__",
+  "display_name": "Atomic Mail",
+  "version": "__VERSION__",
+  "description": "__DESCRIPTION__",
+  "author": {
+    "name": "__AUTHOR_NAME__",
+    "url": "__AUTHOR_URL__"
+  },
+  "server": {
+    "type": "node",
+    "entry_point": "server/esm/mcp/main.js",
+    "mcp_config": {
+      "command": "node",
+      "args": ["${__dirname}/server/esm/mcp/main.js"],
+      "env": {}
+    }
+  },
+  "compatibility": {
+    "claude_desktop": ">=1.0.0",
+    "platforms": ["darwin", "win32", "linux"]
+  },
+  "license": "__LICENSE__",
+  "repository": {
+    "type": "__REPOSITORY_TYPE__",
+    "url": "__REPOSITORY_URL__"
+  }
+}

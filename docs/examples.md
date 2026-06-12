@@ -60,14 +60,16 @@ def solve_pow(challenge: str, salt_hex: str, difficulty: int) -> tuple[int, str]
     """
     Find nonce such that scrypt(challenge:nonce) has required leading zero bits.
     """
-    salt = bytes.fromhex(salt_hex)
+    # IMPORTANT: use UTF-8 bytes of the hex text, not bytes.fromhex(...).
+    # This mirrors the auth service and TS reference client.
+    salt = salt_hex.encode("utf-8")
     target_bits = "0" * difficulty
     nonce = 0
 
     while True:
         data = f"{challenge}:{nonce}".encode()
-        digest = hashlib.scrypt(data, salt=salt, n=16384, r=8, p=1, dklen=32)
-        bits = bin(int.from_bytes(digest, "big"))[2:].zfill(256)
+        digest = hashlib.scrypt(data, salt=salt, n=16384, r=8, p=1, dklen=64)
+        bits = bin(int.from_bytes(digest, "big"))[2:].zfill(512)
         if bits.startswith(target_bits):
             return nonce, digest.hex()
         nonce += 1

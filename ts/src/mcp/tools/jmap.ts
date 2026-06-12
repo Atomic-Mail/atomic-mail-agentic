@@ -7,6 +7,7 @@ import {
   DEFAULT_JMAP_USING,
   readOpsFile,
   runJmapRequest,
+  sharedError,
   USER_VAR_KEY_RE,
 } from "../../lib/mod.ts";
 import type { McpSessionContext } from "../mcp-session-context.ts";
@@ -89,12 +90,10 @@ export function registerJmapTool(
     async ({ credentials_dir, using, ops, ops_file, vars, attachments }) => {
       try {
         if (ops && ops_file) {
-          return mcpError(
-            "ops and ops_file are mutually exclusive — provide one.",
-          );
+          return mcpError(sharedError("mcp_ops_mutually_exclusive"));
         }
         if (!ops && !ops_file) {
-          return mcpError("Provide either ops or ops_file.");
+          return mcpError(sharedError("mcp_ops_required"));
         }
 
         const session = await resolveMcpToolSession(

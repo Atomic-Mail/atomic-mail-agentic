@@ -24,7 +24,8 @@ const PRESET_FILES = [
   "reply.json",
 ] as const;
 
-const SHARED_PRESET_DIR = "./src/lib/agent/jmap/presets";
+const SHARED_ROOT_DIR = "../shared";
+const SHARED_PRESET_DIR = `${SHARED_ROOT_DIR}/presets`;
 const LICENSE_FILE = { path: "../LICENSE", targetPath: "LICENSE" };
 
 const PRODUCT_CONFIG = {
@@ -204,6 +205,21 @@ async function copyFileIfExists(src: string, dest: string): Promise<void> {
   }
 }
 
+async function copyDirRecursive(srcDir: string, destDir: string): Promise<void> {
+  await Deno.mkdir(destDir, { recursive: true });
+  for await (const entry of Deno.readDir(srcDir)) {
+    const src = `${srcDir}/${entry.name}`;
+    const dest = `${destDir}/${entry.name}`;
+    if (entry.isDirectory) {
+      await copyDirRecursive(src, dest);
+      continue;
+    }
+    if (entry.isFile) {
+      await Deno.copyFile(src, dest);
+    }
+  }
+}
+
 async function prependChannelReadme(
   dir: string,
   channel: string,
@@ -301,6 +317,8 @@ export async function buildNpmPackage(
       if (channel) {
         await prependChannelReadme(dir, channel, config.baseName);
       }
+
+      await copyDirRecursive(SHARED_ROOT_DIR, `${dir}/shared`);
 
       await Deno.mkdir(`${dir}/presets`, { recursive: true });
       for (const file of PRESET_FILES) {

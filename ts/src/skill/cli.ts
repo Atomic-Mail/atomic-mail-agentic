@@ -19,6 +19,7 @@ import {
   readNpmPackageReadme,
   readOpsFile,
   runJmapRequest,
+  sharedError,
 } from "../lib/mod.ts";
 
 const USAGE = `Atomic Mail — AgentSkill
@@ -218,10 +219,10 @@ Options:
   const ops = parsed.values.ops as string | undefined;
   const opsFile = parsed.values["ops-file"] as string | undefined;
   if (ops && opsFile) {
-    fail("--ops and --ops-file are mutually exclusive.", 2);
+    fail(sharedError("cli_ops_mutually_exclusive"), 2);
   }
   if (!ops && !opsFile) {
-    fail("Provide --ops or --ops-file.", 2);
+    fail(sharedError("cli_ops_required"), 2);
   }
 
   const rawAttachments = parsed.values.attachment as
@@ -234,7 +235,7 @@ Options:
     ? rawAttachments
     : [rawAttachments];
   if (parsed.values["dry-run"] === true && attachmentPaths.length > 0) {
-    fail("--dry-run cannot be combined with --attachment.", 2);
+    fail(sharedError("cli_dry_run_with_attachment"), 2);
   }
 
   const usingFlag = parsed.values.using as string | undefined;

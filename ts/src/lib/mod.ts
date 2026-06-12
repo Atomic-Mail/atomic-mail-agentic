@@ -2,6 +2,8 @@ export * from "./network/auth-client.ts";
 export * from "./core/utils.ts";
 export * from "./core/read-npm-package-readme.ts";
 export * from "./core/consts.ts";
+export * from "./core/messages.ts";
+export * from "./core/shared-assets.ts";
 export * from "./core/types.ts";
 
 export * from "./agent/session/agent-credentials-store.ts";

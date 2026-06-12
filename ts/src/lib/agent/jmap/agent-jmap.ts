@@ -5,10 +5,10 @@ import { dirname, isAbsolute, resolve as resolvePath } from "node:path";
 import { cwd } from "node:process";
 import { fileURLToPath } from "node:url";
 
+import { tryReadSharedJson } from "../../core/shared-assets.ts";
 import { readCredentials } from "../session/agent-credentials-store.ts";
 import { inboxIdToMailboxEmail } from "../session/inbox-id-to-mailbox-email.ts";
 import {
-  assertAttachmentBytesWithinBlobLimit,
   assertBlobUploadEnvelopeWithinLimits,
   type JmapBlobUploadLimits,
 } from "./agent-jmap-blob-limits.ts";
@@ -28,6 +28,10 @@ export const DEFAULT_JMAP_USING = [
 ] as const;
 
 /** Presets shipped with MCP / skill npm packages (for error hints). */
+const sharedManifest = tryReadSharedJson<{ presets_dir: string }>("manifest.json");
+const sharedHints = tryReadSharedJson<{ jmap_next_hints: string[] }>(
+  "messages/hints.json",
+);
 export const BUNDLED_OPS_PRESET_NAMES = [
   "list_inbox.json",
   "reply.json",
@@ -123,6 +127,12 @@ async function resolveBundledPresetPath(
 
   for (let depth = 0; depth < 8; depth++) {
     const candidates = [
+      resolvePath(
+        currentDir,
+        "shared",
+        sharedManifest?.presets_dir ?? "presets",
+        opsFile,
+      ),
       resolvePath(currentDir, "presets", opsFile),
       resolvePath(currentDir, "agent", "jmap", "presets", opsFile),
       resolvePath(
@@ -491,11 +501,11 @@ export async function postJmap(
   return { ok: res.ok, status: res.status, bodyText };
 }
 
-const JMAP_NEXT_HINTS = [
+const JMAP_NEXT_HINTS = sharedHints?.jmap_next_hints ?? [
   "Use jmap_request with Mailbox/get or Email/query to work with mail data.",
   "Use presets with $VAR placeholders — $ACCOUNT_ID, $INBOX, and $INBOX_MAILBOX_ID come from the session; pass others via vars / --vars.",
   "Call help for the JMAP cheatsheet and troubleshooting.",
-] as const;
+];
 
 /** Attach _next hints to a successful JMAP JSON object when parseable. */
 export function attachJmapNextHints(bodyText: string): string {

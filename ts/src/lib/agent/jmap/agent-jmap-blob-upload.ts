@@ -52,13 +52,17 @@ export async function postBinaryBlobUpload(
   bytes: Uint8Array,
   contentType: string,
 ): Promise<{ blobId: string; size: number }> {
+  const body = bytes.buffer.slice(
+    bytes.byteOffset,
+    bytes.byteOffset + bytes.byteLength,
+  ) as ArrayBuffer;
   const res = await fetch(uploadUrlExpanded, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${capabilityJwt}`,
       "Content-Type": contentType,
     },
-    body: bytes,
+    body,
   });
   const text = await res.text();
   if (!res.ok) {

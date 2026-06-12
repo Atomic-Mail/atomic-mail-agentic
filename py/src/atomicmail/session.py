@@ -27,6 +27,7 @@ from .jwt_utils import (
 )
 
 JMAP_MAIL_URN = "urn:ietf:params:jmap:mail"
+JMAP_BLOB_URN = "urn:ietf:params:jmap:blob"
 
 
 @dataclass
@@ -244,6 +245,15 @@ class AgentSession:
 
         return cap
 
+    def get_blob_upload_limits_for_account(self, account_id: str) -> dict[str, int | None] | None:
+        if not account_id:
+            return None
+        if self._cached_jmap_session is None:
+            self.get_primary_mail_account_id()
+        if self._cached_jmap_session is None:
+            return None
+        return extract_blob_upload_limits(self._cached_jmap_session, account_id)
+
     def invalidate_jmap_session_cache(self) -> None:
         self._cached_mail_account_id = None
         self._cached_upload_url = None
@@ -356,6 +366,47 @@ def extract_jmap_api_url(session: Mapping[str, object]) -> str:
     if not isinstance(api_url, str) or not api_url:
         raise ValueError("JMAP session missing apiUrl.")
     return api_url
+
+
+def _as_non_negative_int(value: object) -> int | None:
+    if not isinstance(value, int):
+        return None
+    if value < 0:
+        return None
+    return value
+
+
+def extract_blob_upload_limits(
+    session: Mapping[str, object],
+    account_id: str,
+) -> dict[str, int | None] | None:
+    accounts = session.get("accounts")
+    if not isinstance(accounts, dict):
+        return None
+    account = accounts.get(account_id)
+    if not isinstance(account, dict):
+        return None
+    account_capabilities = account.get("accountCapabilities")
+    if not isinstance(account_capabilities, dict):
+        return None
+    blob_capabilities = account_capabilities.get(JMAP_BLOB_URN)
+    if not isinstance(blob_capabilities, dict):
+        return None
+
+    raw_max_size = blob_capabilities.get("maxSizeBlobSet")
+    max_size_blob_set: int | None = None
+    if raw_max_size is None:
+        max_size_blob_set = None
+    else:
+        parsed_max_size = _as_non_negative_int(raw_max_size)
+        if parsed_max_size is not None:
+            max_size_blob_set = parsed_max_size
+
+    out: dict[str, int | None] = {"maxSizeBlobSet": max_size_blob_set}
+    parsed_max_data_sources = _as_non_negative_int(blob_capabilities.get("maxDataSources"))
+    if parsed_max_data_sources is not None:
+        out["maxDataSources"] = parsed_max_data_sources
+    return out
 
 
 def _normalize_username(username: str) -> str:

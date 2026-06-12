@@ -12,9 +12,18 @@ JMAP_MODULE = importlib.import_module("atomicmail.jmap_request")
 
 
 class _FakeSession:
-    def __init__(self, *, inbox_id: str | None = "agent@atomicmail.ai") -> None:
+    def __init__(
+        self,
+        *,
+        inbox_id: str | None = "agent@atomicmail.ai",
+        upload_url: str | None = "https://api.atomicmail.ai/upload/{accountId}",
+        limits: dict[str, int | None] | None = None,
+    ) -> None:
         self.current_inbox_id = inbox_id
+        self.current_upload_url = upload_url
         self.credentialDir = "/tmp/fake"
+        self.files = type("Files", (), {"credentialsFile": "/tmp/fake/credentials.json"})()
+        self._limits = limits or {"maxSizeBlobSet": None}
 
     def get_primary_mail_account_id(self) -> str:
         return "acc-1"
@@ -24,6 +33,9 @@ class _FakeSession:
 
     def get_jmap_post_url(self) -> str:
         return "https://api.atomicmail.ai/jmap"
+
+    def get_blob_upload_limits_for_account(self, _account_id: str) -> dict[str, int | None] | None:
+        return self._limits
 
 
 def test_jmap_request_validates_ops_inputs() -> None:
@@ -126,6 +138,158 @@ def test_run_jmap_request_returns_failed_response_without_hints(monkeypatch) -> 
     assert out.ok is False
     assert out.status == 500
     assert out.bodyText == '{"type":"error"}'
+
+
+def test_run_jmap_request_uploads_attachment_and_substitutes_vars(
+    tmp_path: Path, monkeypatch
+) -> None:
+    sent_uploads: list[tuple[str, bytes, str]] = []
+    captured: dict[str, object] = {}
+    attachment_path = tmp_path / "hello.txt"
+    attachment_path.write_text("hello", encoding="utf-8")
+
+    def fake_upload(*, upload_url_expanded: str, capability_jwt: str, content: bytes, content_type: str):
+        assert capability_jwt == "cap-token"
+        sent_uploads.append((upload_url_expanded, content, content_type))
+        return "blob-1", len(content)
+
+    def fake_post(_url: str, _token: str, envelope: dict[str, object]):
+        captured["envelope"] = envelope
+        return JmapRequestResult(ok=True, status=200, bodyText='{"ok":true}')
+
+    monkeypatch.setattr(JMAP_MODULE, "_post_binary_blob_upload", fake_upload)
+    monkeypatch.setattr(JMAP_MODULE, "_post_jmap", fake_post)
+
+    run_jmap_request(
+        session=_FakeSession(),
+        ops_json='[["Email/set",{"create":{"m1":{"attachments":[{"blobId":"$ATTACHMENT_0_BLOB_ID","type":"$ATTACHMENT_0_TYPE","name":"$ATTACHMENT_0_NAME","size":"$ATTACHMENT_0_SIZE"}]}}},"c0"]]',
+        attachments=[{"path": str(attachment_path)}],
+    )
+
+    assert sent_uploads == [("https://api.atomicmail.ai/upload/acc-1", b"hello", "text/plain")]
+    envelope = captured["envelope"]
+    assert isinstance(envelope, dict)
+    method_calls = envelope["methodCalls"]
+    assert isinstance(method_calls, list)
+    first = method_calls[0]
+    assert isinstance(first, list)
+    email_set_arg = first[1]
+    assert isinstance(email_set_arg, dict)
+    create = email_set_arg["create"]
+    assert isinstance(create, dict)
+    msg = create["m1"]
+    assert isinstance(msg, dict)
+    attachments = msg["attachments"]
+    assert isinstance(attachments, list)
+    first_attachment = attachments[0]
+    assert isinstance(first_attachment, dict)
+    assert first_attachment["blobId"] == "blob-1"
+    assert first_attachment["type"] == "text/plain"
+    assert first_attachment["name"] == "hello.txt"
+    assert first_attachment["size"] == "5"
+
+
+def test_run_jmap_request_attachment_upload_failure_bubbles(
+    tmp_path: Path, monkeypatch
+) -> None:
+    attachment_path = tmp_path / "hello.txt"
+    attachment_path.write_text("hello", encoding="utf-8")
+
+    def fail_upload(**_kwargs):
+        raise ValueError("RFC 8620 binary upload failed (HTTP 500)")
+
+    monkeypatch.setattr(JMAP_MODULE, "_post_binary_blob_upload", fail_upload)
+
+    with pytest.raises(ValueError, match="RFC 8620 binary upload failed"):
+        run_jmap_request(
+            session=_FakeSession(),
+            ops_json='[["Email/set",{"create":{"m1":{"attachments":[{"blobId":"$ATTACHMENT_0_BLOB_ID"}]}}},"c0"]]',
+            attachments=[{"path": str(attachment_path)}],
+        )
+
+
+def test_run_jmap_request_rejects_attachment_over_max_size(
+    tmp_path: Path,
+) -> None:
+    attachment_path = tmp_path / "huge.bin"
+    attachment_path.write_bytes(b"12345")
+    with pytest.raises(ValueError, match="maxSizeBlobSet"):
+        run_jmap_request(
+            session=_FakeSession(limits={"maxSizeBlobSet": 3, "maxDataSources": 32}),
+            ops_json='[["Email/set",{"create":{"m1":{"attachments":[{"blobId":"$ATTACHMENT_0_BLOB_ID"}]}}},"c0"]]',
+            attachments=[{"path": str(attachment_path), "contentType": "application/octet-stream"}],
+        )
+
+
+def test_run_jmap_request_rejects_blob_upload_max_data_sources(monkeypatch) -> None:
+    monkeypatch.setattr(JMAP_MODULE, "_post_jmap", lambda *_args, **_kwargs: pytest.fail("should not post"))
+    with pytest.raises(ValueError, match="maxDataSources"):
+        run_jmap_request(
+            session=_FakeSession(limits={"maxSizeBlobSet": 100, "maxDataSources": 1}),
+            ops_json='{"using":["urn:ietf:params:jmap:core","urn:ietf:params:jmap:blob"],"methodCalls":[["Blob/upload",{"accountId":"acc-1","create":{"x":{"data":[{"data:asText":"a"},{"data:asText":"b"}]}}},"m0"]]}',
+        )
+
+
+def test_run_jmap_request_rejects_blob_upload_max_size(
+    monkeypatch,
+) -> None:
+    monkeypatch.setattr(JMAP_MODULE, "_post_jmap", lambda *_args, **_kwargs: pytest.fail("should not post"))
+    with pytest.raises(ValueError, match="maxSizeBlobSet"):
+        run_jmap_request(
+            session=_FakeSession(limits={"maxSizeBlobSet": 4, "maxDataSources": 64}),
+            ops_json='{"using":["urn:ietf:params:jmap:core","urn:ietf:params:jmap:blob"],"methodCalls":[["Blob/upload",{"accountId":"acc-1","create":{"x":{"data":[{"data:asBase64":"SGVsbG8="}]}}},"m0"]]}',
+        )
+
+
+def test_run_jmap_request_adds_charset_for_text_blob_parts(monkeypatch) -> None:
+    captured: dict[str, object] = {}
+
+    def fake_post(_url: str, _token: str, envelope: dict[str, object]):
+        captured["envelope"] = envelope
+        return JmapRequestResult(ok=True, status=200, bodyText='{"ok":true}')
+
+    monkeypatch.setattr(JMAP_MODULE, "_post_jmap", fake_post)
+    run_jmap_request(
+        session=_FakeSession(),
+        ops_json='[["Email/set",{"create":{"m1":{"attachments":[{"blobId":"G1","type":"text/plain","name":"a.txt"}],"textBody":[{"partId":"body1","type":"text/plain"}],"htmlBody":[{"blobId":"G2","type":"text/html"}]}}},"m0"]]',
+    )
+
+    envelope = captured["envelope"]
+    assert isinstance(envelope, dict)
+    method_calls = envelope["methodCalls"]
+    assert isinstance(method_calls, list)
+    call0 = method_calls[0]
+    assert isinstance(call0, list)
+    arg = call0[1]
+    assert isinstance(arg, dict)
+    create = arg["create"]
+    assert isinstance(create, dict)
+    m1 = create["m1"]
+    assert isinstance(m1, dict)
+    atts = m1["attachments"]
+    assert isinstance(atts, list)
+    assert isinstance(atts[0], dict)
+    assert atts[0]["charset"] == "utf-8"
+    text_body = m1["textBody"]
+    assert isinstance(text_body, list)
+    assert isinstance(text_body[0], dict)
+    assert "charset" not in text_body[0]
+    html_body = m1["htmlBody"]
+    assert isinstance(html_body, list)
+    assert isinstance(html_body[0], dict)
+    assert html_body[0]["charset"] == "utf-8"
+
+
+def test_run_jmap_request_dry_run_rejects_attachments(tmp_path: Path) -> None:
+    attachment_path = tmp_path / "hello.txt"
+    attachment_path.write_text("hello", encoding="utf-8")
+    with pytest.raises(ValueError, match="dryRun cannot be used with attachments"):
+        run_jmap_request(
+            session=_FakeSession(),
+            ops_json='[["Mailbox/get",{}, "m0"]]',
+            dry_run=True,
+            attachments=[{"path": str(attachment_path)}],
+        )
 
 
 def test_jmap_request_ops_file_missing_reports_template(

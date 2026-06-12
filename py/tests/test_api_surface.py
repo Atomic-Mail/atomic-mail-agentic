@@ -8,3 +8,4 @@ def test_public_api_exports_help_and_jmap_request() -> None:
     assert callable(atomicmail.jmap_request)
     assert callable(atomicmail.run_jmap_request)
     assert hasattr(atomicmail, "JmapRequestResult")
+    assert hasattr(atomicmail, "JmapAttachmentInput")

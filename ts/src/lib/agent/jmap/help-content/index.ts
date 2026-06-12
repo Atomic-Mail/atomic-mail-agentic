@@ -42,7 +42,7 @@ const fallbackTopics: Record<string, string> = {
 };
 
 const DEFAULT_README_STUB =
-  'Topic "readme" prints the package README.md from the npm install. From MCP use {"topic":"readme"}; from the CLI: `atomicmail help --topic readme`.';
+  'Topic "readme" returns a built-in stub. No runtime package README lookup is performed. From MCP use {"topic":"readme"}; from the CLI: `atomicmail help --topic readme`.';
 const DEFAULT_UNKNOWN_TOPIC =
   "Unknown topic \"{topic}\". Available topics: {topics}, readme";
 

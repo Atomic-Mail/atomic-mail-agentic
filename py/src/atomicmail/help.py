@@ -8,7 +8,8 @@ from .shared_assets import try_read_shared_json, try_read_shared_text
 
 _DEFAULT_UNKNOWN_TOPIC = 'Unknown topic "{topic}". Available topics: {topics}, readme'
 _DEFAULT_README_STUB = (
-    'Topic "readme" prints the package README.md from the npm install. '
+    'Topic "readme" returns a built-in stub. '
+    "No runtime package README lookup is performed. "
     'From MCP use {"topic":"readme"}; from the CLI: `atomicmail help --topic readme`.'
 )
 _FALLBACK_TOPICS: dict[str, str] = {

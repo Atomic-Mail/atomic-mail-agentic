@@ -5,10 +5,15 @@ from __future__ import annotations
 import json
 import sys
 from dataclasses import asdict
-from typing import Any, Mapping, Sequence
+from typing import Any, Mapping
 
 from .help import HELP_TOPIC_LIST, help as get_help
-from .jmap_request import DEFAULT_JMAP_USING, JmapAttachmentInput, jmap_request
+from .jmap_request import (
+    DEFAULT_JMAP_USING,
+    USER_VAR_KEY_RE,
+    JmapAttachmentInput,
+    jmap_request,
+)
 from .session import register
 
 _SERVER_NAME = "atomicmail"
@@ -37,21 +42,31 @@ def _tool_error(text: str) -> dict[str, Any]:
     return {"content": [{"type": "text", "text": text}], "isError": True}
 
 
+def _optional_bool_argument(
+    args: Mapping[str, Any], key: str
+) -> tuple[bool | None, str | None]:
+    value = args.get(key)
+    if value is None:
+        return None, None
+    if isinstance(value, bool):
+        return value, None
+    return None, f"{key} must be a boolean."
+
+
 def _tool_specs() -> list[dict[str, Any]]:
     return [
         {
             "name": "register",
             "title": "Register an Atomic Mail inbox",
             "description": (
-                "PoW signup or API-key login; writes credentials. "
-                "Provide exactly one of username/api_key. "
-                "Use forced=true to replace existing credentials for another username."
+                "PoW signup; writes credentials. Usernames are 5–21 characters. "
+                "Idempotent for the same username and stored inbox; a different username "
+                "is rejected unless forced=true is provided."
             ),
             "inputSchema": {
                 "type": "object",
                 "properties": {
                     "username": {"type": "string", "minLength": 5, "maxLength": 21},
-                    "api_key": {"type": "string", "minLength": 1},
                     "credentials_dir": {"type": "string"},
                     "forced": {"type": "boolean"},
                 },
@@ -74,6 +89,7 @@ def _tool_specs() -> list[dict[str, Any]]:
                     "ops_file": {"type": "string"},
                     "vars": {
                         "type": "object",
+                        "propertyNames": {"pattern": r"^[A-Z][A-Z0-9_]*$"},
                         "additionalProperties": {"type": "string"},
                     },
                     "dry_run": {"type": "boolean"},
@@ -136,34 +152,19 @@ def handle_tool_call(name: str, arguments: Mapping[str, Any] | None) -> dict[str
     if name == "register":
         try:
             username = args.get("username")
-            api_key = args.get("api_key")
-            forced = args.get("forced")
-            has_username = isinstance(username, str) and bool(username.strip())
-            has_api_key = isinstance(api_key, str) and bool(api_key.strip())
+            forced, forced_error = _optional_bool_argument(args, "forced")
 
             if username is not None and not isinstance(username, str):
                 return _tool_error("Registration failed: username must be a string.")
-            if api_key is not None and not isinstance(api_key, str):
-                return _tool_error("Registration failed: api_key must be a string.")
-            if has_username == has_api_key:
-                return _tool_error(
-                    "Registration failed: provide exactly one of username or api_key."
-                )
-            if bool(forced) and has_api_key:
-                return _tool_error(
-                    "Registration failed: forced is only supported with username."
-                )
-
-            if not isinstance(username, str) or not username:
-                username = None
-            if not isinstance(api_key, str) or not api_key:
-                api_key = None
+            if not isinstance(username, str) or not username.strip():
+                return _tool_error("Registration failed: username must be a non-empty string.")
+            if forced_error is not None:
+                return _tool_error(f"Registration failed: {forced_error}")
             credentials_dir = args.get("credentials_dir")
             result = register(
                 username=username,
-                api_key=api_key,
                 credentials_dir=credentials_dir if isinstance(credentials_dir, str) else None,
-                forced=bool(forced),
+                forced=forced if forced is not None else False,
             )
             return _tool_success(json.dumps(asdict(result), indent=2))
         except Exception as err:
@@ -181,13 +182,23 @@ def handle_tool_call(name: str, arguments: Mapping[str, Any] | None) -> dict[str
             credentials_dir = args.get("credentials_dir")
             using = args.get("using")
             vars_in = args.get("vars")
-            dry_run = bool(args.get("dry_run"))
+            dry_run, dry_run_error = _optional_bool_argument(args, "dry_run")
             attachments = _coerce_attachments(args.get("attachments"))
+            if dry_run_error is not None:
+                return _tool_error(dry_run_error)
             if vars_in is not None:
                 if not isinstance(vars_in, dict) or not all(
                     isinstance(k, str) and isinstance(v, str) for k, v in vars_in.items()
                 ):
                     return _tool_error("vars must be an object of string values.")
+                invalid_key = next(
+                    (key for key in vars_in if USER_VAR_KEY_RE.fullmatch(key) is None),
+                    None,
+                )
+                if invalid_key is not None:
+                    return _tool_error(
+                        f"vars key '{invalid_key}' must match /^[A-Z][A-Z0-9_]*$/."
+                    )
             if using is not None:
                 if not isinstance(using, list) or not all(isinstance(item, str) for item in using):
                     return _tool_error("using must be an array of strings.")
@@ -199,7 +210,7 @@ def handle_tool_call(name: str, arguments: Mapping[str, Any] | None) -> dict[str
                 ops=ops if isinstance(ops, str) else None,
                 ops_file=ops_file if isinstance(ops_file, str) else None,
                 vars=vars_in if isinstance(vars_in, dict) else None,
-                dry_run=dry_run,
+                dry_run=dry_run if dry_run is not None else False,
                 attachments=attachments,
                 using=normalized_using,
                 credentials_dir=credentials_dir if isinstance(credentials_dir, str) else None,

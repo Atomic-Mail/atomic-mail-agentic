@@ -34,24 +34,30 @@ def test_mcp_register_tool_wraps_errors(monkeypatch) -> None:
     assert _extract_text(out) == "Registration failed: bad username"
 
 
-def test_mcp_register_tool_supports_api_key_mode(monkeypatch) -> None:
+def test_mcp_register_tool_requires_username() -> None:
+    out = handle_tool_call("register", {"forced": True})
+    assert out.get("isError") is True
+    assert "username must be a non-empty string" in _extract_text(out)
+
+
+def test_mcp_register_tool_passes_username_contract(monkeypatch) -> None:
     def _fake_register(
         username: str | None,
         *,
-        api_key: str | None,
-        credentials_dir: str | None,
-        forced: bool,
+        api_key: str | None = None,
+        credentials_dir: str | None = None,
+        forced: bool = False,
     ):
-        assert username is None
-        assert api_key == "existing-api-key"
+        assert username == "alice"
+        assert api_key is None
         assert credentials_dir == "/tmp/creds"
-        assert forced is False
-        return RegisterResult(inbox="alice@atomicmail.ai", accountId="acc-1", apiKey=None)
+        assert forced is True
+        return RegisterResult(inbox="alice@atomicmail.ai", accountId="acc-1", apiKey="k")
 
     monkeypatch.setattr("atomicmail.mcp_server.register", _fake_register)
     out = handle_tool_call(
         "register",
-        {"api_key": "existing-api-key", "credentials_dir": "/tmp/creds"},
+        {"username": "alice", "credentials_dir": "/tmp/creds", "forced": True},
     )
     assert out.get("isError") is None
     text = _extract_text(out)
@@ -59,10 +65,10 @@ def test_mcp_register_tool_supports_api_key_mode(monkeypatch) -> None:
     assert "acc-1" in text
 
 
-def test_mcp_register_tool_rejects_forced_with_api_key() -> None:
-    out = handle_tool_call("register", {"api_key": "existing-api-key", "forced": True})
+def test_mcp_register_tool_rejects_non_boolean_forced() -> None:
+    out = handle_tool_call("register", {"username": "alice", "forced": "false"})
     assert out.get("isError") is True
-    assert "forced is only supported with username" in _extract_text(out)
+    assert "forced must be a boolean" in _extract_text(out)
 
 
 def test_mcp_jmap_tool_validates_ops_exclusive() -> None:
@@ -91,3 +97,15 @@ def test_mcp_jmap_tool_dispatches_success(monkeypatch) -> None:
     )
     assert out.get("isError") is None
     assert '"ok": true' in _extract_text(out).lower()
+
+
+def test_mcp_jmap_tool_rejects_invalid_vars_key() -> None:
+    out = handle_tool_call("jmap_request", {"ops": "[]", "vars": {"lower": "x"}})
+    assert out.get("isError") is True
+    assert "must match /^[A-Z][A-Z0-9_]*$/" in _extract_text(out)
+
+
+def test_mcp_jmap_tool_rejects_non_boolean_dry_run() -> None:
+    out = handle_tool_call("jmap_request", {"ops": "[]", "dry_run": "true"})
+    assert out.get("isError") is True
+    assert "dry_run must be a boolean" in _extract_text(out)

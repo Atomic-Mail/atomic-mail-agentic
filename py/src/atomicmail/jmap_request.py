@@ -15,7 +15,7 @@ from urllib.request import Request, urlopen
 
 from .config import resolve_agent_config_from_env
 from .credentials import try_read_credentials
-from .session import AgentSession, JMAP_BLOB_URN
+from .session import AgentSession, JMAP_BLOB_URN, inbox_id_to_mailbox_email
 from .shared_assets import shared_dir, try_read_shared_json
 
 DEFAULT_JMAP_USING = [
@@ -30,6 +30,7 @@ BUNDLED_OPS_PRESET_NAMES = [
     "send_mail_blob_attachment.json",
 ]
 _VAR_PATTERN = re.compile(r"\$([A-Z][A-Z0-9_]*)")
+USER_VAR_KEY_RE = re.compile(r"^[A-Z][A-Z0-9_]*$")
 _SESSION_VAR_NAMES = {"ACCOUNT_ID", "INBOX", "INBOX_MAILBOX_ID"}
 _EXT_TO_MIME = {
     ".txt": "text/plain",
@@ -475,6 +476,16 @@ def _substitute_vars(
     return _VAR_PATTERN.sub(lambda match: resolved[match.group(1)], raw)
 
 
+def _resolve_inbox_mailbox_email(session: AgentSession) -> str:
+    raw_inbox = session.current_inbox_id
+    if not raw_inbox:
+        creds = try_read_credentials(session.files.credentialsFile)
+        raw_inbox = creds.inboxId if creds else None
+    if not raw_inbox:
+        raise ValueError("No inbox in session; run register first.")
+    return inbox_id_to_mailbox_email(raw_inbox)
+
+
 def _post_jmap(jmap_post_url: str, capability_jwt: str, envelope: dict[str, object]) -> JmapRequestResult:
     body = json.dumps(envelope).encode("utf-8")
     req = Request(
@@ -802,6 +813,7 @@ def run_jmap_request(
     auto_resolvers: dict[str, Callable[[], str]] = {
         "ACCOUNT_ID": session.get_primary_mail_account_id,
         "INBOX_MAILBOX_ID": lambda: _fetch_inbox_mailbox_id(session),
+        "INBOX": lambda: _resolve_inbox_mailbox_email(session),
         "UPLOAD_URL": lambda: (
             session.current_upload_url
             or (try_read_credentials(session.files.credentialsFile).uploadUrl if try_read_credentials(session.files.credentialsFile) else "")
@@ -811,8 +823,6 @@ def run_jmap_request(
             or (try_read_credentials(session.files.credentialsFile).downloadUrl if try_read_credentials(session.files.credentialsFile) else "")
         ),
     }
-    if session.current_inbox_id:
-        auto_resolvers["INBOX"] = lambda: session.current_inbox_id or ""
 
     substituted = _substitute_vars(
         ops_json,

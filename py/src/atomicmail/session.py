@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 from dataclasses import dataclass
 from typing import Mapping
 from urllib.error import HTTPError
@@ -28,6 +29,7 @@ from .jwt_utils import (
 
 JMAP_MAIL_URN = "urn:ietf:params:jmap:mail"
 JMAP_BLOB_URN = "urn:ietf:params:jmap:blob"
+DEFAULT_INBOX_DOMAIN = "atomicmail.ai"
 
 
 @dataclass
@@ -54,6 +56,24 @@ def inbox_local_part(inbox_id: str) -> str:
     if i < 0:
         return _normalize_username(inbox_id)
     return _normalize_username(inbox_id[:i])
+
+
+def inbox_id_to_mailbox_email(
+    inbox_id: str, env: Mapping[str, str] | None = None
+) -> str:
+    trimmed = inbox_id.strip()
+    if len(trimmed) == 0:
+        return inbox_id
+    if "@" in trimmed:
+        return trimmed
+
+    raw = (
+        (env.get("ATOMIC_MAIL_INBOX_DOMAIN") if env is not None else None)
+        or os.environ.get("ATOMIC_MAIL_INBOX_DOMAIN")
+        or ""
+    ).strip()
+    domain = raw.lstrip("@") if raw else DEFAULT_INBOX_DOMAIN
+    return f"{trimmed}@{domain}"
 
 
 class AgentSession:

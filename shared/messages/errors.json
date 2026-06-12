@@ -6,7 +6,7 @@
   "cli_dry_run_with_attachment": "--dry-run cannot be combined with --attachment.",
   "cli_unknown_command_template": "Unknown command: {cmd}",
   "help_unknown_topic_template": "Unknown topic \"{topic}\". Available topics: {topics}, readme",
-  "help_readme_stub": "Topic \"readme\" prints the package README.md from the npm install. From MCP use {\"topic\":\"readme\"}; from the CLI: `atomicmail help --topic readme`.",
+  "help_readme_stub": "Topic \"readme\" returns a built-in stub. No runtime package README lookup is performed. From MCP use {\"topic\":\"readme\"}; from the CLI: `atomicmail help --topic readme`.",
   "vars_invalid_json_template": "--vars is not valid JSON: {details}",
   "vars_not_object": "--vars must be a JSON object of { VAR_NAME: string }.",
   "vars_key_invalid_template": "--vars key '{key}' must match /^[A-Z][A-Z0-9_]*$/.",

@@ -6,6 +6,7 @@ from pathlib import Path
 
 import pytest
 
+from atomicmail.credentials import Credentials, write_credentials
 from atomicmail.jmap_request import JmapRequestResult, jmap_request, run_jmap_request
 
 JMAP_MODULE = importlib.import_module("atomicmail.jmap_request")
@@ -121,11 +122,97 @@ def test_run_jmap_request_reports_missing_placeholder() -> None:
 
 
 def test_run_jmap_request_reports_missing_session_placeholder() -> None:
-    with pytest.raises(ValueError, match=r"\$INBOX"):
+    with pytest.raises(ValueError, match="No inbox in session"):
         run_jmap_request(
             session=_FakeSession(inbox_id=None),
             ops_json='[["Email/set",{"from":"$INBOX"},"m0"]]',
         )
+
+
+def test_run_jmap_request_resolves_inbox_from_credentials_fallback(
+    tmp_path: Path, monkeypatch
+) -> None:
+    captured: dict[str, object] = {}
+    fake = _FakeSession(inbox_id=None)
+    fake.files = type(
+        "Files",
+        (),
+        {"credentialsFile": str(tmp_path / "credentials.json")},
+    )()
+    write_credentials(
+        fake.files.credentialsFile,
+        Credentials(
+            apiKey="k",
+            inboxId="fallback",
+            authUrl="https://auth.atomicmail.ai",
+            apiUrl="https://api.atomicmail.ai",
+            scryptSalt="salt",
+            uploadUrl="https://api.atomicmail.ai/upload/{accountId}",
+            downloadUrl="https://api.atomicmail.ai/download/{accountId}/{blobId}",
+        ),
+    )
+
+    def fake_post(_url: str, _token: str, envelope: dict[str, object]):
+        captured["envelope"] = envelope
+        return JmapRequestResult(ok=True, status=200, bodyText='{"ok":true}')
+
+    monkeypatch.setattr(JMAP_MODULE, "_post_jmap", fake_post)
+    monkeypatch.setenv("ATOMIC_MAIL_INBOX_DOMAIN", "mail.example")
+    run_jmap_request(
+        session=fake,
+        ops_json='[["Email/set",{"create":{"m1":{"from":[{"email":"$INBOX"}]}}},"m0"]]',
+    )
+
+    envelope = captured["envelope"]
+    assert isinstance(envelope, dict)
+    method_calls = envelope["methodCalls"]
+    assert isinstance(method_calls, list)
+    first_call = method_calls[0]
+    assert isinstance(first_call, list)
+    arg = first_call[1]
+    assert isinstance(arg, dict)
+    create = arg["create"]
+    assert isinstance(create, dict)
+    m1 = create["m1"]
+    assert isinstance(m1, dict)
+    from_list = m1["from"]
+    assert isinstance(from_list, list)
+    first_from = from_list[0]
+    assert isinstance(first_from, dict)
+    assert first_from["email"] == "fallback@mail.example"
+
+
+def test_run_jmap_request_normalizes_inbox_from_session(monkeypatch) -> None:
+    captured: dict[str, object] = {}
+
+    def fake_post(_url: str, _token: str, envelope: dict[str, object]):
+        captured["envelope"] = envelope
+        return JmapRequestResult(ok=True, status=200, bodyText='{"ok":true}')
+
+    monkeypatch.setattr(JMAP_MODULE, "_post_jmap", fake_post)
+    monkeypatch.setenv("ATOMIC_MAIL_INBOX_DOMAIN", "@relay.example")
+    run_jmap_request(
+        session=_FakeSession(inbox_id="agent"),
+        ops_json='[["Email/set",{"create":{"m1":{"from":[{"email":"$INBOX"}]}}},"m0"]]',
+    )
+
+    envelope = captured["envelope"]
+    assert isinstance(envelope, dict)
+    method_calls = envelope["methodCalls"]
+    assert isinstance(method_calls, list)
+    first_call = method_calls[0]
+    assert isinstance(first_call, list)
+    arg = first_call[1]
+    assert isinstance(arg, dict)
+    create = arg["create"]
+    assert isinstance(create, dict)
+    m1 = create["m1"]
+    assert isinstance(m1, dict)
+    from_list = m1["from"]
+    assert isinstance(from_list, list)
+    first_from = from_list[0]
+    assert isinstance(first_from, dict)
+    assert first_from["email"] == "agent@relay.example"
 
 
 def test_run_jmap_request_returns_failed_response_without_hints(monkeypatch) -> None:

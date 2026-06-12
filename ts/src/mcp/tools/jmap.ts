@@ -67,6 +67,12 @@ export function registerJmapTool(
             "String map for `$PLACEHOLDER` values (keys without `$`). " +
               "Overrides session keys and `ATTACHMENT_*` when attachments are set.",
           ),
+        dry_run: z
+          .boolean()
+          .optional()
+          .describe(
+            "Resolve variables/envelope and return the request body without sending it.",
+          ),
         attachments: z
           .array(
             z.object({
@@ -87,7 +93,15 @@ export function registerJmapTool(
           ),
       }),
     },
-    async ({ credentials_dir, using, ops, ops_file, vars, attachments }) => {
+    async ({
+      credentials_dir,
+      using,
+      ops,
+      ops_file,
+      vars,
+      dry_run,
+      attachments,
+    }) => {
       try {
         if (ops && ops_file) {
           return mcpError(sharedError("mcp_ops_mutually_exclusive"));
@@ -124,6 +138,7 @@ export function registerJmapTool(
           defaultUsing: using,
           sourceLabel,
           vars,
+          dryRun: dry_run,
           attachments: attachments?.map((a) => ({
             path: a.path,
             filename: a.filename,

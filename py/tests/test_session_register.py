@@ -12,7 +12,12 @@ from atomicmail.credentials import (
     read_credentials,
     write_credentials,
 )
-from atomicmail.session import AgentSession, AgentSessionConfig, register
+from atomicmail.session import (
+    AgentSession,
+    AgentSessionConfig,
+    inbox_id_to_mailbox_email,
+    register,
+)
 
 
 def _make_jwt(payload: dict[str, object]) -> str:
@@ -48,6 +53,21 @@ def test_register_rejects_username_switch_without_forced(tmp_path: Path) -> None
 
     with pytest.raises(ValueError, match="Register refused"):
         session.register("new-user")
+
+
+def test_inbox_id_to_mailbox_email_keeps_full_address() -> None:
+    assert inbox_id_to_mailbox_email("agent@example.com") == "agent@example.com"
+
+
+def test_inbox_id_to_mailbox_email_uses_default_domain() -> None:
+    assert inbox_id_to_mailbox_email("agent", env={}) == "agent@atomicmail.ai"
+
+
+def test_inbox_id_to_mailbox_email_uses_configured_domain() -> None:
+    assert (
+        inbox_id_to_mailbox_email("agent", env={"ATOMIC_MAIL_INBOX_DOMAIN": "@mail.example"})
+        == "agent@mail.example"
+    )
 
 
 def test_register_same_username_is_idempotent(tmp_path: Path, monkeypatch) -> None:

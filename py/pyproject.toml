@@ -9,6 +9,10 @@ description = "Shared Atomic Mail Python foundation library"
 requires-python = ">=3.9"
 dependencies = []
 
+[project.scripts]
+atomicmail = "atomicmail.cli:console_main"
+atomicmail-mcp = "atomicmail.mcp_server:console_main"
+
 [tool.setuptools]
 
 [tool.setuptools.package-dir]

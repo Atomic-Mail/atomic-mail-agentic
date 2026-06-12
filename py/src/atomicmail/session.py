@@ -198,6 +198,60 @@ class AgentSession:
             apiKey=self._api_key,
         )
 
+    def login_with_api_key(self, api_key: str) -> RegisterResult:
+        normalized_api_key = api_key.strip()
+        if not normalized_api_key:
+            raise ValueError("API key must be a non-empty string.")
+
+        session = perform_pow_and_session(
+            auth_url=self._auth_url,
+            scrypt_salt=self._scrypt_salt,
+            api_key=normalized_api_key,
+        )
+        self._api_key = normalized_api_key
+        self._session_jwt = session.sessionJWT
+        write_jwt_file(self.files.sessionFile, self._session_jwt)
+
+        capability = fetch_capability(self._auth_url, self._session_jwt)
+        self._capability_jwt = capability
+        write_jwt_file(self.files.capabilityFile, capability)
+
+        claims = decode_jwt_payload(capability)
+        inbox_id = claims.get("inboxId")
+        if not isinstance(inbox_id, str) or not inbox_id:
+            raise ValueError("Capability JWT missing inboxId claim after API-key login.")
+        self._inbox_id = inbox_id
+
+        self.invalidate_jmap_session_cache()
+        account_id = self.get_primary_mail_account_id()
+
+        if (
+            not self._cached_upload_url
+            or not self._cached_download_url
+            or not self._cached_jmap_post_url
+        ):
+            raise ValueError(
+                "JMAP session did not provide uploadUrl, downloadUrl, or apiUrl."
+            )
+
+        write_credentials(
+            self.files.credentialsFile,
+            Credentials(
+                apiKey=self._api_key,
+                inboxId=self._inbox_id,
+                authUrl=self._auth_url,
+                apiUrl=self.apiUrl,
+                scryptSalt=self._scrypt_salt,
+                uploadUrl=self._cached_upload_url,
+                downloadUrl=self._cached_download_url,
+            ),
+        )
+
+        return RegisterResult(
+            inbox=self._inbox_id,
+            accountId=account_id,
+        )
+
     def get_primary_mail_account_id(self) -> str:
         if (
             self._cached_mail_account_id
@@ -304,14 +358,29 @@ class AgentSession:
 
 
 def register(
-    username: str,
+    username: str | None = None,
     *,
+    api_key: str | None = None,
     credentials_dir: str | None = None,
     forced: bool = False,
     env: Mapping[str, str] | None = None,
 ) -> RegisterResult:
+    if bool(username) == bool(api_key):
+        raise ValueError(
+            "Provide exactly one of username (new account) or api_key (existing account login)."
+        )
+    if api_key and forced:
+        raise ValueError("forced is only supported when registering with username.")
+
     config = resolve_agent_config_from_env(env, credential_dir=credentials_dir)
-    return AgentSession.from_resolved_config(config).register(username, forced=forced)
+    session = AgentSession.from_resolved_config(config)
+    if username:
+        return session.register(username, forced=forced)
+    if not api_key:
+        raise ValueError(
+            "Internal: expected api_key to be set when username is not provided."
+        )
+    return session.login_with_api_key(api_key)
 
 
 def fetch_jmap_well_known(api_url: str, capability_jwt: str) -> dict[str, object]:

@@ -12,7 +12,7 @@ from atomicmail.credentials import (
     read_credentials,
     write_credentials,
 )
-from atomicmail.session import AgentSession, AgentSessionConfig
+from atomicmail.session import AgentSession, AgentSessionConfig, register
 
 
 def _make_jwt(payload: dict[str, object]) -> str:
@@ -182,3 +182,75 @@ def test_register_forced_replaces_existing_credentials(
     assert out.inbox == "replacement@atomicmail.ai"
     assert out.accountId == "acc-3"
     assert out.apiKey == "replacement-api-key"
+
+
+def test_login_with_api_key_persists_credentials_and_jwts(
+    tmp_path: Path, monkeypatch
+) -> None:
+    session_jwt = _make_jwt({"sub": "session", "exp": 4_000_000_000})
+    capability_jwt = _make_jwt(
+        {"inboxId": "api-login@atomicmail.ai", "exp": 4_000_000_000}
+    )
+
+    def _fake_pow_and_session(**kwargs):
+        assert kwargs["api_key"] == "existing-api-key"
+        assert kwargs.get("username") is None
+        return type(
+            "SessionResponse", (), {"sessionJWT": session_jwt, "apiKey": None}
+        )()
+
+    monkeypatch.setattr("atomicmail.session.perform_pow_and_session", _fake_pow_and_session)
+    monkeypatch.setattr(
+        "atomicmail.session.fetch_capability",
+        lambda *_args, **_kwargs: capability_jwt,
+    )
+    monkeypatch.setattr(
+        "atomicmail.session.fetch_jmap_well_known",
+        lambda *_args, **_kwargs: {
+            "primaryAccounts": {"urn:ietf:params:jmap:mail": "acc-4"},
+            "uploadUrl": "https://api.atomicmail.ai/upload/{accountId}",
+            "downloadUrl": "https://api.atomicmail.ai/download/{accountId}/{blobId}",
+            "apiUrl": "https://api.atomicmail.ai/jmap",
+        },
+    )
+
+    session = AgentSession.create(_cfg(tmp_path, api_key=None, inbox_id=None))
+    out = session.login_with_api_key("existing-api-key")
+
+    assert out.inbox == "api-login@atomicmail.ai"
+    assert out.accountId == "acc-4"
+    assert out.apiKey is None
+
+    creds = read_credentials(default_files_from_out_dir(str(tmp_path)).credentialsFile)
+    assert creds == Credentials(
+        apiKey="existing-api-key",
+        inboxId="api-login@atomicmail.ai",
+        authUrl="https://auth.atomicmail.ai",
+        apiUrl="https://api.atomicmail.ai",
+        scryptSalt="salt",
+        uploadUrl="https://api.atomicmail.ai/upload/{accountId}",
+        downloadUrl="https://api.atomicmail.ai/download/{accountId}/{blobId}",
+    )
+    assert default_files_from_out_dir(str(tmp_path)).sessionFile.read_text(
+        encoding="utf-8"
+    ) == session_jwt
+    assert default_files_from_out_dir(str(tmp_path)).capabilityFile.read_text(
+        encoding="utf-8"
+    ) == capability_jwt
+
+
+def test_register_requires_exactly_one_mode() -> None:
+    with pytest.raises(ValueError, match="exactly one"):
+        register(username=None, api_key=None, env={})
+    with pytest.raises(ValueError, match="exactly one"):
+        register(username="alice", api_key="existing-api-key", env={})
+
+
+def test_register_rejects_forced_in_api_key_mode() -> None:
+    with pytest.raises(ValueError, match="forced is only supported"):
+        register(
+            username=None,
+            api_key="existing-api-key",
+            forced=True,
+            env={},
+        )

@@ -62,10 +62,15 @@ def _pick_env(env: Mapping[str, str], key: str) -> str | None:
 
 def resolve_agent_config_from_env(
     env: Mapping[str, str] | None = None,
+    credential_dir: str | None = None,
 ) -> ResolvedAgentConfig:
     current_env = env or os.environ
-    credential_dir = resolve_credential_dir()
-    files = default_files_from_out_dir(credential_dir)
+    resolved_credential_dir = (
+        expand_credential_dir_input(credential_dir)
+        if credential_dir is not None
+        else resolve_credential_dir()
+    )
+    files = default_files_from_out_dir(resolved_credential_dir)
     file_creds = try_read_credentials(files.credentialsFile)
 
     env_auth_url = _pick_env(current_env, "ATOMIC_MAIL_AUTH_URL")
@@ -101,7 +106,7 @@ def resolve_agent_config_from_env(
         scryptSalt=scrypt_salt,
         apiKey=api_key,
         inboxId=inbox_id,
-        credentialDir=credential_dir,
+        credentialDir=resolved_credential_dir,
         files=files,
         source=source,
     )

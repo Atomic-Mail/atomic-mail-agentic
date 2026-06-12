@@ -27,6 +27,14 @@ integrations_dist/
 *.log
 **/*.log
 
+# Python cache/artifacts
+__pycache__/
+**/__pycache__/
+*.pyc
+**/*.pyc
+.pytest_cache/
+**/.pytest_cache/
+
 docs/.vitepress/dist/
 docs/.vitepress/cache/
 .vitepress/cache/

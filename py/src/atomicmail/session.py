@@ -97,6 +97,18 @@ class AgentSession:
     def has_api_key(self) -> bool:
         return bool(self._api_key)
 
+    @property
+    def current_inbox_id(self) -> str | None:
+        return self._inbox_id
+
+    @property
+    def current_upload_url(self) -> str | None:
+        return self._cached_upload_url
+
+    @property
+    def current_download_url(self) -> str | None:
+        return self._cached_download_url
+
     def register(self, username: str, *, forced: bool = False) -> RegisterResult:
         want = _normalize_username(username)
         if len(want) < 5 or len(want) > 21:
@@ -199,6 +211,14 @@ class AgentSession:
         if not self._cached_mail_account_id:
             raise ValueError("JMAP session missing primary mail account id.")
         return self._cached_mail_account_id
+
+    def get_jmap_post_url(self) -> str:
+        if self._cached_jmap_post_url:
+            return self._cached_jmap_post_url
+        self._refresh_jmap_session_data()
+        if not self._cached_jmap_post_url:
+            raise ValueError("JMAP session missing apiUrl.")
+        return self._cached_jmap_post_url
 
     def get_capability_token(self) -> str:
         if self._capability_jwt and not is_jwt_expired(

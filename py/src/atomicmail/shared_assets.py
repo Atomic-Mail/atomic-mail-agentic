@@ -40,3 +40,17 @@ def try_read_shared_json(relative_path: str) -> Any | None:
         return read_shared_json(relative_path)
     except (OSError, json.JSONDecodeError):
         return None
+
+
+def read_shared_text(relative_path: str) -> str:
+    """Read UTF-8 text from the shared asset directory."""
+    path = shared_dir() / relative_path
+    return path.read_text(encoding="utf-8")
+
+
+def try_read_shared_text(relative_path: str) -> str | None:
+    """Read shared UTF-8 text if present, otherwise return None."""
+    try:
+        return read_shared_text(relative_path)
+    except OSError:
+        return None

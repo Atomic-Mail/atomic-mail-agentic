@@ -1,0 +1,149 @@
+identity:
+  name: "jmap_request"
+  author: "atomicmail"
+  label:
+    en_US: "JMAP Request"
+    zh_Hans: "JMAP 请求"
+    pt_BR: "Requisição JMAP"
+    ja_JP: "JMAP リクエスト"
+description:
+  human:
+    en_US: >-
+      Advanced escape hatch for custom JMAP operations. Prefer dedicated tools
+      (list_inbox, send_mail, reply) for common workflows. Provide exactly one of
+      ops or ops_file. Use vars for placeholders, optional dry_run for request
+      preview, and check Help topic presets before writing custom calls.
+    zh_Hans: >-
+      用于自定义 JMAP 操作的高级“兜底”工具。常见流程优先使用专用工具（list_inbox、
+      send_mail、reply）。ops 与 ops_file 二选一；可用 vars 传占位符值，可选 dry_run
+      预览请求。编写自定义调用前请先查看 Help 的 presets 主题。
+    pt_BR: >-
+      Escape hatch avançado para operações JMAP customizadas. Prefira ferramentas
+      dedicadas (list_inbox, send_mail, reply) para fluxos comuns. Informe
+      exatamente um entre ops e ops_file. Use vars para placeholders, dry_run
+      opcional para prévia da requisição e consulte Help tópico presets antes de
+      chamadas customizadas.
+    ja_JP: >-
+      カスタム JMAP 操作用の高度なエスケープハッチです。一般的なフローでは
+      list_inbox、send_mail、reply などの専用ツールを優先してください。
+      ops と ops_file は必ずどちらか一方のみ指定します。vars でプレースホルダー値を
+      渡し、必要に応じて dry_run でリクエストを確認できます。カスタム呼び出し前に
+      Help の presets トピックを参照してください。
+  llm: >-
+    Use as an advanced escape hatch only. Call help topic presets before custom
+    ops and do not guess JMAP shapes. Provide exactly one of ops or ops_file.
+parameters:
+  - name: ops
+    type: string
+    required: false
+    form: llm
+    label:
+      en_US: Ops JSON
+      zh_Hans: Ops JSON
+      pt_BR: JSON de operações
+      ja_JP: Ops JSON
+    human_description:
+      en_US: >-
+        Inline JSON for JMAP methodCalls or full envelope. Use this for custom
+        requests not covered by dedicated tools.
+      zh_Hans: >-
+        内联 JMAP JSON（methodCalls 或完整 envelope）。用于专用工具无法覆盖的自定义请求。
+      pt_BR: >-
+        JSON inline para methodCalls JMAP ou envelope completo. Use para requisições
+        customizadas fora das ferramentas dedicadas.
+      ja_JP: >-
+        JMAP の methodCalls または完全な envelope を指定するインライン JSON です。
+        専用ツールで対応できないカスタム要求に使用します。
+    llm_description: "Inline JMAP JSON (methodCalls or envelope)."
+  - name: ops_file
+    type: string
+    required: false
+    form: llm
+    label:
+      en_US: Ops File
+      zh_Hans: 操作文件
+      pt_BR: Arquivo de operações
+      ja_JP: Ops ファイル
+    human_description:
+      en_US: >-
+        Preset file name from shared presets, for example list_inbox.json. Use
+        this instead of inline ops when a preset exists.
+      zh_Hans: >-
+        shared 预设文件名，例如 list_inbox.json。若已有预设，优先使用该字段而非内联 ops。
+      pt_BR: >-
+        Nome do arquivo preset compartilhado, por exemplo list_inbox.json. Prefira
+        este campo ao ops inline quando houver preset.
+      ja_JP: >-
+        共有プリセットのファイル名です。例 list_inbox.json。利用可能なプリセットが
+        ある場合はインライン ops よりこちらを優先してください。
+    llm_description: "Preset file name, e.g. list_inbox.json."
+  - name: vars
+    type: string
+    required: false
+    form: llm
+    label:
+      en_US: Vars JSON
+      zh_Hans: Vars JSON
+      pt_BR: JSON de variáveis
+      ja_JP: Vars JSON
+    human_description:
+      en_US: >-
+        Optional JSON object for placeholder replacement. Custom keys must be
+        uppercase (for example {"MAIL_ID":"..."}).
+      zh_Hans: >-
+        可选占位符替换 JSON 对象。自定义键需为大写（例如 {"MAIL_ID":"..."}）。
+      pt_BR: >-
+        Objeto JSON opcional para substituir placeholders. Chaves customizadas
+        devem ser maiúsculas (exemplo {"MAIL_ID":"..."}).
+      ja_JP: >-
+        プレースホルダー置換用の任意 JSON オブジェクトです。カスタムキーは大文字で
+        指定してください（例 {"MAIL_ID":"..."}）。
+    llm_description: "Optional placeholder vars JSON; use uppercase keys."
+  - name: dry_run
+    type: boolean
+    required: false
+    default: false
+    form: llm
+    label:
+      en_US: Dry Run
+      zh_Hans: 仅预览
+      pt_BR: Simulação
+      ja_JP: ドライラン
+    human_description:
+      en_US: >-
+        If true, returns the prepared request envelope without posting to API.
+        Useful for debugging ops and vars mapping.
+      zh_Hans: >-
+        为 true 时仅返回准备好的请求 envelope，不会发送到 API。适合调试 ops 与 vars。
+      pt_BR: >-
+        Se true, retorna o envelope preparado sem enviar à API. Útil para depurar
+        ops e mapeamento de vars.
+      ja_JP: >-
+        true の場合は API 送信せず準備済み envelope のみ返します。ops と vars の
+        デバッグに有効です。
+    llm_description: "Set true to preview envelope without posting."
+  - name: account_id
+    type: string
+    required: false
+    form: llm
+    label:
+      en_US: Account ID
+      zh_Hans: 账户 ID
+      pt_BR: ID da conta
+      ja_JP: アカウント ID
+    human_description:
+      en_US: >-
+        Optional account namespace for multi-account storage isolation. Use same
+        value used during register for this inbox identity.
+      zh_Hans: >-
+        多账号隔离的可选账号命名空间。请使用与该邮箱 register 相同的值。
+      pt_BR: >-
+        Namespace opcional para isolamento multi-conta. Use o mesmo valor usado no
+        register dessa identidade de inbox.
+      ja_JP: >-
+        マルチアカウント分離用の任意名前空間です。この受信箱 ID で register したときと
+        同じ値を使用してください。
+    llm_description: "Optional namespace; match register account namespace."
+extra:
+  python:
+    source: tools/jmap_request.py

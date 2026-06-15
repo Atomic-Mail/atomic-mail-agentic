@@ -3,9 +3,13 @@ from __future__ import annotations
 from pathlib import Path
 
 from atomicmail.credentials import (
+    CredentialArtifacts,
+    FilesystemCredentialStore,
     Credentials,
     default_files_from_out_dir,
+    parse_credentials_json,
     read_credentials,
+    serialize_credentials,
     try_read_credentials,
     try_read_jwt_file,
     unlink_credential_artifacts,
@@ -54,6 +58,12 @@ def test_read_credentials_requires_fields(tmp_path: Path) -> None:
         raise AssertionError("Expected read_credentials to fail")
 
 
+def test_parse_and_serialize_credentials_roundtrip() -> None:
+    creds = _sample_credentials()
+    raw = serialize_credentials(creds)
+    assert parse_credentials_json(raw, path_for_errors="memory://credentials.json") == creds
+
+
 def test_try_read_credentials_missing_file(tmp_path: Path) -> None:
     assert try_read_credentials(tmp_path / "missing.json") is None
 
@@ -75,3 +85,26 @@ def test_unlink_credential_artifacts(tmp_path: Path) -> None:
     assert not files.credentialsFile.exists()
     assert not files.sessionFile.exists()
     assert not files.capabilityFile.exists()
+
+
+def test_filesystem_credential_store_roundtrip(tmp_path: Path) -> None:
+    files = default_files_from_out_dir(str(tmp_path))
+    store = FilesystemCredentialStore(files)
+
+    store.save(
+        CredentialArtifacts(
+            credentials=_sample_credentials(),
+            session_jwt="session-token",
+            capability_jwt="capability-token",
+        )
+    )
+    loaded = store.load()
+    assert loaded.credentials == _sample_credentials()
+    assert loaded.session_jwt == "session-token"
+    assert loaded.capability_jwt == "capability-token"
+
+    store.clear()
+    loaded_after_clear = store.load()
+    assert loaded_after_clear.credentials is None
+    assert loaded_after_clear.session_jwt is None
+    assert loaded_after_clear.capability_jwt is None

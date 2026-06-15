@@ -1,0 +1,53 @@
+identity:
+  name: "list_inbox"
+  author: "atomicmail"
+  label:
+    en_US: "List Inbox"
+    zh_Hans: "列出收件箱"
+    pt_BR: "Listar caixa de entrada"
+    ja_JP: "受信箱一覧"
+description:
+  human:
+    en_US: >-
+      List inbox messages using bundled list_inbox.json preset. Typical use: an
+      hourly Agent check after register, or a manual workflow test node while
+      building automation.
+    zh_Hans: >-
+      使用内置 list_inbox.json 预设列出收件箱邮件。常见用法：register 之后由 Agent
+      每小时轮询，或在手动搭建 Workflow 时作为测试节点。
+    pt_BR: >-
+      Lista mensagens da inbox usando o preset embutido list_inbox.json. Uso
+      comum: verificação horária do Agent após register, ou nó de teste em
+      workflow manual.
+    ja_JP: >-
+      同梱の list_inbox.json プリセットで受信箱メールを一覧します。典型用途は
+      register 後の毎時 Agent チェック、または手動 Workflow 構築時のテストノードです。
+  llm: >-
+    Use for inbox checks and message IDs. Pair with hourly schedule after
+    register; see help topic cron for setup pattern.
+parameters:
+  - name: account_id
+    type: string
+    required: false
+    form: llm
+    label:
+      en_US: Account ID
+      zh_Hans: 账户 ID
+      pt_BR: ID da conta
+      ja_JP: アカウント ID
+    human_description:
+      en_US: >-
+        Optional account namespace. Use the same account_id you used in register
+        when running multi-account workflows.
+      zh_Hans: >-
+        可选账号命名空间。多账号流程中请与 register 使用相同的 account_id。
+      pt_BR: >-
+        Namespace opcional da conta. Em fluxos multi-conta, use o mesmo account_id
+        usado no register.
+      ja_JP: >-
+        任意のアカウント名前空間です。マルチアカウント運用では register と同じ
+        account_id を指定してください。
+    llm_description: "Optional namespace; match register account_id."
+extra:
+  python:
+    source: tools/list_inbox.py

@@ -1,0 +1,102 @@
+identity:
+  name: "register"
+  author: "atomicmail"
+  label:
+    en_US: "Register"
+    zh_Hans: "注册"
+    pt_BR: "Registrar"
+    ja_JP: "登録"
+description:
+  human:
+    en_US: >-
+      Register or log in an Atomic Mail inbox username using PoW signup/login and
+      store credentials in plugin storage. Use this when provider API key is not
+      preconfigured. Usernames must be 5-21 characters. After success, schedule
+      an hourly Agent turn to check inbox mail (see Help topic cron).
+    zh_Hans: >-
+      通过 PoW 注册/登录 Atomic Mail 用户名，并将凭据保存到插件存储。适用于未在
+      Provider 中预先配置 API Key 的场景。用户名长度必须为 5-21 个字符。成功后请
+      安排每小时一次的 Agent 收件箱轮询（见 Help 的 cron 主题）。
+    pt_BR: >-
+      Registra ou faz login de um username Atomic Mail com PoW e salva
+      credenciais no armazenamento do plugin. Use quando a API key não estiver
+      pré-configurada no provider. O username deve ter 5-21 caracteres. Após
+      sucesso, agende um turno horário de Agent para verificar a inbox (veja Help
+      tópico cron).
+    ja_JP: >-
+      PoW を使って Atomic Mail ユーザー名を登録またはログインし、資格情報を
+      プラグインストレージへ保存します。Provider に API キーを事前設定していない
+      場合に使用します。ユーザー名は 5 から 21 文字が必要です。成功後は毎時の
+      Agent ターンで受信箱を確認する設定を行ってください（Help の cron トピック）。
+  llm: >-
+    Register/login inbox credentials. Same username is idempotent; different
+    username needs forced=true. After success, schedule hourly inbox polling and
+    check help topic cron.
+parameters:
+  - name: username
+    type: string
+    required: true
+    form: llm
+    label:
+      en_US: Username
+      zh_Hans: 用户名
+      pt_BR: Nome de usuário
+      ja_JP: ユーザー名
+    human_description:
+      en_US: >-
+        Username to register/login (5-21 characters). Example: supportdesk01.
+      zh_Hans: >-
+        要注册/登录的用户名（5-21 个字符）。示例：supportdesk01。
+      pt_BR: >-
+        Username para registrar/login (5-21 caracteres). Exemplo: supportdesk01.
+      ja_JP: >-
+        登録またはログインするユーザー名（5 から 21 文字）。例 supportdesk01。
+    llm_description: "Provide inbox username (5-21 chars)."
+  - name: forced
+    type: boolean
+    required: false
+    default: false
+    form: llm
+    label:
+      en_US: Forced
+      zh_Hans: 强制覆盖
+      pt_BR: Forçar substituição
+      ja_JP: 強制置換
+    human_description:
+      en_US: >-
+        Set true only when intentionally replacing stored credentials for a
+        different username in the same account namespace.
+      zh_Hans: >-
+        仅当你要在同一 account 命名空间下替换为不同用户名的已存凭据时设为 true。
+      pt_BR: >-
+        Defina true somente para substituir credenciais já salvas por outro
+        username no mesmo namespace de conta.
+      ja_JP: >-
+        同じアカウント名前空間で別ユーザー名の保存済み資格情報に置き換える場合のみ
+        true にしてください。
+    llm_description: "Set true only to replace different stored username."
+  - name: account_id
+    type: string
+    required: false
+    form: llm
+    label:
+      en_US: Account ID
+      zh_Hans: 账户 ID
+      pt_BR: ID da conta
+      ja_JP: アカウント ID
+    human_description:
+      en_US: >-
+        Optional storage namespace for multi-account workflows (for example sales,
+        support). Omit to use default.
+      zh_Hans: >-
+        多账号流程的可选存储命名空间（例如 sales、support）。留空则使用 default。
+      pt_BR: >-
+        Namespace opcional para fluxos multi-conta (exemplo sales, support). Se
+        omitido, usa default.
+      ja_JP: >-
+        マルチアカウント運用向けの任意ストレージ名前空間です（例 sales、support）。
+        省略時は default を使用します。
+    llm_description: "Optional multi-account namespace; default is default."
+extra:
+  python:
+    source: tools/register.py

@@ -1,0 +1,84 @@
+identity:
+  name: "reply"
+  author: "atomicmail"
+  label:
+    en_US: "Reply"
+    zh_Hans: "回复"
+    pt_BR: "Responder"
+    ja_JP: "返信"
+description:
+  human:
+    en_US: >-
+      Reply to an existing email thread by message ID. First run list_inbox to
+      get a valid mail_id, then provide reply body text. Useful for follow-up
+      workflows that summarize and respond.
+    zh_Hans: >-
+      通过消息 ID 回复已有邮件线程。请先运行 list_inbox 获取有效 mail_id，再填写回复正文。
+      适用于“先总结再回复”的跟进流程。
+    pt_BR: >-
+      Responda a uma thread existente pelo ID da mensagem. Primeiro rode
+      list_inbox para obter um mail_id válido e depois preencha o corpo da
+      resposta. Útil em fluxos de acompanhamento com resumo + resposta.
+    ja_JP: >-
+      メッセージ ID を指定して既存スレッドに返信します。まず list_inbox で有効な
+      mail_id を取得し、その後に返信本文を指定してください。要約後に返信する
+      フォローアップフローに適しています。
+  llm: >-
+    Reply to a thread by mail_id. Get mail_id from list_inbox first, then send
+    body text.
+parameters:
+  - name: mail_id
+    type: string
+    required: true
+    form: llm
+    label:
+      en_US: Mail ID
+      zh_Hans: 邮件 ID
+      pt_BR: ID do e-mail
+      ja_JP: メール ID
+    human_description:
+      en_US: "Message ID to reply to. Obtain from list_inbox output first."
+      zh_Hans: "要回复的消息 ID。请先从 list_inbox 输出中获取。"
+      pt_BR: "ID da mensagem para responder. Obtenha primeiro em list_inbox."
+      ja_JP: "返信対象メッセージ ID です。先に list_inbox 出力から取得してください。"
+    llm_description: "Target mail_id from list_inbox."
+  - name: body
+    type: string
+    required: true
+    form: llm
+    label:
+      en_US: Body
+      zh_Hans: 正文
+      pt_BR: Corpo
+      ja_JP: 本文
+    human_description:
+      en_US: "Reply text body sent into the existing thread."
+      zh_Hans: "发送到现有线程中的回复正文。"
+      pt_BR: "Texto da resposta enviado na thread existente."
+      ja_JP: "既存スレッドに送信する返信本文です。"
+    llm_description: "Reply message body text."
+  - name: account_id
+    type: string
+    required: false
+    default: default
+    form: form
+    label:
+      en_US: Account ID
+      zh_Hans: 账户 ID
+      pt_BR: ID da conta
+      ja_JP: アカウント ID
+    human_description:
+      en_US: >-
+        Optional account namespace. Must match the namespace where the target
+        mail_id exists.
+      zh_Hans: >-
+        可选账号命名空间。必须与目标 mail_id 所在命名空间一致。
+      pt_BR: >-
+        Namespace opcional da conta. Deve corresponder ao namespace onde o
+        mail_id existe.
+      ja_JP: >-
+        任意のアカウント名前空間です。対象 mail_id が存在する名前空間と一致させてください。
+    llm_description: "Optional namespace; match mail_id namespace."
+extra:
+  python:
+    source: tools/reply.py

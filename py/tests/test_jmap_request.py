@@ -52,12 +52,7 @@ def test_jmap_request_uses_bundled_ops_fallback(
 ) -> None:
     captured: dict[str, object] = {}
 
-    monkeypatch.setattr(JMAP_MODULE, "resolve_agent_config_from_env", lambda *_args, **_kwargs: object())
-    monkeypatch.setattr(
-        JMAP_MODULE.AgentSession,
-        "from_resolved_config",
-        lambda _cfg: _FakeSession(),
-    )
+    monkeypatch.setattr(JMAP_MODULE, "create_agent_session", lambda *_args, **_kwargs: _FakeSession())
 
     def fake_run(**kwargs):
         captured.update(kwargs)
@@ -382,12 +377,29 @@ def test_run_jmap_request_dry_run_rejects_attachments(tmp_path: Path) -> None:
 def test_jmap_request_ops_file_missing_reports_template(
     tmp_path: Path, monkeypatch
 ) -> None:
-    monkeypatch.setattr(JMAP_MODULE, "resolve_agent_config_from_env", lambda *_args, **_kwargs: object())
-    monkeypatch.setattr(
-        JMAP_MODULE.AgentSession,
-        "from_resolved_config",
-        lambda _cfg: _FakeSession(),
-    )
+    monkeypatch.setattr(JMAP_MODULE, "create_agent_session", lambda *_args, **_kwargs: _FakeSession())
 
     with pytest.raises(ValueError, match="not among bundled presets"):
         jmap_request(ops_file="does_not_exist.json", credentials_dir=str(tmp_path))
+
+
+def test_jmap_request_uses_store_session_factory(monkeypatch) -> None:
+    captured: dict[str, object] = {}
+    sentinel_store = object()
+    fake_session = _FakeSession()
+
+    def _fake_factory(**kwargs):
+        captured.update(kwargs)
+        return fake_session
+
+    def _fake_run(**kwargs):
+        captured["session"] = kwargs.get("session")
+        return JmapRequestResult(ok=True, status=200, bodyText="{}")
+
+    monkeypatch.setattr(JMAP_MODULE, "create_agent_session", _fake_factory)
+    monkeypatch.setattr(JMAP_MODULE, "run_jmap_request", _fake_run)
+    out = jmap_request(ops='[["Mailbox/get", {}, "m0"]]', store=sentinel_store)
+
+    assert out.ok is True
+    assert captured["store"] is sentinel_store
+    assert captured["session"] is fake_session

@@ -1,0 +1,122 @@
+identity:
+  name: "send_mail"
+  author: "atomicmail"
+  label:
+    en_US: "Send Mail"
+    zh_Hans: "发送邮件"
+    pt_BR: "Enviar e-mail"
+    ja_JP: "メール送信"
+description:
+  human:
+    en_US: >-
+      Send an outbound email with TO, SUBJECT, BODY, and optional attachments.
+      Prefer this tool for normal email sends in workflows. Use jmap_request only
+      for advanced JMAP methods not covered by dedicated tools.
+    zh_Hans: >-
+      发送外发邮件，需填写 TO、SUBJECT、BODY，可选附件。常规收发流程优先使用本工具；
+      仅在专用工具无法覆盖的高级场景下再使用 jmap_request。
+    pt_BR: >-
+      Envie e-mail de saída com TO, SUBJECT, BODY e anexos opcionais. Prefira esta
+      ferramenta para envios normais em workflows. Use jmap_request apenas para
+      métodos JMAP avançados fora das ferramentas dedicadas.
+    ja_JP: >-
+      TO、SUBJECT、BODY と任意の添付でメールを送信します。通常の送信ワークフローは
+      このツールを優先し、専用ツールで対応できない高度な JMAP 操作のみ
+      jmap_request を使用してください。
+  llm: >-
+    Send a mail with recipient, subject, and body; attachments are optional.
+    Prefer this tool over jmap_request for standard sending. Call help presets if
+    unsure.
+parameters:
+  - name: to
+    type: string
+    required: true
+    form: llm
+    label:
+      en_US: To
+      zh_Hans: 收件人
+      pt_BR: Para
+      ja_JP: 宛先
+    human_description:
+      en_US: "Recipient email address (single address). Example: alice@example.com."
+      zh_Hans: "收件人邮箱地址（单个地址）。示例：alice@example.com。"
+      pt_BR: "E-mail do destinatário (um endereço). Exemplo: alice@example.com."
+      ja_JP: "受信者のメールアドレス（単一）。例 alice@example.com。"
+    llm_description: "Recipient address, e.g. alice@example.com."
+  - name: subject
+    type: string
+    required: true
+    form: llm
+    label:
+      en_US: Subject
+      zh_Hans: 主题
+      pt_BR: Assunto
+      ja_JP: 件名
+    human_description:
+      en_US: "Subject line shown in recipient inbox. Keep concise and specific."
+      zh_Hans: "收件箱显示的邮件主题。建议简洁且具体。"
+      pt_BR: "Linha de assunto exibida na inbox do destinatário. Seja objetivo."
+      ja_JP: "受信箱に表示される件名です。簡潔で具体的に記入してください。"
+    llm_description: "Subject line for outbound email."
+  - name: body
+    type: string
+    required: true
+    form: llm
+    label:
+      en_US: Body
+      zh_Hans: 正文
+      pt_BR: Corpo
+      ja_JP: 本文
+    human_description:
+      en_US: "Body text content. Plain text is supported and recommended."
+      zh_Hans: "邮件正文内容。建议使用纯文本。"
+      pt_BR: "Conteúdo do corpo do e-mail. Texto simples é recomendado."
+      ja_JP: "メール本文の内容です。プレーンテキスト推奨です。"
+    llm_description: "Body text for outbound email."
+  - name: attachments
+    type: files
+    required: false
+    form: llm
+    label:
+      en_US: Attachments
+      zh_Hans: 附件
+      pt_BR: Anexos
+      ja_JP: 添付ファイル
+    human_description:
+      en_US: >-
+        Optional file attachments from Dify file input. Leave empty to send text
+        only.
+      zh_Hans: >-
+        可选附件文件（来自 Dify 文件输入）。留空则发送纯文本邮件。
+      pt_BR: >-
+        Arquivos opcionais anexados via entrada de arquivos do Dify. Deixe vazio
+        para enviar apenas texto.
+      ja_JP: >-
+        Dify のファイル入力から添付する任意ファイルです。空の場合はテキストのみ送信します。
+    llm_description: "Optional file attachments."
+  - name: account_id
+    type: string
+    required: false
+    default: default
+    form: form
+    label:
+      en_US: Account ID
+      zh_Hans: 账户 ID
+      pt_BR: ID da conta
+      ja_JP: アカウント ID
+    human_description:
+      en_US: >-
+        Optional account namespace for multi-account workflows. Use same value as
+        register/list_inbox for that inbox identity.
+      zh_Hans: >-
+        多账号流程可选命名空间。请与该邮箱身份对应的 register/list_inbox 使用相同值。
+      pt_BR: >-
+        Namespace opcional para fluxos multi-conta. Use o mesmo valor do
+        register/list_inbox dessa identidade de inbox.
+      ja_JP: >-
+        マルチアカウント運用向けの任意名前空間です。対象受信箱の register/list_inbox
+        と同じ値を指定してください。
+    llm_description: "Optional namespace; keep consistent per inbox."
+extra:
+  python:
+    source: tools/send_mail.py

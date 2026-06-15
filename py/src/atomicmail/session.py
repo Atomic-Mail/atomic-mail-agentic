@@ -10,15 +10,23 @@ from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
 from .auth_http import fetch_capability, perform_pow_and_session
-from .config import ResolvedAgentConfig, resolve_agent_config_from_env
+from .config import (
+    ResolvedAgentConfig,
+    expand_credential_dir_input,
+    resolve_agent_config_from_env,
+    resolve_credential_dir,
+)
+from .constants import (
+    DEFAULT_API_URL,
+    DEFAULT_AUTH_URL,
+    DEFAULT_POW_SCRYPT_SALT_HEX,
+)
 from .credentials import (
+    CredentialArtifacts,
+    CredentialStore,
     Credentials,
+    FilesystemCredentialStore,
     SkillFiles,
-    try_read_credentials,
-    try_read_jwt_file,
-    unlink_credential_artifacts,
-    write_credentials,
-    write_jwt_file,
 )
 from .jwt_utils import (
     CAPABILITY_SAFETY_MARGIN_MS,
@@ -48,7 +56,8 @@ class AgentSessionConfig:
     apiKey: str | None
     inboxId: str | None
     credentialDir: str
-    files: SkillFiles
+    files: SkillFiles | None = None
+    store: CredentialStore | None = None
 
 
 def inbox_local_part(inbox_id: str) -> str:
@@ -85,6 +94,13 @@ class AgentSession:
         self._inbox_id = cfg.inboxId
         self.credentialDir = cfg.credentialDir
         self.files = cfg.files
+        self._store = cfg.store or (
+            FilesystemCredentialStore(cfg.files)
+            if cfg.files is not None
+            else None
+        )
+        if self._store is None:
+            raise ValueError("AgentSessionConfig requires either store or files.")
 
         self._session_jwt: str | None = None
         self._capability_jwt: str | None = None
@@ -97,7 +113,7 @@ class AgentSession:
     @classmethod
     def create(cls, cfg: AgentSessionConfig) -> AgentSession:
         session = cls(cfg)
-        session._load_from_disk()
+        session._load_from_store()
         return session
 
     @classmethod
@@ -111,6 +127,7 @@ class AgentSession:
                 inboxId=config.inboxId,
                 credentialDir=config.credentialDir,
                 files=config.files,
+                store=FilesystemCredentialStore(config.files),
             )
         )
 
@@ -158,7 +175,7 @@ class AgentSession:
                     "in this directory, retry with forced=True."
                 )
 
-            unlink_credential_artifacts(self.files)
+            self._store.clear()
             self._api_key = None
             self._inbox_id = None
             self._session_jwt = None
@@ -175,11 +192,11 @@ class AgentSession:
 
         self._api_key = session.apiKey
         self._session_jwt = session.sessionJWT
-        write_jwt_file(self.files.sessionFile, self._session_jwt)
+        self._store.save(CredentialArtifacts(session_jwt=self._session_jwt))
 
         capability = fetch_capability(self._auth_url, self._session_jwt)
         self._capability_jwt = capability
-        write_jwt_file(self.files.capabilityFile, capability)
+        self._store.save(CredentialArtifacts(capability_jwt=capability))
 
         claims = decode_jwt_payload(capability)
         inbox_id = claims.get("inboxId")
@@ -199,18 +216,7 @@ class AgentSession:
                 "JMAP session did not provide uploadUrl, downloadUrl, or apiUrl."
             )
 
-        write_credentials(
-            self.files.credentialsFile,
-            Credentials(
-                apiKey=self._api_key,
-                inboxId=self._inbox_id,
-                authUrl=self._auth_url,
-                apiUrl=self.apiUrl,
-                scryptSalt=self._scrypt_salt,
-                uploadUrl=self._cached_upload_url,
-                downloadUrl=self._cached_download_url,
-            ),
-        )
+        self._store.save(self._current_credential_artifacts())
 
         return RegisterResult(
             inbox=self._inbox_id,
@@ -230,11 +236,11 @@ class AgentSession:
         )
         self._api_key = normalized_api_key
         self._session_jwt = session.sessionJWT
-        write_jwt_file(self.files.sessionFile, self._session_jwt)
+        self._store.save(CredentialArtifacts(session_jwt=self._session_jwt))
 
         capability = fetch_capability(self._auth_url, self._session_jwt)
         self._capability_jwt = capability
-        write_jwt_file(self.files.capabilityFile, capability)
+        self._store.save(CredentialArtifacts(capability_jwt=capability))
 
         claims = decode_jwt_payload(capability)
         inbox_id = claims.get("inboxId")
@@ -254,18 +260,7 @@ class AgentSession:
                 "JMAP session did not provide uploadUrl, downloadUrl, or apiUrl."
             )
 
-        write_credentials(
-            self.files.credentialsFile,
-            Credentials(
-                apiKey=self._api_key,
-                inboxId=self._inbox_id,
-                authUrl=self._auth_url,
-                apiUrl=self.apiUrl,
-                scryptSalt=self._scrypt_salt,
-                uploadUrl=self._cached_upload_url,
-                downloadUrl=self._cached_download_url,
-            ),
-        )
+        self._store.save(self._current_credential_artifacts())
 
         return RegisterResult(
             inbox=self._inbox_id,
@@ -307,7 +302,7 @@ class AgentSession:
 
         cap = fetch_capability(self._auth_url, self._session_jwt)
         self._capability_jwt = cap
-        write_jwt_file(self.files.capabilityFile, cap)
+        self._store.save(CredentialArtifacts(capability_jwt=cap))
 
         try:
             claims = decode_jwt_payload(cap)
@@ -335,15 +330,39 @@ class AgentSession:
         self._cached_jmap_post_url = None
         self._cached_jmap_session = None
 
-    def _load_from_disk(self) -> None:
-        self._session_jwt = try_read_jwt_file(self.files.sessionFile)
-        self._capability_jwt = try_read_jwt_file(self.files.capabilityFile)
-        disk = try_read_credentials(self.files.credentialsFile)
+    def _load_from_store(self) -> None:
+        loaded = self._store.load()
+        self._session_jwt = loaded.session_jwt
+        self._capability_jwt = loaded.capability_jwt
+        disk = loaded.credentials
         if disk:
             self._api_key = self._api_key or disk.apiKey
             self._inbox_id = self._inbox_id or disk.inboxId
             self._cached_upload_url = disk.uploadUrl
             self._cached_download_url = disk.downloadUrl
+
+    def _current_credential_artifacts(self) -> CredentialArtifacts:
+        credentials: Credentials | None = None
+        if (
+            self._api_key
+            and self._inbox_id
+            and self._cached_upload_url
+            and self._cached_download_url
+        ):
+            credentials = Credentials(
+                apiKey=self._api_key,
+                inboxId=self._inbox_id,
+                authUrl=self._auth_url,
+                apiUrl=self.apiUrl,
+                scryptSalt=self._scrypt_salt,
+                uploadUrl=self._cached_upload_url,
+                downloadUrl=self._cached_download_url,
+            )
+        return CredentialArtifacts(
+            credentials=credentials,
+            session_jwt=self._session_jwt,
+            capability_jwt=self._capability_jwt,
+        )
 
     def _ensure_session(self) -> None:
         if self._session_jwt and not is_jwt_expired(
@@ -364,7 +383,7 @@ class AgentSession:
         self._session_jwt = result.sessionJWT
         self._capability_jwt = None
         self.invalidate_jmap_session_cache()
-        write_jwt_file(self.files.sessionFile, self._session_jwt)
+        self._store.save(CredentialArtifacts(session_jwt=self._session_jwt))
 
     def _refresh_jmap_session_data(self) -> None:
         cap = self.get_capability_token()
@@ -384,6 +403,7 @@ def register(
     credentials_dir: str | None = None,
     forced: bool = False,
     env: Mapping[str, str] | None = None,
+    store: CredentialStore | None = None,
 ) -> RegisterResult:
     if bool(username) == bool(api_key):
         raise ValueError(
@@ -392,8 +412,12 @@ def register(
     if api_key and forced:
         raise ValueError("forced is only supported when registering with username.")
 
-    config = resolve_agent_config_from_env(env, credential_dir=credentials_dir)
-    session = AgentSession.from_resolved_config(config)
+    session = create_agent_session(
+        credentials_dir=credentials_dir,
+        env=env,
+        provider_api_key=api_key,
+        store=store,
+    )
     if username:
         return session.register(username, forced=forced)
     if not api_key:
@@ -401,6 +425,75 @@ def register(
             "Internal: expected api_key to be set when username is not provided."
         )
     return session.login_with_api_key(api_key)
+
+
+def create_agent_session(
+    *,
+    store: CredentialStore | None = None,
+    env: Mapping[str, str] | None = None,
+    provider_api_key: str | None = None,
+    credentials_dir: str | None = None,
+) -> AgentSession:
+    if store is None:
+        config = resolve_agent_config_from_env(env, credential_dir=credentials_dir)
+        if provider_api_key:
+            return AgentSession.create(
+                AgentSessionConfig(
+                    authUrl=config.authUrl,
+                    apiUrl=config.apiUrl,
+                    scryptSalt=config.scryptSalt,
+                    apiKey=provider_api_key,
+                    inboxId=config.inboxId,
+                    credentialDir=config.credentialDir,
+                    files=config.files,
+                    store=FilesystemCredentialStore(config.files),
+                )
+            )
+        return AgentSession.from_resolved_config(config)
+
+    current_env = env or os.environ
+    loaded = store.load()
+    loaded_creds = loaded.credentials
+
+    auth_url = (
+        current_env.get("ATOMIC_MAIL_AUTH_URL")
+        or (loaded_creds.authUrl if loaded_creds else None)
+        or DEFAULT_AUTH_URL
+    )
+    api_url = (
+        current_env.get("ATOMIC_MAIL_API_URL")
+        or (loaded_creds.apiUrl if loaded_creds else None)
+        or DEFAULT_API_URL
+    )
+    scrypt_salt = (
+        current_env.get("ATOMIC_MAIL_SCRYPT_SALT")
+        or (loaded_creds.scryptSalt if loaded_creds else None)
+        or DEFAULT_POW_SCRYPT_SALT_HEX
+    )
+    api_key = (
+        provider_api_key
+        or current_env.get("ATOMIC_MAIL_API_KEY")
+        or (loaded_creds.apiKey if loaded_creds else None)
+    )
+    inbox_id = loaded_creds.inboxId if loaded_creds else None
+    resolved_credential_dir = (
+        expand_credential_dir_input(credentials_dir)
+        if credentials_dir is not None
+        else ""
+    )
+
+    return AgentSession.create(
+        AgentSessionConfig(
+            authUrl=auth_url,
+            apiUrl=api_url,
+            scryptSalt=scrypt_salt,
+            apiKey=api_key,
+            inboxId=inbox_id,
+            credentialDir=resolved_credential_dir,
+            files=None,
+            store=store,
+        )
+    )
 
 
 def fetch_jmap_well_known(api_url: str, capability_jwt: str) -> dict[str, object]:

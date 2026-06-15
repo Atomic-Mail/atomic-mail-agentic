@@ -28,7 +28,9 @@ export const DEFAULT_JMAP_USING = [
 ] as const;
 
 /** Presets shipped with MCP / skill npm packages (for error hints). */
-const sharedManifest = tryReadSharedJson<{ presets_dir: string }>("manifest.json");
+const sharedManifest = tryReadSharedJson<{ presets_dir: string }>(
+  "manifest.json",
+);
 const sharedHints = tryReadSharedJson<{ jmap_next_hints: string[] }>(
   "messages/hints.json",
 );
@@ -276,7 +278,7 @@ export async function fetchJmapWellKnown(
 export interface JmapSessionPort {
   /** Base used for `GET /.well-known/jmap` (configured `ATOMIC_MAIL_API_URL` / credentials). */
   readonly apiUrl: string;
-  readonly files: { credentialsFile: string };
+  readonly files?: { credentialsFile: string };
   /** RFC 8620 Session `apiUrl` — full URL for `POST` JMAP batches. */
   getJmapPostUrl(): Promise<string>;
   getPrimaryMailAccountId(): Promise<string>;
@@ -341,18 +343,36 @@ export async function runJmapRequest(
       ACCOUNT_ID: () => input.session.getPrimaryMailAccountId(),
       INBOX: async () => {
         const raw = input.session.currentInboxId ??
-          (await readCredentials(input.session.files.credentialsFile)).inboxId;
+          (input.session.files
+            ? (await readCredentials(input.session.files.credentialsFile))
+              .inboxId
+            : undefined);
+        if (!raw) {
+          throw new Error("No inbox in session; run register first.");
+        }
         return inboxIdToMailboxEmail(raw);
       },
       INBOX_MAILBOX_ID: () => fetchInboxMailboxId(input.session),
-      UPLOAD_URL: async () =>
-        input.session.currentUploadUrl ??
-          (await readCredentials(input.session.files.credentialsFile))
-            .uploadUrl,
-      DOWNLOAD_URL: async () =>
-        input.session.currentDownloadUrl ??
-          (await readCredentials(input.session.files.credentialsFile))
-            .downloadUrl,
+      UPLOAD_URL: async () => {
+        if (input.session.currentUploadUrl) {
+          return input.session.currentUploadUrl;
+        }
+        if (input.session.files) {
+          return (await readCredentials(input.session.files.credentialsFile))
+            .uploadUrl;
+        }
+        throw new Error("JMAP session missing uploadUrl.");
+      },
+      DOWNLOAD_URL: async () => {
+        if (input.session.currentDownloadUrl) {
+          return input.session.currentDownloadUrl;
+        }
+        if (input.session.files) {
+          return (await readCredentials(input.session.files.credentialsFile))
+            .downloadUrl;
+        }
+        throw new Error("JMAP session missing downloadUrl.");
+      },
     },
   });
 

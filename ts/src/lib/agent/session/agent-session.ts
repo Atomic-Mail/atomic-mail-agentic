@@ -1,11 +1,10 @@
 // Stateful PoW + capability JWT + optional cached JMAP session (accountId).
 
 import {
-  type Credentials,
+  type CredentialArtifacts,
+  type CredentialStore,
+  FilesystemCredentialStore,
   type SkillFiles,
-  tryReadCredentials,
-  tryReadJwtFile,
-  unlinkCredentialArtifacts,
   writeCredentials,
   writeJwtFile,
 } from "./agent-credentials-store.ts";
@@ -35,7 +34,8 @@ export interface AgentSessionConfig {
   apiKey?: string;
   inboxId?: string;
   credentialDir: string;
-  files: SkillFiles;
+  files?: SkillFiles;
+  store?: CredentialStore;
 }
 
 export interface RegisterResult {
@@ -73,7 +73,8 @@ export class AgentSession {
   private apiKey: string | undefined;
   private inboxId: string | undefined;
   readonly credentialDir: string;
-  readonly files: SkillFiles;
+  readonly files: SkillFiles | undefined;
+  private readonly store: CredentialStore;
 
   private sessionJWT: string | undefined;
   private capabilityJWT: string | undefined;
@@ -92,12 +93,16 @@ export class AgentSession {
     this.apiKey = cfg.apiKey;
     this.inboxId = cfg.inboxId;
     this.credentialDir = cfg.credentialDir;
+    this.store = cfg.store ??
+      (cfg.files ? new FilesystemCredentialStore(cfg.files) : (() => {
+        throw new Error("AgentSessionConfig requires either store or files.");
+      })());
     this.files = cfg.files;
   }
 
   static async create(cfg: AgentSessionConfig): Promise<AgentSession> {
     const session = new AgentSession(cfg);
-    await session.loadFromDisk();
+    await session.loadFromStore();
     return session;
   }
 
@@ -117,16 +122,44 @@ export class AgentSession {
     return this.cachedDownloadUrl;
   }
 
-  private async loadFromDisk(): Promise<void> {
-    this.sessionJWT = await tryReadJwtFile(this.files.sessionFile);
-    this.capabilityJWT = await tryReadJwtFile(this.files.capabilityFile);
-    const disk = await tryReadCredentials(this.files.credentialsFile);
+  private async loadFromStore(): Promise<void> {
+    const loaded = await this.store.load();
+    this.sessionJWT = loaded.sessionJwt;
+    this.capabilityJWT = loaded.capabilityJwt;
+    const disk = loaded.credentials;
     if (disk) {
       this.apiKey = this.apiKey ?? disk.apiKey;
       this.inboxId = this.inboxId ?? disk.inboxId;
       this.cachedUploadUrl = disk.uploadUrl;
       this.cachedDownloadUrl = disk.downloadUrl;
     }
+  }
+
+  private currentCredentialArtifacts(): CredentialArtifacts {
+    const artifacts: CredentialArtifacts = {};
+    if (
+      this.apiKey &&
+      this.inboxId &&
+      this.cachedUploadUrl &&
+      this.cachedDownloadUrl
+    ) {
+      artifacts.credentials = {
+        apiKey: this.apiKey,
+        inboxId: this.inboxId,
+        authUrl: this.authUrl,
+        apiUrl: this.apiUrl,
+        scryptSalt: this.scryptSalt,
+        uploadUrl: this.cachedUploadUrl,
+        downloadUrl: this.cachedDownloadUrl,
+      };
+    }
+    if (this.sessionJWT !== undefined) {
+      artifacts.sessionJwt = this.sessionJWT;
+    }
+    if (this.capabilityJWT !== undefined) {
+      artifacts.capabilityJwt = this.capabilityJWT;
+    }
+    return artifacts;
   }
 
   /**
@@ -239,7 +272,7 @@ export class AgentSession {
             "(MCP) or --forced (AgentSkill).",
         );
       }
-      await unlinkCredentialArtifacts(this.files);
+      await this.store.clear();
       this.apiKey = undefined;
       this.inboxId = undefined;
       this.sessionJWT = undefined;
@@ -263,11 +296,11 @@ export class AgentSession {
     }
     this.apiKey = result.apiKey;
     this.sessionJWT = result.sessionJWT;
-    await writeJwtFile(this.files.sessionFile, this.sessionJWT);
+    await this.store.save({ sessionJwt: this.sessionJWT });
 
     const capability = await fetchCapability(this.authUrl, this.sessionJWT);
     this.capabilityJWT = capability;
-    await writeJwtFile(this.files.capabilityFile, capability);
+    await this.store.save({ capabilityJwt: capability });
 
     const claims = decodeJwtPayload<{ inboxId?: string }>(capability);
     if (typeof claims.inboxId !== "string" || claims.inboxId.length === 0) {
@@ -290,16 +323,7 @@ export class AgentSession {
       );
     }
 
-    const creds: Credentials = {
-      apiKey: this.apiKey,
-      inboxId: this.inboxId,
-      authUrl: this.authUrl,
-      apiUrl: this.apiUrl,
-      scryptSalt: this.scryptSalt,
-      uploadUrl: this.cachedUploadUrl,
-      downloadUrl: this.cachedDownloadUrl,
-    };
-    await writeCredentials(this.files.credentialsFile, creds);
+    await this.store.save(this.currentCredentialArtifacts());
 
     return {
       inbox: this.inboxId,
@@ -322,7 +346,7 @@ export class AgentSession {
     }
     const cap = await fetchCapability(this.authUrl, this.sessionJWT);
     this.capabilityJWT = cap;
-    await writeJwtFile(this.files.capabilityFile, cap);
+    await this.store.save({ capabilityJwt: cap });
 
     try {
       const claims = decodeJwtPayload<{ inboxId?: string }>(cap);
@@ -362,7 +386,7 @@ export class AgentSession {
     this.cachedDownloadUrl = undefined;
     this.cachedJmapPostUrl = undefined;
     this.cachedJmapSession = undefined;
-    await writeJwtFile(this.files.sessionFile, this.sessionJWT);
+    await this.store.save({ sessionJwt: this.sessionJWT });
   }
 
   destroy(): void {

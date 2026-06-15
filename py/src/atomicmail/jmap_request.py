@@ -13,9 +13,14 @@ from typing import Any, Callable, Mapping, Sequence
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
-from .config import resolve_agent_config_from_env
+from .credentials import CredentialStore
 from .credentials import try_read_credentials
-from .session import AgentSession, JMAP_BLOB_URN, inbox_id_to_mailbox_email
+from .session import (
+    AgentSession,
+    JMAP_BLOB_URN,
+    create_agent_session,
+    inbox_id_to_mailbox_email,
+)
 from .shared_assets import shared_dir, try_read_shared_json
 
 DEFAULT_JMAP_USING = [
@@ -306,7 +311,7 @@ def _build_vars_from_attachment_files(
     capability_jwt = session.get_capability_token()
 
     upload_template = session.current_upload_url
-    if not upload_template:
+    if not upload_template and getattr(session, "files", None) is not None:
         creds = try_read_credentials(session.files.credentialsFile)
         if creds:
             upload_template = creds.uploadUrl
@@ -478,12 +483,22 @@ def _substitute_vars(
 
 def _resolve_inbox_mailbox_email(session: AgentSession) -> str:
     raw_inbox = session.current_inbox_id
-    if not raw_inbox:
+    if not raw_inbox and getattr(session, "files", None) is not None:
         creds = try_read_credentials(session.files.credentialsFile)
         raw_inbox = creds.inboxId if creds else None
     if not raw_inbox:
         raise ValueError("No inbox in session; run register first.")
     return inbox_id_to_mailbox_email(raw_inbox)
+
+
+def _fallback_jmap_url_from_files(session: AgentSession, attr_name: str) -> str:
+    files = getattr(session, "files", None)
+    if files is None:
+        raise ValueError(f"JMAP session missing {attr_name}.")
+    creds = try_read_credentials(files.credentialsFile)
+    if not creds:
+        raise ValueError(f"JMAP session missing {attr_name}.")
+    return getattr(creds, attr_name)
 
 
 def _post_jmap(jmap_post_url: str, capability_jwt: str, envelope: dict[str, object]) -> JmapRequestResult:
@@ -816,11 +831,11 @@ def run_jmap_request(
         "INBOX": lambda: _resolve_inbox_mailbox_email(session),
         "UPLOAD_URL": lambda: (
             session.current_upload_url
-            or (try_read_credentials(session.files.credentialsFile).uploadUrl if try_read_credentials(session.files.credentialsFile) else "")
+            or _fallback_jmap_url_from_files(session, "uploadUrl")
         ),
         "DOWNLOAD_URL": lambda: (
             session.current_download_url
-            or (try_read_credentials(session.files.credentialsFile).downloadUrl if try_read_credentials(session.files.credentialsFile) else "")
+            or _fallback_jmap_url_from_files(session, "downloadUrl")
         ),
     }
 
@@ -865,6 +880,7 @@ def jmap_request(
     using: Sequence[str] | None = None,
     credentials_dir: str | None = None,
     env: Mapping[str, str] | None = None,
+    store: CredentialStore | None = None,
 ) -> JmapRequestResult:
     """Execute a JMAP request from inline ops JSON or an ops preset file."""
     if ops and ops_file:
@@ -877,8 +893,11 @@ def jmap_request(
     if not ops and not ops_file:
         raise ValueError(_error("mcp_ops_required", "Provide either ops or ops_file."))
 
-    resolved = resolve_agent_config_from_env(env, credential_dir=credentials_dir)
-    session = AgentSession.from_resolved_config(resolved)
+    session = create_agent_session(
+        credentials_dir=credentials_dir,
+        env=env,
+        store=store,
+    )
 
     if ops_file:
         raw = _read_ops_file(session.credentialDir, ops_file)

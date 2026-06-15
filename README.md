@@ -4,12 +4,13 @@
 
 [Website](https://atomicmail.ai) · [Docs](docs/getting-started.md) · [Issues](https://github.com/Atomic-Mail/agentic-clients/issues) · [@atomicmail/mcp-github](https://www.npmjs.com/package/@atomicmail/mcp-github) · [@atomicmail/mcp-clawhub](https://www.npmjs.com/package/@atomicmail/mcp-clawhub)
 
-This repository ships the two client integrations for the Atomic Mail ESP:
-`@atomicmail/mcp-github` for MCP hosts and `@atomicmail/agent-skill-github` for shell agents.
-For ClawHub installs, use the MCP-only channel package
-`@atomicmail/mcp-clawhub`.
-Both wrap the same hosted Atomic Mail APIs with a tiny but powerful surface area: `register`,
-`jmap_request`, and `help`.
+This repository ships Atomic Mail client integrations for MCP hosts, shell agents,
+and Dify tool plugins. Use `@atomicmail/mcp-github` for MCP hosts,
+`@atomicmail/agent-skill-github` for shell agents, and
+`@atomicmail/mcp-clawhub` for ClawHub installs. For Dify plugin setup and usage,
+see [integrations/dify/README.md](integrations/dify/README.md).
+All channels wrap the same hosted Atomic Mail APIs with a tiny but powerful
+surface area: `register`, `jmap_request`, and `help`.
 
 ---
 
@@ -204,6 +205,8 @@ agentic-clients/
 │   ├── src/mcp/        # MCP entrypoint + MCP tools
 │   ├── src/skill/      # AgentSkill CLI entrypoint
 │   └── src/lib/agent/  # shared auth, session, JMAP, presets, help-content
+├── py/                 # Python client parity layer and tests
+├── integrations/dify/  # Dify plugin integration and packaging docs
 ├── docs/               # VitePress docs and shipped SKILL/README sources
 ├── test/checklists/    # manual release QA
 ├── CONTRIBUTING.md

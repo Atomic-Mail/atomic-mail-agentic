@@ -3,7 +3,7 @@
 import { AgentSession } from "./agent-session.ts";
 import {
   defaultFilesFromOutDir,
-  readCredentials,
+  FilesystemCredentialStore,
   tryReadCredentials,
 } from "./agent-credentials-store.ts";
 import {
@@ -23,6 +23,7 @@ export async function createAgentSessionForCredentialDir(
 ): Promise<AgentSession> {
   const expandedDir = expandCredentialDirInput(credentialDir);
   const files = defaultFilesFromOutDir(expandedDir);
+  const store = new FilesystemCredentialStore(files);
   const fileCreds = await tryReadCredentials(files.credentialsFile);
 
   if (!fileCreds) {
@@ -37,11 +38,11 @@ export async function createAgentSessionForCredentialDir(
       apiUrl: envDefaults.apiUrl,
       scryptSalt: envDefaults.scryptSalt,
       credentialDir: expandedDir,
-      files,
+      store,
     });
   }
 
-  const creds = await readCredentials(files.credentialsFile);
+  const creds = fileCreds;
   return AgentSession.create({
     authUrl: creds.authUrl,
     apiUrl: creds.apiUrl,
@@ -49,6 +50,6 @@ export async function createAgentSessionForCredentialDir(
     apiKey: creds.apiKey,
     inboxId: creds.inboxId,
     credentialDir: expandedDir,
-    files,
+    store,
   });
 }

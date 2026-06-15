@@ -7,6 +7,7 @@ from pathlib import Path
 import pytest
 
 from atomicmail.credentials import (
+    CredentialArtifacts,
     Credentials,
     default_files_from_out_dir,
     read_credentials,
@@ -15,6 +16,7 @@ from atomicmail.credentials import (
 from atomicmail.session import (
     AgentSession,
     AgentSessionConfig,
+    create_agent_session,
     inbox_id_to_mailbox_email,
     register,
 )
@@ -51,6 +53,56 @@ def test_register_rejects_username_switch_without_forced(tmp_path: Path) -> None
         )
     )
 
+    with pytest.raises(ValueError, match="Register refused"):
+        session.register("new-user")
+
+
+def test_agent_session_can_load_from_in_memory_store(tmp_path: Path) -> None:
+    artifacts = CredentialArtifacts(
+        credentials=Credentials(
+            apiKey="existing-api-key",
+            inboxId="current-user@atomicmail.ai",
+            authUrl="https://auth.atomicmail.ai",
+            apiUrl="https://api.atomicmail.ai",
+            scryptSalt="salt",
+            uploadUrl="https://api.atomicmail.ai/upload/{accountId}",
+            downloadUrl="https://api.atomicmail.ai/download/{accountId}/{blobId}",
+        ),
+        session_jwt="session-jwt",
+        capability_jwt="capability-jwt",
+    )
+
+    class _InMemoryStore:
+        def load(self) -> CredentialArtifacts:
+            return artifacts
+
+        def save(self, incoming: CredentialArtifacts) -> None:
+            if incoming.credentials is not None:
+                artifacts.credentials = incoming.credentials
+            if incoming.session_jwt is not None:
+                artifacts.session_jwt = incoming.session_jwt
+            if incoming.capability_jwt is not None:
+                artifacts.capability_jwt = incoming.capability_jwt
+
+        def clear(self) -> None:
+            artifacts.credentials = None
+            artifacts.session_jwt = None
+            artifacts.capability_jwt = None
+
+    session = AgentSession.create(
+        AgentSessionConfig(
+            authUrl="https://auth.atomicmail.ai",
+            apiUrl="https://api.atomicmail.ai",
+            scryptSalt="salt",
+            apiKey=None,
+            inboxId=None,
+            credentialDir=str(tmp_path),
+            store=_InMemoryStore(),
+        )
+    )
+
+    assert session.has_api_key is True
+    assert session.current_inbox_id == "current-user@atomicmail.ai"
     with pytest.raises(ValueError, match="Register refused"):
         session.register("new-user")
 
@@ -274,3 +326,122 @@ def test_register_rejects_forced_in_api_key_mode() -> None:
             forced=True,
             env={},
         )
+
+
+def test_create_agent_session_with_store_uses_overrides(tmp_path: Path) -> None:
+    class _InMemoryStore:
+        def __init__(self) -> None:
+            self._artifacts = CredentialArtifacts(
+                credentials=Credentials(
+                    apiKey="stored-api-key",
+                    inboxId="stored@atomicmail.ai",
+                    authUrl="https://stored-auth.atomicmail.ai",
+                    apiUrl="https://stored-api.atomicmail.ai",
+                    scryptSalt="stored-salt",
+                    uploadUrl="https://stored-api.atomicmail.ai/upload/{accountId}",
+                    downloadUrl="https://stored-api.atomicmail.ai/download/{accountId}/{blobId}",
+                )
+            )
+
+        def load(self) -> CredentialArtifacts:
+            return self._artifacts
+
+        def save(self, incoming: CredentialArtifacts) -> None:
+            if incoming.credentials is not None:
+                self._artifacts.credentials = incoming.credentials
+            if incoming.session_jwt is not None:
+                self._artifacts.session_jwt = incoming.session_jwt
+            if incoming.capability_jwt is not None:
+                self._artifacts.capability_jwt = incoming.capability_jwt
+
+        def clear(self) -> None:
+            self._artifacts = CredentialArtifacts()
+
+    session = create_agent_session(
+        store=_InMemoryStore(),
+        env={"ATOMIC_MAIL_AUTH_URL": "https://env-auth.atomicmail.ai"},
+        provider_api_key="provider-api-key",
+        credentials_dir=str(tmp_path),
+    )
+
+    assert session.has_api_key is True
+    assert session.current_inbox_id == "stored@atomicmail.ai"
+
+
+def test_create_agent_session_with_store_does_not_require_home(monkeypatch) -> None:
+    class _InMemoryStore:
+        def load(self) -> CredentialArtifacts:
+            return CredentialArtifacts()
+
+        def save(self, incoming: CredentialArtifacts) -> None:
+            return None
+
+        def clear(self) -> None:
+            return None
+
+    monkeypatch.delenv("HOME", raising=False)
+    monkeypatch.delenv("USERPROFILE", raising=False)
+
+    session = create_agent_session(store=_InMemoryStore(), env={})
+
+    assert session.credentialDir == ""
+
+
+def test_create_agent_session_with_store_expands_explicit_credentials_dir(
+    tmp_path: Path, monkeypatch
+) -> None:
+    class _InMemoryStore:
+        def load(self) -> CredentialArtifacts:
+            return CredentialArtifacts()
+
+        def save(self, incoming: CredentialArtifacts) -> None:
+            return None
+
+        def clear(self) -> None:
+            return None
+
+    monkeypatch.setenv("HOME", str(tmp_path))
+
+    session = create_agent_session(
+        store=_InMemoryStore(),
+        env={},
+        credentials_dir="~/custom-atomicmail-dir",
+    )
+
+    assert session.credentialDir == str((tmp_path / "custom-atomicmail-dir").resolve())
+
+
+def test_register_uses_store_session_factory(monkeypatch) -> None:
+    captured: dict[str, object] = {}
+
+    class _FakeSession:
+        def register(self, username: str, *, forced: bool = False):
+            captured["username"] = username
+            captured["forced"] = forced
+            return type(
+                "RegisterResult",
+                (),
+                {"inbox": "ok@atomicmail.ai", "accountId": "acc-1", "apiKey": None, "idempotent": True},
+            )()
+
+        def login_with_api_key(self, api_key: str):
+            captured["api_key"] = api_key
+            return type(
+                "RegisterResult",
+                (),
+                {"inbox": "ok@atomicmail.ai", "accountId": "acc-1", "apiKey": None, "idempotent": None},
+            )()
+
+    sentinel_store = object()
+
+    def _fake_factory(**kwargs):
+        captured.update(kwargs)
+        return _FakeSession()
+
+    monkeypatch.setattr("atomicmail.session.create_agent_session", _fake_factory)
+    out = register(username="alice", store=sentinel_store, forced=True)
+
+    assert out.inbox == "ok@atomicmail.ai"
+    assert captured["store"] is sentinel_store
+    assert captured["username"] == "alice"
+    assert captured["forced"] is True

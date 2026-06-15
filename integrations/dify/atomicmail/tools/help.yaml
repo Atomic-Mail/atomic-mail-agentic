@@ -1,0 +1,62 @@
+identity:
+  name: "help"
+  author: "atomicmail"
+  label:
+    en_US: "Help"
+    zh_Hans: "帮助"
+    pt_BR: "Ajuda"
+    ja_JP: "ヘルプ"
+description:
+  human:
+    en_US: >-
+      Read runtime Atomic Mail documentation directly inside tool calls. Topics:
+      overview, installation, auth, tools, presets, cron, jmap_cheatsheet,
+      multi_account, troubleshooting, readme. Use this for operational guidance;
+      README is for install and packaging details.
+    zh_Hans: >-
+      在工具调用中直接读取 Atomic Mail 运行时文档。主题包括：overview、
+      installation、auth、tools、presets、cron、jmap_cheatsheet、
+      multi_account、troubleshooting、readme。运行时操作请优先查这里；安装打包
+      细节看 README。
+    pt_BR: >-
+      Leia a documentação runtime do Atomic Mail direto nas chamadas de
+      ferramenta. Tópicos: overview, installation, auth, tools, presets, cron,
+      jmap_cheatsheet, multi_account, troubleshooting, readme. Use para operação;
+      README cobre instalação e empacotamento.
+    ja_JP: >-
+      ツール呼び出し内で Atomic Mail の実行時ドキュメントを参照できます。トピックは
+      overview、installation、auth、tools、presets、cron、
+      jmap_cheatsheet、multi_account、troubleshooting、readme です。
+      運用ガイドは本ツールを使い、インストールとパッケージ手順は README を参照します。
+  llm: >-
+    Call early and often when uncertain. Topics: overview, installation, auth,
+    tools, presets, cron, jmap_cheatsheet, multi_account, troubleshooting,
+    readme. Use presets before jmap_request, cron after register, and
+    troubleshooting when stuck.
+parameters:
+  - name: topic
+    type: string
+    required: false
+    form: llm
+    label:
+      en_US: Topic
+      zh_Hans: 主题
+      pt_BR: Tópico
+      ja_JP: トピック
+    human_description:
+      en_US: >-
+        Optional topic name. Examples: presets before custom JMAP, cron after
+        register, troubleshooting for runtime failures.
+      zh_Hans: >-
+        可选主题名。示例：自定义 JMAP 前用 presets，register 后用 cron，失败排查用
+        troubleshooting。
+      pt_BR: >-
+        Nome opcional do tópico. Exemplos: presets antes de JMAP customizado, cron
+        após register, troubleshooting para falhas.
+      ja_JP: >-
+        任意のトピック名です。例は custom JMAP 前の presets、register 後の cron、
+        障害調査の troubleshooting です。
+    llm_description: "Optional topic (e.g., presets, cron, troubleshooting)."
+extra:
+  python:
+    source: tools/help.py

@@ -528,14 +528,9 @@ Phase 6 completes automated coverage for the Dify plugin and keeps SDK parity in
     5) `list_inbox` after send
     6) `reply` when a message id is discoverable (skip gracefully otherwise)
     7) `help(cron)`
-  - Added offline mode for CI/manual dry runs:
+  - Added offline mode for manual dry runs:
     - `--skip-network`, or
     - `ATOMIC_MAIL_LIVE_E2E=0`
-- Added CI workflow:
-  - `.github/workflows/test-dify-plugin.yml`
-  - Triggers on changes in `integrations/dify/**`, `py/**`, `shared/**`,
-    and `ts/build_dify_wrapper.ts`.
-  - Runs `npm run build:dify`, plugin pytest, and `py/` parity pytest.
 
 ### Run tests locally
 

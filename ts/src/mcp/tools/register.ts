@@ -53,6 +53,8 @@ export function registerRegisterTool(
       annotations: {
         idempotentHint: true,
         destructiveHint: false,
+        openWorldHint: true,
+        readOnlyHint: false,
       },
     },
     async ({ username, credentials_dir, forced }) => {

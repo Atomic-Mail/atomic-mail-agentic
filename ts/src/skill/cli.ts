@@ -12,13 +12,12 @@ import {
   defaultFilesFromOutDir,
   expandCredentialDirInput,
   getHelp,
-  normalizeHelpTopic,
   parseUserVarsJson,
   persistLoginWithApiKey,
   readCredentials,
-  readNpmPackageReadme,
   readOpsFile,
   runJmapRequest,
+  sharedError,
 } from "../lib/mod.ts";
 
 const USAGE = `Atomic Mail — AgentSkill
@@ -29,7 +28,7 @@ Usage:
 Commands:
   register       PoW signup or login with API key (writes credentials)
   jmap_request   Send a JMAP batch (inline --ops or --ops-file; optional --attachment)
-  help           Full documentation [--topic TOPIC] (topic readme = package README)
+  help           Full documentation [--topic TOPIC] (topic readme = built-in stub)
 
 Examples:
   atomicmail register --username alice
@@ -218,10 +217,10 @@ Options:
   const ops = parsed.values.ops as string | undefined;
   const opsFile = parsed.values["ops-file"] as string | undefined;
   if (ops && opsFile) {
-    fail("--ops and --ops-file are mutually exclusive.", 2);
+    fail(sharedError("cli_ops_mutually_exclusive"), 2);
   }
   if (!ops && !opsFile) {
-    fail("Provide --ops or --ops-file.", 2);
+    fail(sharedError("cli_ops_required"), 2);
   }
 
   const rawAttachments = parsed.values.attachment as
@@ -234,7 +233,7 @@ Options:
     ? rawAttachments
     : [rawAttachments];
   if (parsed.values["dry-run"] === true && attachmentPaths.length > 0) {
-    fail("--dry-run cannot be combined with --attachment.", 2);
+    fail(sharedError("cli_dry_run_with_attachment"), 2);
   }
 
   const usingFlag = parsed.values.using as string | undefined;
@@ -307,7 +306,7 @@ Options:
   process.stdout.write(bodyText.endsWith("\n") ? bodyText : bodyText + "\n");
 }
 
-async function cmdHelp(argv: string[]): Promise<void> {
+function cmdHelp(argv: string[]): void {
   let parsed: ReturnType<typeof parseArgs>;
   try {
     parsed = parseArgs({
@@ -327,21 +326,12 @@ async function cmdHelp(argv: string[]): Promise<void> {
     process.stdout.write(`Usage: atomicmail help [--topic TOPIC]
 
 Topics include: overview, installation, auth, jmap_cheatsheet, tools, presets, troubleshooting, readme.
-Topic readme prints the npm package README.md (requires install from npm).
+Topic readme prints a built-in stub (no runtime package README lookup).
 `);
     process.exit(0);
   }
 
   const topic = parsed.values.topic as string | undefined;
-  if (topic !== undefined && normalizeHelpTopic(topic) === "readme") {
-    try {
-      const text = await readNpmPackageReadme();
-      process.stdout.write(text.endsWith("\n") ? text : text + "\n");
-    } catch (err) {
-      fail(err instanceof Error ? err.message : String(err));
-    }
-    return;
-  }
   process.stdout.write(getHelp(topic) + "\n");
 }
 
@@ -362,7 +352,7 @@ async function main(): Promise<void> {
       await cmdJmapRequest(rest);
       break;
     case "help":
-      await cmdHelp(rest);
+      cmdHelp(rest);
       break;
     default:
       process.stderr.write(`Unknown command: ${cmd}\n\n`);

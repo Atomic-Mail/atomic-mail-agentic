@@ -16,6 +16,10 @@ credentials.json
 *.jwt
 **/*.jwt
 
+# Dify plugin package artifacts
+*.difypkg
+**/*.difypkg
+
 # Generated integration artifacts and local package tarballs
 integrations_dist/
 /openclaw/
@@ -26,6 +30,16 @@ integrations_dist/
 # Logs
 *.log
 **/*.log
+
+# Python cache/artifacts
+__pycache__/
+**/__pycache__/
+*.pyc
+**/*.pyc
+.pytest_cache/
+**/.pytest_cache/
+.venv312/
+**/.venv312/
 
 docs/.vitepress/dist/
 docs/.vitepress/cache/

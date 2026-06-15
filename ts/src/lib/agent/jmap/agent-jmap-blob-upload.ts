@@ -52,13 +52,17 @@ export async function postBinaryBlobUpload(
   bytes: Uint8Array,
   contentType: string,
 ): Promise<{ blobId: string; size: number }> {
+  const body = bytes.buffer.slice(
+    bytes.byteOffset,
+    bytes.byteOffset + bytes.byteLength,
+  ) as ArrayBuffer;
   const res = await fetch(uploadUrlExpanded, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${capabilityJwt}`,
       "Content-Type": contentType,
     },
-    body: bytes,
+    body,
   });
   const text = await res.text();
   if (!res.ok) {
@@ -92,8 +96,13 @@ export async function buildVarsFromAttachmentFiles(
   const accountId = await session.getPrimaryMailAccountId();
   const limits = await session.getBlobUploadLimitsForAccount(accountId);
   const capabilityJwt = await session.getCapabilityToken();
-  const creds = await readCredentials(session.files.credentialsFile);
-  const uploadTemplate = session.currentUploadUrl ?? creds.uploadUrl;
+  const uploadTemplate = session.currentUploadUrl ??
+    (session.files
+      ? (await readCredentials(session.files.credentialsFile)).uploadUrl
+      : undefined);
+  if (!uploadTemplate) {
+    throw new Error("JMAP session missing uploadUrl.");
+  }
   const uploadUrlExpanded = expandUploadUrl(uploadTemplate, accountId);
 
   const prepared: {

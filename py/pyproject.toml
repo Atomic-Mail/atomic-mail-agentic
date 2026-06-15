@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "atomicmail-shared"
+version = "0.1.0"
+description = "Shared Atomic Mail Python foundation library"
+requires-python = ">=3.9"
+dependencies = []
+
+[project.scripts]
+atomicmail = "atomicmail.cli:console_main"
+atomicmail-mcp = "atomicmail.mcp_server:console_main"
+
+[tool.setuptools]
+
+[tool.setuptools.package-dir]
+"" = "src"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

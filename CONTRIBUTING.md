@@ -94,6 +94,26 @@ cd ts
 deno run -A build_mcp_npm.ts <version>    # -> ts/mcp_npm/
 deno run -A build_skill_npm.ts <version>  # -> ts/skill_npm/
 deno run -A build_all_npm.ts <version>    # default + all channel variants
+deno run -A build_clawhub_skill.ts <version>  # -> integrations_dist/clawhub/atomicmail/
+```
+
+`build_clawhub_skill.ts` requires `skill_npm/` (run `build_skill_npm.ts` or
+`build_all_npm.ts` first). CI publishes the built skill via
+`.github/workflows/publish-clawhub-skill.yml` on GitHub release using explicit
+semver (`clawhub skill publish --version <release>`), matching the git tag.
+
+Local publish (maintainers, after building):
+
+```bash
+cd ts
+deno run -A build_skill_npm.ts <version>
+deno run -A build_clawhub_skill.ts <version>
+clawhub skill publish ../integrations_dist/clawhub/atomicmail \
+  --slug atomicmail \
+  --name "Atomic Mail" \
+  --version <version> \
+  --owner atomicmail \
+  --changelog "Release <version>"
 ```
 
 GitHub Packages (`@atomic-mail/*` on `npm.pkg.github.com`):

@@ -7,6 +7,7 @@ import {
   DEFAULT_JMAP_USING,
   readOpsFile,
   runJmapRequest,
+  sharedError,
   USER_VAR_KEY_RE,
 } from "../../lib/mod.ts";
 import type { McpSessionContext } from "../mcp-session-context.ts";
@@ -31,6 +32,12 @@ export function registerJmapTool(
         "(preset path; relative to credential directory). `$VAR` substitution " +
         "and optional file `attachments`: see `help` topics presets and " +
         "jmap_cheatsheet.",
+      annotations: {
+        openWorldHint: true,
+        destructiveHint: true,
+        readOnlyHint: false,
+        idempotentHint: false,
+      },
       inputSchema: z.object({
         credentials_dir: z
           .string()
@@ -60,6 +67,12 @@ export function registerJmapTool(
             "String map for `$PLACEHOLDER` values (keys without `$`). " +
               "Overrides session keys and `ATTACHMENT_*` when attachments are set.",
           ),
+        dry_run: z
+          .boolean()
+          .optional()
+          .describe(
+            "Resolve variables/envelope and return the request body without sending it.",
+          ),
         attachments: z
           .array(
             z.object({
@@ -80,15 +93,21 @@ export function registerJmapTool(
           ),
       }),
     },
-    async ({ credentials_dir, using, ops, ops_file, vars, attachments }) => {
+    async ({
+      credentials_dir,
+      using,
+      ops,
+      ops_file,
+      vars,
+      dry_run,
+      attachments,
+    }) => {
       try {
         if (ops && ops_file) {
-          return mcpError(
-            "ops and ops_file are mutually exclusive — provide one.",
-          );
+          return mcpError(sharedError("mcp_ops_mutually_exclusive"));
         }
         if (!ops && !ops_file) {
-          return mcpError("Provide either ops or ops_file.");
+          return mcpError(sharedError("mcp_ops_required"));
         }
 
         const session = await resolveMcpToolSession(
@@ -119,6 +138,7 @@ export function registerJmapTool(
           defaultUsing: using,
           sourceLabel,
           vars,
+          dryRun: dry_run,
           attachments: attachments?.map((a) => ({
             path: a.path,
             filename: a.filename,

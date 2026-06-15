@@ -1,2 +1,2 @@
-/** Published @atomicmail/mcp version; bump when releasing to npm. */
-export const ATOMICMAIL_MCP_VERSION = "0.3.4";
+/** Published @atomicmail/mcp version; set from release tag in CI. */
+export const ATOMICMAIL_MCP_VERSION = "0.0.0-dev-anthropic";

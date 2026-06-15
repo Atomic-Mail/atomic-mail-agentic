@@ -6,8 +6,6 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp";
 import {
   getHelp,
   HELP_TOPIC_LIST,
-  normalizeHelpTopic,
-  readNpmPackageReadme,
 } from "../../lib/mod.ts";
 import { mcpError, mcpText } from "../mcp-result.ts";
 
@@ -27,20 +25,17 @@ export function registerHelpTool(server: McpServer): void {
           .string()
           .optional()
           .describe(
-            "Topic name; omit for overview. Use readme for package README.md.",
+            "Topic name; omit for overview. Use readme for the built-in readme stub.",
           ),
       }),
       annotations: {
+        destructiveHint: false,
         readOnlyHint: true,
         idempotentHint: true,
       },
     },
-    async ({ topic }) => {
+    ({ topic }) => {
       try {
-        if (topic !== undefined && normalizeHelpTopic(topic) === "readme") {
-          const text = await readNpmPackageReadme();
-          return mcpText(text);
-        }
         return mcpText(getHelp(topic));
       } catch (error) {
         return mcpError(

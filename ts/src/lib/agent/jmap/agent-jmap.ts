@@ -5,10 +5,10 @@ import { dirname, isAbsolute, resolve as resolvePath } from "node:path";
 import { cwd } from "node:process";
 import { fileURLToPath } from "node:url";
 
+import { tryReadSharedJson } from "../../core/shared-assets.ts";
 import { readCredentials } from "../session/agent-credentials-store.ts";
 import { inboxIdToMailboxEmail } from "../session/inbox-id-to-mailbox-email.ts";
 import {
-  assertAttachmentBytesWithinBlobLimit,
   assertBlobUploadEnvelopeWithinLimits,
   type JmapBlobUploadLimits,
 } from "./agent-jmap-blob-limits.ts";
@@ -28,6 +28,12 @@ export const DEFAULT_JMAP_USING = [
 ] as const;
 
 /** Presets shipped with MCP / skill npm packages (for error hints). */
+const sharedManifest = tryReadSharedJson<{ presets_dir: string }>(
+  "manifest.json",
+);
+const sharedHints = tryReadSharedJson<{ jmap_next_hints: string[] }>(
+  "messages/hints.json",
+);
 export const BUNDLED_OPS_PRESET_NAMES = [
   "list_inbox.json",
   "reply.json",
@@ -123,6 +129,12 @@ async function resolveBundledPresetPath(
 
   for (let depth = 0; depth < 8; depth++) {
     const candidates = [
+      resolvePath(
+        currentDir,
+        "shared",
+        sharedManifest?.presets_dir ?? "presets",
+        opsFile,
+      ),
       resolvePath(currentDir, "presets", opsFile),
       resolvePath(currentDir, "agent", "jmap", "presets", opsFile),
       resolvePath(
@@ -266,7 +278,7 @@ export async function fetchJmapWellKnown(
 export interface JmapSessionPort {
   /** Base used for `GET /.well-known/jmap` (configured `ATOMIC_MAIL_API_URL` / credentials). */
   readonly apiUrl: string;
-  readonly files: { credentialsFile: string };
+  readonly files?: { credentialsFile: string };
   /** RFC 8620 Session `apiUrl` — full URL for `POST` JMAP batches. */
   getJmapPostUrl(): Promise<string>;
   getPrimaryMailAccountId(): Promise<string>;
@@ -331,18 +343,36 @@ export async function runJmapRequest(
       ACCOUNT_ID: () => input.session.getPrimaryMailAccountId(),
       INBOX: async () => {
         const raw = input.session.currentInboxId ??
-          (await readCredentials(input.session.files.credentialsFile)).inboxId;
+          (input.session.files
+            ? (await readCredentials(input.session.files.credentialsFile))
+              .inboxId
+            : undefined);
+        if (!raw) {
+          throw new Error("No inbox in session; run register first.");
+        }
         return inboxIdToMailboxEmail(raw);
       },
       INBOX_MAILBOX_ID: () => fetchInboxMailboxId(input.session),
-      UPLOAD_URL: async () =>
-        input.session.currentUploadUrl ??
-          (await readCredentials(input.session.files.credentialsFile))
-            .uploadUrl,
-      DOWNLOAD_URL: async () =>
-        input.session.currentDownloadUrl ??
-          (await readCredentials(input.session.files.credentialsFile))
-            .downloadUrl,
+      UPLOAD_URL: async () => {
+        if (input.session.currentUploadUrl) {
+          return input.session.currentUploadUrl;
+        }
+        if (input.session.files) {
+          return (await readCredentials(input.session.files.credentialsFile))
+            .uploadUrl;
+        }
+        throw new Error("JMAP session missing uploadUrl.");
+      },
+      DOWNLOAD_URL: async () => {
+        if (input.session.currentDownloadUrl) {
+          return input.session.currentDownloadUrl;
+        }
+        if (input.session.files) {
+          return (await readCredentials(input.session.files.credentialsFile))
+            .downloadUrl;
+        }
+        throw new Error("JMAP session missing downloadUrl.");
+      },
     },
   });
 
@@ -491,11 +521,11 @@ export async function postJmap(
   return { ok: res.ok, status: res.status, bodyText };
 }
 
-const JMAP_NEXT_HINTS = [
+const JMAP_NEXT_HINTS = sharedHints?.jmap_next_hints ?? [
   "Use jmap_request with Mailbox/get or Email/query to work with mail data.",
   "Use presets with $VAR placeholders — $ACCOUNT_ID, $INBOX, and $INBOX_MAILBOX_ID come from the session; pass others via vars / --vars.",
   "Call help for the JMAP cheatsheet and troubleshooting.",
-] as const;
+];
 
 /** Attach _next hints to a successful JMAP JSON object when parseable. */
 export function attachJmapNextHints(bodyText: string): string {

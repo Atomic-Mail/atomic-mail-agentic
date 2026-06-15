@@ -6,9 +6,14 @@ import {
 } from "../npm_package_meta.ts";
 
 export type NpmProduct = "mcp" | "skill";
+export interface NpmChannelMcpbConfig {
+  artifactBaseName?: string;
+}
 export interface NpmChannelConfig {
   name: string;
   products?: NpmProduct[];
+  publish?: boolean;
+  mcpb?: NpmChannelMcpbConfig;
 }
 
 const PRESET_FILES = [
@@ -19,7 +24,8 @@ const PRESET_FILES = [
   "reply.json",
 ] as const;
 
-const SHARED_PRESET_DIR = "./src/lib/agent/jmap/presets";
+const SHARED_ROOT_DIR = "../shared";
+const SHARED_PRESET_DIR = `${SHARED_ROOT_DIR}/presets`;
 const LICENSE_FILE = { path: "../LICENSE", targetPath: "LICENSE" };
 
 const PRODUCT_CONFIG = {
@@ -82,9 +88,12 @@ function normalizeChannelConfig(
   channel: string | NpmChannelConfig,
 ): NpmChannelConfig {
   if (typeof channel === "string") {
-    return { name: channel };
+    return { name: channel, publish: true };
   }
-  return channel;
+  return {
+    publish: true,
+    ...channel,
+  };
 }
 
 export function loadChannels(): NpmChannelConfig[] {
@@ -102,13 +111,23 @@ export function supportsChannelProduct(
   return !channel.products || channel.products.includes(product);
 }
 
+export function shouldPublishChannel(channel: NpmChannelConfig): boolean {
+  return channel.publish ?? true;
+}
+
+export function getChannelConfig(
+  channel: string,
+): NpmChannelConfig | undefined {
+  return loadChannels().find((entry) => entry.name === channel);
+}
+
 export function assertChannelSupported(
   product: NpmProduct,
   channel?: string,
 ): void {
   if (!channel) return;
 
-  const config = loadChannels().find((entry) => entry.name === channel);
+  const config = getChannelConfig(channel);
   if (!config) {
     throw new Error(`Unknown npm channel: ${channel}`);
   }
@@ -127,6 +146,39 @@ export function getOutputDir(product: NpmProduct, channel?: string): string {
 export function getPackageName(product: NpmProduct, channel?: string): string {
   const { baseName } = PRODUCT_CONFIG[product];
   return channel ? `${baseName}-${channel}` : baseName;
+}
+
+export interface NpmPackageTarget {
+  product: NpmProduct;
+  channel?: string;
+}
+
+export function listConfiguredPackageTargets(
+  options: { publishableOnly?: boolean } = {},
+): NpmPackageTarget[] {
+  const { publishableOnly = false } = options;
+  const targets: NpmPackageTarget[] = [
+    { product: "mcp" },
+    { product: "skill" },
+  ];
+
+  for (const channel of loadChannels()) {
+    if (publishableOnly && !shouldPublishChannel(channel)) continue;
+    for (const product of ["mcp", "skill"] as const) {
+      if (!supportsChannelProduct(channel, product)) continue;
+      targets.push({ product, channel: channel.name });
+    }
+  }
+
+  return targets;
+}
+
+export function listConfiguredPackageDirs(
+  options: { publishableOnly?: boolean } = {},
+): string[] {
+  return listConfiguredPackageTargets(options).map(({ product, channel }) =>
+    getOutputDir(product, channel)
+  );
 }
 
 export function buildHomepage(channel?: string): string {
@@ -150,6 +202,21 @@ async function copyFileIfExists(src: string, dest: string): Promise<void> {
     await Deno.copyFile(src, dest);
   } catch (err) {
     if (!(err instanceof Deno.errors.NotFound)) throw err;
+  }
+}
+
+async function copyDirRecursive(srcDir: string, destDir: string): Promise<void> {
+  await Deno.mkdir(destDir, { recursive: true });
+  for await (const entry of Deno.readDir(srcDir)) {
+    const src = `${srcDir}/${entry.name}`;
+    const dest = `${destDir}/${entry.name}`;
+    if (entry.isDirectory) {
+      await copyDirRecursive(src, dest);
+      continue;
+    }
+    if (entry.isFile) {
+      await Deno.copyFile(src, dest);
+    }
   }
 }
 
@@ -251,6 +318,8 @@ export async function buildNpmPackage(
         await prependChannelReadme(dir, channel, config.baseName);
       }
 
+      await copyDirRecursive(SHARED_ROOT_DIR, `${dir}/shared`);
+
       await Deno.mkdir(`${dir}/presets`, { recursive: true });
       for (const file of PRESET_FILES) {
         await Deno.copyFile(
@@ -314,19 +383,14 @@ export function parseBuildArgs(args: string[]): ParsedBuildArgs {
   return { version, channel };
 }
 
-export function listBuiltPackageDirs(): string[] {
+export function listBuiltPackageDirs(
+  options: { publishableOnly?: boolean } = {},
+): string[] {
+  const allowed = new Set(listConfiguredPackageDirs(options));
   const dirs: string[] = [];
   for (const entry of Deno.readDirSync(".")) {
     if (!entry.isDirectory) continue;
-    if (entry.name.endsWith("_npm_gpr")) continue;
-    if (
-      entry.name === "mcp_npm" ||
-      entry.name === "skill_npm" ||
-      /^mcp_npm_[a-z0-9_-]+$/.test(entry.name) ||
-      /^skill_npm_[a-z0-9_-]+$/.test(entry.name)
-    ) {
-      dirs.push(entry.name);
-    }
+    if (allowed.has(entry.name)) dirs.push(entry.name);
   }
   return dirs.sort();
 }

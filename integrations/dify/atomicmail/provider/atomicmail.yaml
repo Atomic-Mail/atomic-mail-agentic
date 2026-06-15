@@ -1,0 +1,166 @@
+identity:
+  author: "atomicmail"
+  name: "atomicmail"
+  label:
+    en_US: "Atomic Mail"
+    zh_Hans: "Atomic Mail"
+    pt_BR: "Atomic Mail"
+    ja_JP: "Atomic Mail"
+  description:
+    en_US: >-
+      Atomic Mail is an agent-first programmable inbox for Dify, and also works
+      well for manual Workflow builders. Tool catalog: register/login, help
+      topics, inbox listing, send, reply, and advanced jmap_request. After
+      register, schedule an hourly Agent turn to check inbox mail. Use the Help
+      tool and plugin README for setup and operations guidance.
+    zh_Hans: >-
+      Atomic Mail 是面向 Agent 的可编程收件箱，也支持手动搭建 Dify Workflow。
+      工具包含注册登录、帮助主题、收件箱查看、发信、回复与高级 jmap_request。
+      完成 register 后，请安排每小时一次的 Agent 轮询收件箱。配置与使用建议请参考
+      Help 工具与插件 README。
+    pt_BR: >-
+      Atomic Mail é uma caixa de entrada programável orientada a agentes no Dify,
+      e também funciona para quem monta Workflows manualmente. Catálogo de
+      ferramentas: registro/login, tópicos de ajuda, listagem da inbox, envio,
+      resposta e jmap_request avançado. Após register, agende um turno horário de
+      Agent para verificar a inbox. Use a ferramenta Help e o README do plugin
+      para configuração e operação.
+    ja_JP: >-
+      Atomic Mail は Dify 向けのエージェント中心のプログラム可能な受信箱であり、
+      手動で Workflow を構築する開発者にも適しています。利用できるツールは
+      register/login、help、受信箱一覧、送信、返信、拡張 jmap_request です。
+      register 後は受信箱確認の Agent ターンを毎時で設定してください。設定手順と
+      運用ガイドは Help ツールとプラグイン README を参照してください。
+  tags:
+    - productivity
+  icon: "icon.svg"
+
+#########################################################################################
+# If you want to support OAuth, you can uncomment the following code.
+#########################################################################################
+# oauth_schema:
+#   client_schema:
+#     - name: "client_id"
+#       type: "secret-input"
+#       required: true
+#       url: https://example.com/oauth/authorize
+#       placeholder:
+#         en_US: "Please input your Client ID"
+#         zh_Hans: "请输入你的 Client ID"
+#         pt_BR: "Insira seu Client ID"
+#       help:
+#         en_US: "Client ID is used to authenticate requests to the example.com API."
+#         zh_Hans: "Client ID 用于认证请求到 example.com API。"
+#         pt_BR: "Client ID é usado para autenticar solicitações à API do example.com."
+#       label:
+#         zh_Hans: "Client ID"
+#         en_US: "Client ID"
+#     - name: "client_secret"
+#       type: "secret-input"
+#       required: true
+#       url: https://example.com/oauth/authorize
+#       placeholder:
+#         en_US: "Please input your Client Secret"
+#         zh_Hans: "请输入你的 Client Secret"
+#         pt_BR: "Insira seu Client Secret"
+#       help:
+#         en_US: "Client Secret is used to authenticate requests to the example.com API."
+#         zh_Hans: "Client Secret 用于认证请求到 example.com API。"
+#         pt_BR: "Client Secret é usado para autenticar solicitações à API do example.com."
+#       label:
+#         zh_Hans: "Client Secret"
+#         en_US: "Client Secret"
+#   credentials_schema:
+#     - name: "access_token"
+#       type: "secret-input"
+#       label:
+#         zh_Hans: "Access Token"
+#         en_US: "Access Token"
+
+credentials_schema:
+  - name: api_key
+    type: secret-input
+    required: false
+    label:
+      en_US: API Key
+      zh_Hans: API 密钥
+      pt_BR: Chave de API
+      ja_JP: API キー
+    placeholder:
+      en_US: Optional existing Atomic Mail API key
+      zh_Hans: 可选：已有的 Atomic Mail API 密钥
+      pt_BR: Chave de API do Atomic Mail (opcional)
+      ja_JP: "任意: 既存の Atomic Mail API キー"
+    help:
+      en_US: >-
+        Optional. Set this if you already have an Atomic Mail API key and want
+        to skip Register in first-run workflows.
+      zh_Hans: >-
+        可选。如果你已有 Atomic Mail API 密钥，可填写后在首次流程中跳过 Register。
+      pt_BR: >-
+        Opcional. Preencha se você já tem uma chave de API da Atomic Mail e quer
+        pular Register no primeiro fluxo.
+      ja_JP: >-
+        任意です。既存の Atomic Mail API キーがある場合は入力すると初回フローで
+        Register を省略できます。
+  - name: auth_url
+    type: text-input
+    required: false
+    label:
+      en_US: Auth URL
+      zh_Hans: 认证 URL
+      pt_BR: URL de autenticação
+      ja_JP: 認証 URL
+    placeholder:
+      en_US: https://auth.atomicmail.ai
+      zh_Hans: https://auth.atomicmail.ai
+      pt_BR: https://auth.atomicmail.ai
+      ja_JP: https://auth.atomicmail.ai
+    help:
+      en_US: >-
+        Optional auth service endpoint. Leave default unless you were given a
+        custom environment URL.
+      zh_Hans: >-
+        可选认证服务地址。除非你收到专用环境地址，否则保持默认值即可。
+      pt_BR: >-
+        Endpoint opcional do serviço de autenticação. Mantenha o padrão, a menos
+        que você tenha recebido uma URL de ambiente customizada.
+      ja_JP: >-
+        任意の認証サービス URL です。専用環境の URL を案内されていない限り、
+        既定値のままにしてください。
+  - name: api_url
+    type: text-input
+    required: false
+    label:
+      en_US: API URL
+      zh_Hans: API URL
+      pt_BR: URL da API
+      ja_JP: API URL
+    placeholder:
+      en_US: https://api.atomicmail.ai
+      zh_Hans: https://api.atomicmail.ai
+      pt_BR: https://api.atomicmail.ai
+      ja_JP: https://api.atomicmail.ai
+    help:
+      en_US: >-
+        Optional JMAP/API endpoint. Keep default for production Atomic Mail unless
+        your team uses a custom deployment.
+      zh_Hans: >-
+        可选 JMAP/API 地址。若使用官方生产环境请保持默认，只有在团队使用私有部署时再修改。
+      pt_BR: >-
+        Endpoint JMAP/API opcional. Mantenha o padrão na produção da Atomic Mail,
+        exceto se sua equipe usar uma implantação customizada.
+      ja_JP: >-
+        任意の JMAP/API エンドポイントです。通常は既定値を使用し、チームで
+        カスタム環境を利用する場合のみ変更してください。
+
+tools:
+  - tools/register.yaml
+  - tools/help.yaml
+  - tools/list_inbox.yaml
+  - tools/jmap_request.yaml
+  - tools/send_mail.yaml
+  - tools/reply.yaml
+extra:
+  python:
+    source: provider/atomicmail.py

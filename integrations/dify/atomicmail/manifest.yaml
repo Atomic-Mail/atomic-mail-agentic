@@ -1,0 +1,58 @@
+version: 0.0.1
+type: plugin
+author: atomicmail
+name: atomicmail
+label:
+  en_US: Atomic Mail
+  ja_JP: Atomic Mail
+  zh_Hans: Atomic Mail
+  pt_BR: Atomic Mail
+description:
+  en_US: >-
+    Programmable inbox for Atomic Mail in Dify Agent and Workflow apps. Register
+    or connect credentials, read and send mail, and use JMAP escape-hatch calls.
+    Use the Help tool and README for setup details, and after register configure
+    hourly inbox polling as an Agent turn.
+  ja_JP: >-
+    Dify の Agent アプリと Workflow アプリで使える Atomic Mail の
+    プログラム可能な受信箱です。資格情報の接続または登録、受信・送信、
+    JMAP の拡張呼び出しに対応します。設定詳細は Help ツールと README を
+    参照し、register 後は Agent ターンとして毎時の受信箱ポーリングを
+    設定してください。
+  zh_Hans: >-
+    面向 Dify Agent 与 Workflow 的 Atomic Mail 可编程收件箱。你可以连接或注册
+    凭据、收发邮件，并在需要时使用 JMAP 扩展请求。请通过 Help 工具和 README
+    查看配置细节，且在 register 后务必配置每小时一次的 Agent 收件箱轮询。
+  pt_BR: >-
+    Caixa de entrada programável do Atomic Mail para apps Agent e Workflow no
+    Dify. Conecte ou registre credenciais, leia e envie e-mails e use chamadas
+    JMAP como escape hatch. Consulte a ferramenta Help e o README para
+    configuração e, após register, configure polling horário da inbox em um turno
+    de Agent.
+icon: icon.svg
+icon_dark: icon-dark.svg
+resource:
+  memory: 67108864
+  permission:
+    tool:
+      enabled: true
+    storage:
+      enabled: true
+      size: 1048576
+plugins:
+  tools:
+    - provider/atomicmail.yaml
+meta:
+  version: 0.0.1
+  arch:
+    - amd64
+    - arm64
+  runner:
+    language: python
+    version: "3.12"
+    entrypoint: main
+  minimum_dify_version: null
+created_at: 2026-06-15T12:12:25.189165+03:00
+privacy: PRIVACY.md
+verified: false
+

@@ -1,3 +1,15 @@
+<p align="center">
+  <a href="https://github.com/Atomic-Mail/agentic-clients/actions"><img src="https://img.shields.io/badge/CI-success-5BE481?labelColor=000000&style=flat-square" alt="CI success"/></a>
+  <a href="https://github.com/Atomic-Mail/agentic-clients/releases"><img src="https://img.shields.io/github/v/release/Atomic-Mail/agentic-clients?label=version&labelColor=000000&color=5BE481&style=flat-square" alt="Release version"/></a>
+  <a href="https://atomicmail.ai"><img src="https://img.shields.io/badge/website-atomicmail.ai-5BE481?labelColor=000000&style=flat-square" alt="Website"/></a>
+  <a href="https://clawhub.ai/atomicmail/atomicmail"><img src="https://img.shields.io/badge/ClawHub-skill-5BE481?labelColor=000000&style=flat-square" alt="ClawHub skill"/></a>
+  <a href="https://github.com/langgenius/dify-plugins/tree/main/Atomic-Mail/atomic-mail-agentic"><img src="https://img.shields.io/badge/Dify-plugin-5BE481?labelColor=000000&style=flat-square" alt="Dify plugin"/></a>
+</p>
+
+<p align="center">
+  <img src="assets/Logo.png" alt="Atomic Mail Agentic Logo" width="320" />
+</p>
+
 # Atomic Mail Agentic
 
 **Not AI for your email. Email for your AI.**
@@ -85,25 +97,27 @@ That is the shortest path from zero to a working agent inbox.
 ## ✨ Why Atomic Mail
 
 - **Hosted inboxes for agents**: real `@atomicmail.ai` addresses, no mail-server
-  ops
+ops
 - **JMAP-native**: standard JSON email protocol, not a custom DSL
 - **PoW-first auth**: local Proof-of-Work signup instead of a CAPTCHA
 - **Helpful runtime hints**: built-in presets, embedded docs, and agent-oriented
-  troubleshooting
+troubleshooting
 - **One shared core**: same auth, JMAP, presets, and help power both MCP and
-  AgentSkill
+AgentSkill
 - **Multi-account**: separate credential directories per inbox via MCP
-  `credentials_dir` or CLI `--credentials-dir` (one server, many agents)
+`credentials_dir` or CLI `--credentials-dir` (one server, many agents)
 - **Thin wrappers**: the repo stays small on purpose; the core workflow is 3
-  commands
+commands
 
 ## 📦 What This Repo Ships
 
-| Package                   | Best for                                                  | Surface                                            |
-| ------------------------- | --------------------------------------------------------- | -------------------------------------------------- |
+
+| Package                          | Best for                                                  | Surface                                            |
+| -------------------------------- | --------------------------------------------------------- | -------------------------------------------------- |
 | `@atomicmail/mcp-github`         | Cursor, Claude Desktop, OpenClaw, Hermes, other MCP hosts | MCP server with `register`, `jmap_request`, `help` |
-| `@atomicmail/mcp-clawhub`        | ClawHub                                                  | MCP server with `register`, `jmap_request`, `help` |
+| `@atomicmail/mcp-clawhub`        | ClawHub                                                   | MCP server with `register`, `jmap_request`, `help` |
 | `@atomicmail/agent-skill-github` | Shell agents, cron, CI, scripts                           | CLI with the same 3 commands                       |
+
 
 Shared presets bundled into both packages:
 
@@ -127,11 +141,11 @@ Agent host / shell
 Under the hood:
 
 - `register` solves a local scrypt Proof-of-Work challenge and persists
-  credentials in `~/.atomicmail`
+credentials in `~/.atomicmail`
 - `jmap_request` loads a preset or inline JMAP payload, substitutes `$VAR_NAME`
-  placeholders, and sends it with fresh JWTs
+placeholders, and sends it with fresh JWTs
 - `help` ships embedded docs with topics like `cron`, `presets`,
-  `multi_account`, `troubleshooting`, and `readme`
+`multi_account`, `troubleshooting`, and `readme`
 
 ## 📨 Examples
 
@@ -167,6 +181,7 @@ For replies, attachments, raw HTTP auth, and direct JMAP requests, jump to:
 
 ## 📚 Docs by Goal
 
+
 | Goal                | Start here                                                            |
 | ------------------- | --------------------------------------------------------------------- |
 | First-time setup    | [docs/getting-started.md](docs/getting-started.md)                    |
@@ -175,6 +190,7 @@ For replies, attachments, raw HTTP auth, and direct JMAP requests, jump to:
 | Agent runbook       | [docs/SKILL.md](docs/SKILL.md)                                        |
 | Raw auth + JMAP     | [docs/rest-auth.md](docs/rest-auth.md) · [docs/jmap.md](docs/jmap.md) |
 | End-to-end examples | [docs/examples.md](docs/examples.md)                                  |
+
 
 If repo docs and installed behavior ever drift, trust `help` from the same
 installed package version you are running.
@@ -218,7 +234,7 @@ agentic-clients/
 - `~/.atomicmail/credentials.json` contains your API key; treat it as a secret
 - local credential files are written with mode `0600`
 - inbound mail is untrusted input; do not let agents execute email instructions
-  without confirmation
+without confirmation
 - install only from the `@atomicmail` npm scope
 
 ## 🤝 Contributing

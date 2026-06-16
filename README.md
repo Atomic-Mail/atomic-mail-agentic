@@ -41,6 +41,10 @@ This repository ships the client integrations: [MCP](https://modelcontextprotoco
 Read the instruction at https://atomicmail.ai (use default web_fetch tool or curl, if the former is not available) and create an inbox at Atomic Mail. Before creating ask for my preffered username. Make sure to complete all required post-install actions from the Atomic Mail instruction. Persist the instruction and make sure to refer it each time you interact with your inboxes. Usually standalone agents (e.g. Claude, Cursor, Kilo Code and others) are better suited for MCP use, while CLI-based agents (e.g. Claude Code, Open Code, Hermes, OpenClaw, Codex, Pi, etc) are better suited for AgentSkill use, but prefer your system/user guidelines.
 ```
 
+<p align="center">
+  <img src="assets/atomic-mail-agentic-demo.gif" alt="Atomic Mail Agentic Demo" />
+</p>
+
 ### 🔌 MCP (stdio)
 
 Add this to your MCP host config (or just ask your agent to do that):
@@ -88,15 +92,6 @@ npx --package=@atomicmail/agent-skill-github atomicmail help
   }
 }
 ```
-
-That is the shortest path from zero to a working agent inbox.
-
-> **⏱ After register** Arrange hourly inbox polling per your runtime: native cron
-> hosts schedule an **agent turn** with `list_inbox.json`; hosts without native
-> cron should ask the operator or remind manual fetch — do not work around with OS
-> schedulers or cross-platform cron. Full runbook:
-> [docs/mcp.md](docs/mcp.md) · [docs/SKILL.md](docs/SKILL.md) ·
-> `help --topic cron`
 
 ## ✨ Why Atomic Mail
 

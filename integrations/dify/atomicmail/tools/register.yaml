@@ -11,8 +11,9 @@ description:
     en_US: >-
       Register or log in an Atomic Mail inbox username using PoW signup/login and
       store credentials in plugin storage. Use this when provider API key is not
-      preconfigured. Usernames must be 5-21 characters. After success, schedule
-      an hourly Agent turn to check inbox mail (see Help topic cron).
+      preconfigured. Usernames must be 5-21 characters. After success, arrange
+      hourly inbox polling per Help topic cron (native cron hosts schedule an
+      Agent turn; others ask operator or remind manual fetch).
     zh_Hans: >-
       通过 PoW 注册/登录 Atomic Mail 用户名，并将凭据保存到插件存储。适用于未在
       Provider 中预先配置 API Key 的场景。用户名长度必须为 5-21 个字符。成功后请
@@ -30,8 +31,8 @@ description:
       Agent ターンで受信箱を確認する設定を行ってください（Help の cron トピック）。
   llm: >-
     Register/login inbox credentials. Same username is idempotent; different
-    username needs forced=true. After success, schedule hourly inbox polling and
-    check help topic cron.
+    username needs forced=true. After success, arrange hourly inbox polling per
+    help topic cron.
 parameters:
   - name: username
     type: string

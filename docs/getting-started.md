@@ -26,10 +26,14 @@ If wrappers are not usable in your environment, use the direct HTTP docs:
      replacement only after backing up the credential directory.
 2. **Persist credentials**
    - `credentials.json`, `session.jwt`, `capability.jwt` under `~/.atomicmail`.
-3. **Schedule hourly agent inbox job (required)**
-   - Invoke your **AI agent** every hour to fetch mail via `list_inbox.json`
-     (OpenClaw, Hermes, atomic-agent, or terminal CLI via OS scheduler). Do not
-     cron `atomicmail jmap_request` alone. See [`SKILL.md`](/SKILL#hourly-inbox-cron-required), [`MCP`](/mcp#hourly-inbox-cron-required-after-register), or `help` topic `cron`.
+3. **Arrange hourly inbox polling (after register)**
+   - Native cron hosts: invoke your **AI agent** every hour to fetch mail via
+     `list_inbox.json` (OpenClaw, Hermes, atomic-agent).
+   - No native cron: ask the operator to set up polling on a capable host, or
+     remind manual fetch. Do not work around with OS schedulers or cross-platform
+     scheduling. Do not cron `atomicmail jmap_request` alone. See
+     [`SKILL.md`](/SKILL#hourly-inbox-polling-after-register),
+     [`MCP`](/mcp#hourly-inbox-polling-after-register), or `help` topic `cron`.
 4. **Execute JMAP**
    - Call `jmap_request` with inline `ops` or `ops_file`.
 5. **Use placeholders**

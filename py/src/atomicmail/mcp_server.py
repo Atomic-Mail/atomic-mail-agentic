@@ -22,7 +22,9 @@ _INSTRUCTIONS = (
     "Atomic Mail MCP — programmable inbox for AI agents.\n\n"
     "Use register first, then jmap_request for mailbox operations. "
     "Use help early and often (presets, cron, jmap_cheatsheet, troubleshooting). "
-    "After register, schedule an hourly AGENT job with ops_file list_inbox.json."
+    "After register, arrange hourly inbox polling per help topic cron: native "
+    "scheduler if available; otherwise ask operator or remind manual fetch. "
+    "Do not cron jmap_request alone."
 )
 
 
@@ -61,7 +63,8 @@ def _tool_specs() -> list[dict[str, Any]]:
             "description": (
                 "PoW signup; writes credentials. Usernames are 5–21 characters. "
                 "Idempotent for the same username and stored inbox; a different username "
-                "is rejected unless forced=true is provided."
+                "is rejected unless forced=true is provided. After success, arrange "
+                "hourly inbox polling per help topic cron."
             ),
             "inputSchema": {
                 "type": "object",

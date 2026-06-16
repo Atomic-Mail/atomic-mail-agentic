@@ -1,6 +1,6 @@
 <p align="center">
-  <a href="https://github.com/Atomic-Mail/agentic-clients/actions"><img src="https://img.shields.io/badge/CI-success-5BE481?labelColor=000000&style=flat-square" alt="CI success"/></a>
-  <a href="https://github.com/Atomic-Mail/agentic-clients/releases"><img src="https://img.shields.io/github/v/release/Atomic-Mail/agentic-clients?label=version&labelColor=000000&color=5BE481&style=flat-square" alt="Release version"/></a>
+  <a href="https://github.com/Atomic-Mail/atomic-mail-agentic/actions"><img src="https://img.shields.io/badge/CI-success-5BE481?labelColor=000000&style=flat-square" alt="CI success"/></a>
+  <a href="https://github.com/Atomic-Mail/atomic-mail-agentic/releases"><img src="https://img.shields.io/badge/version-0.3.11-5BE481?labelColor=000000&style=flat-square" alt="Release version"/></a>
   <a href="https://atomicmail.ai"><img src="https://img.shields.io/badge/website-atomicmail.ai-5BE481?labelColor=000000&style=flat-square" alt="Website"/></a>
   <a href="https://clawhub.ai/atomicmail/atomicmail"><img src="https://img.shields.io/badge/ClawHub-skill-5BE481?labelColor=000000&style=flat-square" alt="ClawHub skill"/></a>
   <a href="https://github.com/langgenius/dify-plugins/tree/main/Atomic-Mail/atomic-mail-agentic"><img src="https://img.shields.io/badge/Dify-plugin-5BE481?labelColor=000000&style=flat-square" alt="Dify plugin"/></a>
@@ -14,7 +14,7 @@
 
 **Not AI for your email. Email for your AI.**
 
-[Website](https://atomicmail.ai) · [Docs](docs/getting-started.md) · [Issues](https://github.com/Atomic-Mail/agentic-clients/issues) · [@atomicmail/mcp-github](https://www.npmjs.com/package/@atomicmail/mcp-github) · [@atomicmail/mcp-clawhub](https://www.npmjs.com/package/@atomicmail/mcp-clawhub)
+[Website](https://atomicmail.ai) · [Docs](docs/getting-started.md) · [Issues](https://github.com/Atomic-Mail/atomic-mail-agentic/issues) · [@atomicmail/mcp-github](https://www.npmjs.com/package/@atomicmail/mcp-github) · [@atomicmail/mcp-clawhub](https://www.npmjs.com/package/@atomicmail/mcp-clawhub)
 
 This repository ships Atomic Mail client integrations for MCP hosts, shell agents,
 and Dify tool plugins. Use `@atomicmail/mcp-github` for MCP hosts,

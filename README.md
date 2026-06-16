@@ -94,7 +94,7 @@ Atomic Mail is designed to run through an agent — not through manual inbox set
 
 If the agent gets stuck, the integration is built to recover on its own: `help` ships embedded docs (presets, cron, troubleshooting), bundled JSON presets cover common operations, and errors include hints on what to try next.
 
-**Example workflows** (from [atomicmail.ai](https://atomicmail.ai)):
+#### Example workflows
 
 **Newsletter digest** — *"Subscribe your inbox to these newsletters, read everything, and email me a daily digest of what matters for AI tooling."* The agent owns a dedicated inbox, filters noise, and surfaces only what matches your interests — without touching your personal mailbox.
 

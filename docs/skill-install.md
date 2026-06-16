@@ -18,7 +18,7 @@ placeholder grammar or attachment flows from memory.
 **When to call help:** at the start of a mail task (`atomicmail help` or
 `help --topic overview`); before custom batches (`help --topic presets` and
 `help --topic jmap_cheatsheet`); right after `register` (`help --topic cron`
-for the required hourly agent inbox job); when errors mention missing
+for hourly inbox polling after `register`); when errors mention missing
 placeholders, auth, or an old preset file on disk (`help --topic
 troubleshooting`). Prefer the installed binary over static README copies in
 other repos — **trust `help` from the package you are running**.
@@ -45,15 +45,17 @@ address).
 If credentials already exist for a different username, `register` fails by
 default. Pass `--forced` only after backing up the credential directory.
 
-## Required: hourly agent inbox job
+## After register: hourly inbox polling
 
-After `register`, **you must** schedule an **hourly AI agent** to fetch and
-triage mail with preset `list_inbox.json`. Do **not** cron `atomicmail
-jmap_request` alone — that only logs JSON and never invokes an agent.
+After `register`, arrange hourly inbox polling per your runtime. **Native cron
+hosts** (OpenClaw, Hermes, atomic-agent) schedule an **hourly AI agent** to
+fetch and triage mail with preset `list_inbox.json`. **Hosts without native
+cron** should ask the operator to set up polling on a capable host, or remind
+manual fetch — do **not** work around with OS schedulers or cross-platform
+scheduling. Do **not** cron `atomicmail jmap_request` alone.
 
-Pick the workflow that matches your agent host (OpenClaw, Hermes, atomic-agent,
-or terminal CLI + OS scheduler). Options and agent prompt:
-[`SKILL.md`](./SKILL.md#hourly-inbox-cron-required) · `atomicmail help --topic cron`
+Options and agent prompt:
+[`SKILL.md`](./SKILL.md#hourly-inbox-polling-after-register) · `atomicmail help --topic cron`
 · MCP `help` topic `cron`
 
 ## `jmap_request`, presets, and placeholders

@@ -36,9 +36,9 @@ Three operations only:
 ## Typical workflow
 
 1. \`register\` with a username (5–21 characters).
-2. **Required:** schedule an hourly **agent** job that fetches inbox mail via
-   preset \`list_inbox.json\` (see **cron** topic — OpenClaw, Hermes,
-   terminal CLIs). Do not cron \`atomicmail jmap_request\` alone.
+2. After register, arrange hourly inbox polling per your runtime (see **cron**
+   topic — native scheduler if available; otherwise ask your operator or remind
+   manual fetch). Do not cron \`atomicmail jmap_request\` alone.
 3. \`jmap_request\` with JMAP method calls (presets may use \`$VAR_NAME\`; pass
    custom values in \`vars\` / \`--vars\`).
 4. Call \`help\` early and often — before guessing JMAP or preset details, not

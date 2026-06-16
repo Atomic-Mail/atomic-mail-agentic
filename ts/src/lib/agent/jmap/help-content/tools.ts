@@ -19,9 +19,10 @@ replacing the current one, pass a **separate** \`credentials_dir\` (MCP) or
 credentials in the **same** directory, pass **\`forced: true\`** (MCP) or
 **\`--forced\`** (skill) explicitly after backing up.
 
-**After a successful register you must** schedule an hourly **agent** job that
-calls \`jmap_request\` / \`--ops-file\` **\`list_inbox.json\`** (see **cron**
-topic — do not cron the CLI alone).
+**After a successful register,** arrange hourly inbox polling per your runtime
+(see **cron** topic — native cron hosts schedule an agent turn with
+\`list_inbox.json\`; no-native-cron hosts ask the operator or remind manual
+fetch).
 
 ## jmap_request
 

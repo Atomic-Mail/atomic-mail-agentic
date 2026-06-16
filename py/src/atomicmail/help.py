@@ -19,7 +19,7 @@ _FALLBACK_TOPICS: dict[str, str] = {
     "jmap_cheatsheet": "Use jmap_request with JMAP methodCalls envelope JSON.",
     "tools": "Available tools include register, help, and jmap_request.",
     "presets": "Use ops_file to load preset JSON operations.",
-    "cron": "Schedule hourly agent runs that execute list_inbox.json.",
+    "cron": "Arrange hourly inbox polling after register (help topic cron).",
     "multi_account": "Use separate credentials_dir values per account.",
     "troubleshooting": "Run help('troubleshooting') for common fixes.",
 }

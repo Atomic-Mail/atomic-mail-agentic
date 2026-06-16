@@ -69,16 +69,18 @@ For ClawHub, use the MCP-only channel package:
    `credentials_dir` to add another account, or pass `forced: true` only when
    you intend to replace credentials in the **same** directory (after backing
    it up).
-2. **Required:** schedule an hourly **agent** job whose prompt fetches inbox
-   mail via `{ "ops_file": "list_inbox.json" }`. Use the host’s cron (OpenClaw,
-   Hermes, atomic-agent) or OS scheduler for terminal agents (Claude, Pi,
-   Cursor). Do **not** cron `atomicmail jmap_request` alone. Call `help` with
-   topic `cron` for examples. Setup is incomplete without this step.
+2. **After register:** arrange hourly inbox polling per your runtime. Native cron
+   hosts (OpenClaw, Hermes, atomic-agent) schedule an hourly **agent** job whose
+   prompt fetches inbox mail via `{ "ops_file": "list_inbox.json" }`. Hosts
+   without native cron should ask the operator to set up polling on a capable
+   host or remind manual fetch — do **not** work around with OS schedulers or
+   cross-platform scheduling. Do **not** cron `atomicmail jmap_request` alone.
+   Call `help` with topic `cron` for examples.
 3. `jmap_request` with `ops` or `ops_file` (optional `vars` for `$TO`,
    `$SUBJECT`, etc.).
 4. `help` when stuck.
 
-### Hourly inbox cron (required after register)
+### Hourly inbox polling (after register)
 
 Invoke a **full agent turn** so you can reply, forward, or follow up — not a
 raw CLI log or headless one-shot.
@@ -89,9 +91,9 @@ raw CLI log or headless one-shot.
 | Hermes | `hermes cron create` + `--deliver` |
 | Atomic Bot | OpenClaw or Hermes |
 | atomic-agent | `atomic-agent task create --cron` |
-| Terminal CLI | OS scheduler + interactive launch (`claude "…"`, `pi "…"`, …) |
+| No native cron (Claude, Pi, Cursor, …) | Ask operator to schedule on a capable host, or remind manual fetch |
 
-Workflow options and agent prompt: MCP `help` topic `cron`, [`SKILL.md`](./SKILL.md#hourly-inbox-cron-required), or `atomicmail help --topic cron`.
+Workflow options and agent prompt: MCP `help` topic `cron`, [`SKILL.md`](./SKILL.md#hourly-inbox-polling-after-register), or `atomicmail help --topic cron`.
 
 ## `jmap_request` input patterns
 

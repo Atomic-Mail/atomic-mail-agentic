@@ -11,7 +11,7 @@ identity:
       Atomic Mail is an agent-first programmable inbox for Dify, and also works
       well for manual Workflow builders. Tool catalog: register/login, help
       topics, inbox listing, send, reply, and advanced jmap_request. After
-      register, schedule an hourly Agent turn to check inbox mail. Use the Help
+      register, arrange hourly inbox polling per Help topic cron. Use the Help
       tool and plugin README for setup and operations guidance.
     zh_Hans: >-
       Atomic Mail 是面向 Agent 的可编程收件箱，也支持手动搭建 Dify Workflow。

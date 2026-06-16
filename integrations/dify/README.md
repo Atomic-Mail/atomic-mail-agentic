@@ -183,7 +183,7 @@ The script always:
 
 - Rebuilds `integrations/dify/atomicmail/vendor/`
 - Regenerates `integrations/dify/atomicmail/requirements.txt` with
-  `dify_plugin>=0.5.0,<0.7.0`
+  `dify_plugin>=0.9.0,<1.0.0`
 
 ### Runtime wiring
 
@@ -225,7 +225,7 @@ Verification date: 2026-06-15
   - `help(topic="presets")` returns non-empty text (`len == 269`).
 - Plugin startup smoke:
   - Python 3.12 venv created in `integrations/dify/atomicmail/.venv312`.
-  - `pip install -r requirements.txt` succeeds with `dify_plugin 0.6.2`.
+  - `pip install -r requirements.txt` succeeds with `dify_plugin>=0.9.0`.
   - `python -m main` starts briefly under venv with no `ImportError` /
     `ModuleNotFoundError`.
 
@@ -528,14 +528,9 @@ Phase 6 completes automated coverage for the Dify plugin and keeps SDK parity in
     5) `list_inbox` after send
     6) `reply` when a message id is discoverable (skip gracefully otherwise)
     7) `help(cron)`
-  - Added offline mode for CI/manual dry runs:
+  - Added offline mode for manual dry runs:
     - `--skip-network`, or
     - `ATOMIC_MAIL_LIVE_E2E=0`
-- Added CI workflow:
-  - `.github/workflows/test-dify-plugin.yml`
-  - Triggers on changes in `integrations/dify/**`, `py/**`, `shared/**`,
-    and `ts/build_dify_wrapper.ts`.
-  - Runs `npm run build:dify`, plugin pytest, and `py/` parity pytest.
 
 ### Run tests locally
 

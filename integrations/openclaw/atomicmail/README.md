@@ -35,7 +35,7 @@ Probe the saved server before relying on it:
 openclaw mcp doctor atomicmail --probe
 ```
 
-After `register`, create the required hourly inbox cron job:
+After `register`, create the hourly inbox cron job (OpenClaw has native cron):
 
 ```bash
 openclaw cron add \

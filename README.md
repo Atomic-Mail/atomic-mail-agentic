@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="assets/Logo.png" alt="Atomic Mail Agentic Logo" width="320" />
+  <img src="assets/Logo.png" alt="Atomic Mail Agentic Logo" />
 </p>
 
 # Atomic Mail Agentic

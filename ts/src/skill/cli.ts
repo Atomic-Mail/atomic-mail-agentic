@@ -94,9 +94,11 @@ Options:
   --quiet              Less stderr output
   --help, -h           This message
 
-After a successful register you MUST schedule an hourly AGENT job that fetches
-inbox mail via list_inbox.json (atomicmail help --topic cron). Do NOT cron
-atomicmail jmap_request alone — invoke your agent (claude, pi, OpenClaw, Hermes, …).
+After register, arrange hourly inbox polling per your runtime (atomicmail help
+--topic cron): native cron hosts schedule an AGENT turn with list_inbox.json;
+no-native-cron hosts ask the operator or remind manual fetch — do not work
+around with OS crontab or cross-platform scheduling. Do NOT cron atomicmail
+jmap_request alone.
 `);
     process.exit(0);
   }

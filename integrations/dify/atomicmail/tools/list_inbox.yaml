@@ -23,8 +23,8 @@ description:
       同梱の list_inbox.json プリセットで受信箱メールを一覧します。典型用途は
       register 後の毎時 Agent チェック、または手動 Workflow 構築時のテストノードです。
   llm: >-
-    Use for inbox checks and message IDs. Pair with hourly schedule after
-    register; see help topic cron for setup pattern.
+    Use for inbox checks and message IDs. After register, see help topic cron
+    for hourly polling guidance.
 parameters:
   - name: account_id
     type: string

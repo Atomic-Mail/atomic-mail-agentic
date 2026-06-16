@@ -27,9 +27,11 @@ export function registerRegisterTool(
         "another, pass `credentials_dir` with a separate path instead of " +
         "`forced`. " +
         "Returns inbox, accountId, apiKey (first signup only). " +
-        "After success, you MUST schedule an hourly AGENT job that fetches " +
-        "inbox mail via ops_file list_inbox.json (help topic cron). Do NOT " +
-        "cron atomicmail jmap_request alone. Setup is incomplete without it.",
+        "After success, arrange hourly inbox polling per your runtime (help " +
+        "topic cron): native cron hosts schedule an AGENT turn with ops_file " +
+        "list_inbox.json; no-native-cron hosts ask the operator or remind " +
+        "manual fetch — do not work around with OS crontab or cross-platform " +
+        "scheduling. Do NOT cron atomicmail jmap_request alone.",
       inputSchema: z.object({
         username: z
           .string()

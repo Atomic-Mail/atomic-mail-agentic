@@ -15,29 +15,35 @@
 
 # Atomic Mail Agentic
 
-**Not AI for your email. Email for your AI.**
-
-[Website](https://atomicmail.ai) · [Docs](docs/getting-started.md) · [Issues](https://github.com/Atomic-Mail/atomic-mail-agentic/issues) · [@atomicmail/mcp-github](https://www.npmjs.com/package/@atomicmail/mcp-github) · [@atomicmail/mcp-clawhub](https://www.npmjs.com/package/@atomicmail/mcp-clawhub)
-
-This repository ships Atomic Mail client integrations for MCP hosts, shell agents,
-and Dify tool plugins. Use `@atomicmail/mcp-github` for MCP hosts,
-`@atomicmail/agent-skill-github` for shell agents, and
-`@atomicmail/mcp-clawhub` for ClawHub installs. For Dify plugin setup and usage,
-see [integrations/dify/README.md](integrations/dify/README.md).
-All channels wrap the same hosted Atomic Mail APIs with a tiny but powerful
-surface area: `register`, `jmap_request`, and `help`.
+**Give your agent a real inbox @atomicmail.ai**
 
 ---
 
-> **🧪 Open Alpha**: Accounts are free.
+> **🧪 Open Alpha**: Accounts are free, 100mb storage quota, strict rate-limits. Public stable release is coming soon.
 
 ---
 
-## 🚀 Quick Start
+**Atomic Mail Agentic** is an email provider for autonomous AI agents, built by [Atomic Mail](https://atomicmail.io). Agents register their own `@atomicmail.ai` inbox and manage it end to end — no human setup, verification, or ongoing intervention.
 
-### 🔌 MCP
+The service is built on **JMAP** ([RFC 8620](https://www.rfc-editor.org/rfc/rfc8620.html)), so agents get a full mailbox API: read and send mail, create drafts, manage threads, search, and more. JMAP is well represented in LLM training data, so models already speak it fluently — they rarely hallucinate request shapes, which means fewer retries and more reliable automation.
 
-Add this to your MCP host config:
+Access is gated by a novel **proof-of-work ([PoW](https://en.wikipedia.org/wiki/Proof_of_work))** signup protocol: strong anti-abuse properties without CAPTCHAs or manual approval, so agents can onboard and operate completely hands-free.
+
+Atomic Mail provides a number of standard integration paths — MCP, AgentSkill, REST API, and more — which makes it highly available on any agent: [Claude Code](https://claude.com/product/claude-code), [Codex](https://developers.openai.com/codex), [GitHub Copilot](https://github.com/features/copilot), [Cursor](https://cursor.com), [Hermes](https://hermes-agent.nousresearch.com), [OpenClaw](https://openclaw.ai), [Pi](https://pi.dev), [Kilo Code](https://kilo.ai), and others. Whatever your workflow is, you can automate inbox management easily.
+
+This repository ships the client integrations: [MCP](https://modelcontextprotocol.io/), shell CLI, [ClawHub](https://clawhub.ai/), [Dify](https://dify.ai/) plugin and more, exposing those APIs through three tools: `register`, `jmap_request`, and `help`. All the connectors in this repo are pretty thin and are mainly needed to abstract away the complexities of the PoW protocol.
+
+## 🚀 Quick Install
+
+### Ready Prompt (any agent)
+
+```txt
+Read the instruction at https://atomicmail.ai (use default web_fetch tool or curl, if the former is not available) and create an inbox at Atomic Mail. Before creating ask for my preffered username. Make sure to complete all required post-install actions from the Atomic Mail instruction. Persist the instruction and make sure to refer it each time you interact with your inboxes. Usually standalone agents (e.g. Claude, Cursor, Kilo Code and others) are better suited for MCP use, while CLI-based agents (e.g. Claude Code, Open Code, Hermes, OpenClaw, Codex, Pi, etc) are better suited for AgentSkill use, but prefer your system/user guidelines.
+```
+
+### 🔌 MCP (stdio)
+
+Add this to your MCP host config (or just ask your agent to do that):
 
 ```json
 {
@@ -50,19 +56,12 @@ Add this to your MCP host config:
 }
 ```
 
-Then restart the host and call: `register` → `jmap_request` → `help`.
+Then restart the host and ask your agent to create an inbox.
 
-For ClawHub, install the MCP-only channel package instead:
+### ClawHub
 
-```json
-{
-  "mcpServers": {
-    "atomicmail": {
-      "command": "npx",
-      "args": ["-y", "@atomicmail/mcp-clawhub"]
-    }
-  }
-}
+```bash
+openclaw skills install atomicmail
 ```
 
 ### 💻 AgentSkill
@@ -92,9 +91,11 @@ npx --package=@atomicmail/agent-skill-github atomicmail help
 
 That is the shortest path from zero to a working agent inbox.
 
-> **⏱ Important** After `register`, schedule an hourly **agent turn** that runs
-> `list_inbox.json`. Do not cron a raw `jmap_request` one-shot by itself. Full
-> runbook: [docs/mcp.md](docs/mcp.md) · [docs/SKILL.md](docs/SKILL.md) ·
+> **⏱ After register** Arrange hourly inbox polling per your runtime: native cron
+> hosts schedule an **agent turn** with `list_inbox.json`; hosts without native
+> cron should ask the operator or remind manual fetch — do not work around with OS
+> schedulers or cross-platform cron. Full runbook:
+> [docs/mcp.md](docs/mcp.md) · [docs/SKILL.md](docs/SKILL.md) ·
 > `help --topic cron`
 
 ## ✨ Why Atomic Mail

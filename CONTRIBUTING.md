@@ -95,14 +95,16 @@ deno run -A build_mcp_npm.ts <version>    # -> ts/mcp_npm/
 deno run -A build_skill_npm.ts <version>  # -> ts/skill_npm/
 deno run -A build_all_npm.ts <version>    # default + all channel variants
 deno run -A build_clawhub_skill.ts <version>  # -> integrations_dist/clawhub/atomicmail/
+deno run -A build_hermes_skill.ts <version>   # -> integrations_dist/hermes/atomicmail/
 ```
 
-`build_clawhub_skill.ts` requires `skill_npm/` (run `build_skill_npm.ts` or
-`build_all_npm.ts` first). CI publishes the built skill via
-`.github/workflows/publish-clawhub-skill.yml` on GitHub release using explicit
-semver (`clawhub skill publish --version <release>`), matching the git tag.
+`build_clawhub_skill.ts` and `build_hermes_skill.ts` require `skill_npm/` (run
+`build_skill_npm.ts` or `build_all_npm.ts` first). CI publishes the built skill
+via `.github/workflows/publish-clawhub-skill.yml` on GitHub release using
+explicit semver (`clawhub skill publish --version <release>`), matching the git
+tag.
 
-Local publish (maintainers, after building):
+Local ClawHub publish (maintainers, after building):
 
 ```bash
 cd ts
@@ -115,6 +117,40 @@ clawhub skill publish ../integrations_dist/clawhub/atomicmail \
   --owner atomicmail \
   --changelog "Release <version>"
 ```
+
+### Hermes skill (maintainers)
+
+Build output: `integrations_dist/hermes/atomicmail/` (gitignored). Published
+copies land in `integrations/hermes/atomicmail/` for the in-repo tap (committed
+to git — bootstrap once, then updated by CI).
+
+CI workflow: `.github/workflows/publish-hermes-skill.yml` (on GitHub release,
+push to `main`/`develop` when Hermes skill sources change, or `workflow_dispatch`).
+
+Dry-run locally (build + verify only — same as CI `dry_run: true`):
+
+```bash
+cd ts
+deno run -A build_skill_npm.ts <version>
+deno run -A build_hermes_skill.ts <version>
+deno test --allow-read --allow-env --allow-write --allow-run hermes_skill_build.test.ts
+```
+
+First CI run: trigger **Publish Hermes skill** manually with `dry_run: true` to
+validate build and verify jobs before enabling real publishes.
+
+No extra secrets are required — the workflow uses the default `GITHUB_TOKEN`
+(`contents: write`) to commit the built skill to `integrations/hermes/atomicmail/`.
+
+After publish, users can install from the in-repo tap:
+
+```bash
+hermes skills install Atomic-Mail/atomic-mail-agentic/integrations/hermes/atomicmail
+```
+
+The Hermes build ships a `.skillignore` and omits TypeScript declaration/source-map
+artifacts so `hermes skills install` passes Hermes's community security scanner
+(PoW registration, JWT parsing, and cron help docs otherwise trigger false positives).
 
 GitHub Packages (`@atomic-mail/*` on `npm.pkg.github.com`):
 

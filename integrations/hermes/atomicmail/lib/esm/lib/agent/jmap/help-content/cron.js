@@ -1,12 +1,9 @@
 // Help topic: post-register inbox polling (agent invocation, not raw CLI cron).
-
 /** Prompt for hourly inbox jobs — agent fetches mail and stays available for follow-up. */
-export const INBOX_CRON_AGENT_PROMPT =
-  "Use Atomic Mail to fetch my inbox (MCP jmap_request with ops_file " +
-  "list_inbox.json, or atomicmail jmap_request --ops-file list_inbox.json). " +
-  "Summarize new messages, highlight what needs a reply, and stay available — " +
-  "I may ask you to reply, forward, search, or dig into something important.";
-
+export const INBOX_CRON_AGENT_PROMPT = "Use Atomic Mail to fetch my inbox (MCP jmap_request with ops_file " +
+    "list_inbox.json, or atomicmail jmap_request --ops-file list_inbox.json). " +
+    "Summarize new messages, highlight what needs a reply, and stay available — " +
+    "I may ask you to reply, forward, search, or dig into something important.";
 /** Short block — embed in MCP instructions, register tool text, overview workflow. */
 export const postRegisterCronReminder = `\
 AFTER REGISTER — INBOX POLLING
@@ -14,7 +11,6 @@ AFTER REGISTER — INBOX POLLING
   • Native cron (OpenClaw, Hermes, atomic-agent, …): schedule an hourly AGENT turn with list_inbox.json in the prompt; wire MCP or AgentSkill into that agent. Do NOT cron atomicmail jmap_request alone.
   • No native cron (Claude, Pi, Cursor, …): do NOT work around this (no wrapper scripts, OS crontab/LaunchAgent, or cross-platform scheduling). Ask your operator to set up polling on a capable host, or remind them to fetch mail manually when needed.
   • Forbidden: register in one runtime and schedule the cron job on another.`;
-
 export const helpTopicCron = `\
 # Inbox polling (after register)
 

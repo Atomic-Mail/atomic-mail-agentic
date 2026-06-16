@@ -5,6 +5,7 @@
   <a href="https://atomic-mail.github.io/atomic-mail-agentic/"><img src="https://shieldcn.dev/badge/docs-guide-5BE481.svg?split=true&labelColor=000000&color=5BE481&valueColor=000000&labelTextColor=FFFFFF&height=32&fontSize=16" alt="docs guide"/></a>&nbsp;&nbsp;
   <a href="https://github.com/Atomic-Mail/atomic-mail-agentic/issues"><img src="https://shieldcn.dev/badge/issues-open-5BE481.svg?split=true&labelColor=000000&color=5BE481&valueColor=000000&labelTextColor=FFFFFF&height=32&fontSize=16" alt="issues open"/></a>&nbsp;&nbsp;
   <a href="https://clawhub.ai/atomicmail/atomicmail"><img src="https://shieldcn.dev/badge/ClawHub-skill-5BE481.svg?split=true&labelColor=000000&color=5BE481&valueColor=000000&labelTextColor=FFFFFF&height=32&fontSize=16" alt="ClawHub skill"/></a>&nbsp;&nbsp;
+  <a href="https://hermes-agent.nousresearch.com/docs/developer-guide/creating-skills"><img src="https://shieldcn.dev/badge/Hermes-skill-5BE481.svg?split=true&labelColor=000000&color=5BE481&valueColor=000000&labelTextColor=FFFFFF&height=32&fontSize=16" alt="Hermes skill"/></a>&nbsp;&nbsp;
   <a href="https://github.com/langgenius/dify-plugins/tree/main/Atomic-Mail/atomic-mail-agentic"><img src="https://shieldcn.dev/badge/Dify-plugin-5BE481.svg?split=true&labelColor=000000&color=5BE481&valueColor=000000&labelTextColor=FFFFFF&height=32&fontSize=16" alt="Dify plugin"/></a>&nbsp;&nbsp;
   <a href="https://registry.modelcontextprotocol.io/?q=atomic-mail"><img src="https://shieldcn.dev/badge/MCP-registry-5BE481.svg?split=true&labelColor=000000&color=5BE481&valueColor=000000&labelTextColor=FFFFFF&height=32&fontSize=16" alt="MCP registry"/></a>
 </p>
@@ -15,7 +16,13 @@
 
 # Atomic Mail Agentic
 
-**Give your agent a real inbox @atomicmail.ai**
+<p align="center">
+  <a href="https://atomicmail.ai">Website</a> ·
+  <a href="https://atomic-mail.github.io/atomic-mail-agentic/">Docs</a> ·
+  <a href="https://github.com/Atomic-Mail/atomic-mail-agentic/issues">Issues</a>
+</p>
+
+**Give your agent a real inbox**
 
 ---
 
@@ -66,6 +73,12 @@ Then restart the host and ask your agent to create an inbox.
 
 ```bash
 openclaw skills install atomicmail
+```
+
+### 👩🏻 Hermes
+
+```bash
+hermes skills install Atomic-Mail/atomic-mail-agentic/integrations/hermes/atomicmail
 ```
 
 ### 💻 AgentSkill
@@ -145,9 +158,10 @@ agentic-clients/
 │   ├── src/skill/      # AgentSkill CLI entrypoint
 │   └── src/lib/agent/  # shared auth, session, JMAP, presets, help-content
 ├── py/                 # Python client parity layer and tests
-├── integrations/dify/  # Dify plugin integration and packaging docs
-├── docs/               # VitePress docs and shipped SKILL/README sources
-├── test/checklists/    # manual release QA
+├── integrations/dify/   # Dify plugin integration and packaging docs
+├── integrations/hermes/ # Hermes skill tap (published atomicmail skill)
+├── docs/                # VitePress docs and shipped SKILL/README sources
+├── test/checklists/     # manual release QA
 ├── CONTRIBUTING.md
 └── LICENSE
 ```

@@ -62,7 +62,7 @@ Use Atomic Mail to fetch my inbox (MCP jmap_request with ops_file list_inbox.jso
 | Your setup | Recommended approach |
 | --- | --- |
 | OpenClaw gateway | Built-in `openclaw cron` |
-| Hermes Agent | Built-in `hermes cron` / `cronjob` tool |
+| Hermes Agent | Install Atomic Mail skill → `/suggestions` blueprint after `register` (or manual `hermes cron`) |
 | Atomic Bot (atomicbot.ai) | Same as OpenClaw or Hermes host |
 | atomic-agent | Built-in `atomic-agent task create` |
 | No native cron (Claude, Pi, Cursor, …) | Ask operator to schedule on a capable host, or remind them to fetch manually |
@@ -92,12 +92,44 @@ Manage: `openclaw cron list` · test: `openclaw cron run <job-id>`
 
 ### Hermes Agent
 
-Docs: https://hermes-agent.nousresearch.com/docs/user-guide/features/cron
+Skill blueprints: https://hermes-agent.nousresearch.com/docs/developer-guide/creating-skills
+
+Cron (manual fallback): https://hermes-agent.nousresearch.com/docs/user-guide/features/cron
+
+#### Recommended: skill + blueprint
+
+1. Install the **Atomic Mail** Hermes skill from the in-repo tap
+   (`hermes skills install Atomic-Mail/agentic-clients/integrations/hermes/atomicmail`).
+2. After the first successful `register`, accept the hourly inbox **blueprint**
+   via `/suggestions`.
+
+The blueprint schedules a full **agent** turn (`no_agent: false`) with
+`list_inbox.json` and delivers to `origin`. Do **not** skip this step. Do **not**
+schedule raw `jmap_request` cron jobs or use `--no-agent` (script-only; no LLM).
+
+#### Credentials on Hermes
+
+- Default directory: `~/.hermes/atomicmail` (not `~/.atomicmail`).
+- The skill launcher sets `ATOMIC_MAIL_CREDENTIALS_DIR` to
+  `$HOME/.hermes/atomicmail` when that variable is **not** already set — operator
+  overrides are preserved.
+- Override explicitly with `ATOMIC_MAIL_CREDENTIALS_DIR` or
+  `atomicmail.credentials_dir` in Hermes config.
+
+#### Multi-account only
+
+Operating multiple inboxes at once: pass `--credentials-dir` (skill) or
+`credentials_dir` (MCP) on `register` / `jmap_request` with a separate directory
+per account. Not needed for the default single-inbox flow.
+
+#### Manual fallback: `hermes cron`
+
+If you are not using the skill blueprint, create the job manually:
 
 - Schedule: cron expression (`0 * * * *`) or natural language (`every 1h`)
-- Delivery: `--deliver` — `origin`, `telegram`, `discord`, `slack`, `email`,
-  `local`, etc. (pick where you want to read and reply)
-- **Do not** use `--no-agent` (script-only; no LLM)
+- Delivery: `--deliver origin` (or `telegram`, `discord`, `slack`, `email`,
+  `local`, etc.)
+- **Do not** use `--no-agent`
 
 ```bash
 hermes cron create "0 * * * *" \

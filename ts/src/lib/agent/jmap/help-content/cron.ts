@@ -80,7 +80,7 @@ ${INBOX_CRON_AGENT_PROMPT}
 | Your setup | Recommended approach |
 | --- | --- |
 | OpenClaw gateway | Built-in \`openclaw cron\` |
-| Hermes Agent | Built-in \`hermes cron\` / \`cronjob\` tool |
+| Hermes Agent | Install skill → \`/suggestions\` blueprint after \`register\` (or manual \`hermes cron\`) |
 | Atomic Bot (atomicbot.ai) | Same as OpenClaw or Hermes host |
 | atomic-agent | Built-in \`atomic-agent task create\` |
 | No native cron (Claude, Pi, Cursor, …) | Ask operator to schedule on a capable host, or remind them to fetch manually |
@@ -102,7 +102,21 @@ Manage: \`openclaw cron list\` · test: \`openclaw cron run <job-id>\`
 
 ### Hermes Agent
 
-Docs: https://hermes-agent.nousresearch.com/docs/user-guide/features/cron
+Skill blueprints: https://hermes-agent.nousresearch.com/docs/developer-guide/creating-skills
+
+Cron (manual fallback): https://hermes-agent.nousresearch.com/docs/user-guide/features/cron
+
+**Recommended:** Install the Atomic Mail Hermes skill → after \`register\`, accept
+the hourly inbox blueprint via \`/suggestions\` (\`no_agent: false\`,
+\`list_inbox.json\`, \`deliver: origin\`). Do not cron raw \`jmap_request\` or use
+\`--no-agent\`.
+
+**Credentials:** Default \`~/.hermes/atomicmail\` (not \`~/.atomicmail\`). The skill
+launcher sets \`ATOMIC_MAIL_CREDENTIALS_DIR\` when unset; override via env or
+\`atomicmail.credentials_dir\` config. Use \`--credentials-dir\` only for
+multi-account setups.
+
+**Manual fallback:**
 
 \`\`\`bash
 hermes cron create "0 * * * *" \\

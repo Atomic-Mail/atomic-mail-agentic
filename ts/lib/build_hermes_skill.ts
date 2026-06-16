@@ -5,6 +5,10 @@ import {
   NPX_SKILL_INVOCATION,
 } from "./build_skill_bundle.ts";
 import {
+  HERMES_SKILLIGNORE_CONTENT,
+  pruneHermesSkillBundle,
+} from "./hermes_skill_bundle.ts";
+import {
   buildHermesFrontmatter,
   HERMES_CLI_INVOCATION,
   HERMES_CREDENTIALS_DIR,
@@ -23,13 +27,23 @@ export {
 export const DEFAULT_SKILL_MD_SOURCE = "../docs/SKILL.md";
 export const DEFAULT_OUT_DIR = "../integrations_dist/hermes/atomicmail";
 
+export const HERMES_LAUNCHER_SCRIPT = `#!/usr/bin/env bash
+set -euo pipefail
+ROOT="$(cd "$(dirname "\${BASH_SOURCE[0]}")/.." && pwd)"
+if [ -z "\${ATOMIC_MAIL_CREDENTIALS_DIR:-}" ]; then
+  export ATOMIC_MAIL_CREDENTIALS_DIR="\${HOME}/.hermes/atomicmail"
+fi
+exec node "$ROOT/lib/esm/skill/cli.js" "$@"
+`;
+
 const HERMES_APPENDIX_HEADER = "## Hermes Agent notes";
 const HERMES_APPENDIX = [
   HERMES_APPENDIX_HEADER,
   "",
-  `- **Credentials directory:** This skill stores credentials under \`${HERMES_CREDENTIALS_DIR}\` (not the CLI default \`~/.atomicmail\`). Set \`ATOMIC_MAIL_CREDENTIALS_DIR\` or \`atomicmail.credentials_dir\` in config if needed.`,
+  `- **Credentials directory:** Default \`${HERMES_CREDENTIALS_DIR}\` (not \`~/.atomicmail\`). The skill launcher sets \`ATOMIC_MAIL_CREDENTIALS_DIR\` when unset; operator env or \`atomicmail.credentials_dir\` config overrides it.`,
   "- **After register:** Accept the hourly inbox blueprint via `/suggestions` — do not skip inbox polling setup.",
   `- **Never cron raw CLI:** Do not schedule \`${HERMES_CLI_INVOCATION} jmap_request\` alone without an agent turn. The blueprint uses \`no_agent: false\` so each run is a full agent session with \`list_inbox.json\`.`,
+  "- **Multi-account:** Pass `--credentials-dir` on `register` / `jmap_request` only when operating multiple inboxes at once — not needed for the default single-inbox flow.",
 ].join("\n");
 
 export interface BuildHermesSkillOptions {
@@ -86,12 +100,23 @@ export async function buildHermesSkill(
   const skillMdSource = options.skillMdSource ?? DEFAULT_SKILL_MD_SOURCE;
   const outDir = options.outDir ?? DEFAULT_OUT_DIR;
 
-  await buildSkillBundle({ skillNpmDir, outDir });
+  await buildSkillBundle({
+    skillNpmDir,
+    outDir,
+    launcherScript: HERMES_LAUNCHER_SCRIPT,
+  });
+
+  await pruneHermesSkillBundle(outDir);
 
   const skillMd = await Deno.readTextFile(skillMdSource);
   await Deno.writeTextFile(
     joinPath(outDir, "SKILL.md"),
     transformHermesSkillMd(skillMd, options.version),
+  );
+
+  await Deno.writeTextFile(
+    joinPath(outDir, ".skillignore"),
+    HERMES_SKILLIGNORE_CONTENT,
   );
 
   return outDir;

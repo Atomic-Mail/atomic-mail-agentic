@@ -14,6 +14,7 @@ exec node "$ROOT/lib/esm/skill/cli.js" "$@"
 export interface BuildSkillBundleOptions {
   skillNpmDir?: string;
   outDir: string;
+  launcherScript?: string;
 }
 
 export async function exists(path: string): Promise<boolean> {
@@ -65,7 +66,10 @@ export async function buildSkillBundle(
   await ensureDir(joinPath(outDir, "lib"));
 
   const launcherPath = joinPath(outDir, "scripts/atomicmail");
-  await Deno.writeTextFile(launcherPath, LAUNCHER_SCRIPT);
+  await Deno.writeTextFile(
+    launcherPath,
+    options.launcherScript ?? LAUNCHER_SCRIPT,
+  );
   await Deno.chmod(launcherPath, 0o755);
 
   await copyDir(esmSrc, joinPath(outDir, "lib/esm"));

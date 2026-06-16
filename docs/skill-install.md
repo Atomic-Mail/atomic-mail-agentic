@@ -54,9 +54,83 @@ cron** should ask the operator to set up polling on a capable host, or remind
 manual fetch — do **not** work around with OS schedulers or cross-platform
 scheduling. Do **not** cron `atomicmail jmap_request` alone.
 
+**Hermes users:** follow [Hermes Agent](#hermes-agent) — accept the skill
+blueprint via `/suggestions` after `register`.
+
 Options and agent prompt:
 [`SKILL.md`](./SKILL.md#hourly-inbox-polling-after-register) · `atomicmail help --topic cron`
 · MCP `help` topic `cron`
+
+## Hermes Agent
+
+Hermes ships a bundled Atomic Mail skill with a launcher CLI and an hourly inbox
+blueprint. Requires [Hermes](https://hermes-agent.nousresearch.com) with the
+skills toolset and Node.js 20+ (for the bundled launcher).
+
+### Install
+
+In-repo tap (updated on each GitHub release):
+
+```bash
+hermes skills install Atomic-Mail/agentic-clients/integrations/hermes/atomicmail
+```
+
+### Credentials
+
+On Hermes the default credential directory is **`~/.hermes/atomicmail`**, not
+`~/.atomicmail` (used by npm/npx AgentSkill and MCP defaults).
+
+The skill launcher sets `ATOMIC_MAIL_CREDENTIALS_DIR` to `$HOME/.hermes/atomicmail`
+when that variable is **not** already set. Override explicitly with
+`ATOMIC_MAIL_CREDENTIALS_DIR` or `atomicmail.credentials_dir` in Hermes config.
+
+| Runtime | Default credentials dir |
+| ------- | ----------------------- |
+| Hermes skill | `~/.hermes/atomicmail` |
+| npm/npx AgentSkill, MCP | `~/.atomicmail` |
+
+Files in each directory (mode `0600`): `credentials.json`, `session.jwt`,
+`capability.jwt`.
+
+### Register
+
+Use the skill's bundled CLI — no `npx`:
+
+```bash
+atomicmail register --username "myagent"
+```
+
+The launcher handles the credentials directory; omit `--credentials-dir` in the
+default single-inbox flow. For **multiple inboxes**, pass `--credentials-dir`
+with a separate directory per account on `register` and `jmap_request`.
+
+### After register (required)
+
+1. Run `/suggestions` in Hermes and **accept** the Atomic Mail hourly inbox
+   blueprint.
+2. The blueprint schedules a full **agent** turn (`no_agent: false`) with
+   `list_inbox.json` and `deliver: origin`. Do **not** skip this step.
+3. Do **not** cron raw `jmap_request` alone or use `--no-agent` (no LLM triage).
+
+**Manual fallback** if you skip the blueprint:
+
+```bash
+hermes cron create "0 * * * *" \
+  "Use atomicmail jmap_request --ops-file list_inbox.json to fetch my inbox. Summarize new messages, highlight what needs a reply, and stay available — I may ask you to reply, forward, search, or dig into something important." \
+  --name "atomicmail-inbox" \
+  --deliver origin
+```
+
+See `atomicmail help --topic cron` for the full prompt and delivery options.
+
+### Links
+
+- Hermes creating skills (blueprints):
+  https://hermes-agent.nousresearch.com/docs/developer-guide/creating-skills
+- Hermes cron (manual fallback):
+  https://hermes-agent.nousresearch.com/docs/user-guide/features/cron
+- Maintainer publish workflow: [CONTRIBUTING.md](../CONTRIBUTING.md) (Hermes skill
+  section)
 
 ## `jmap_request`, presets, and placeholders
 

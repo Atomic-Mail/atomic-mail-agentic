@@ -32,7 +32,7 @@ export function buildHermesFrontmatter(version: string): string {
     "required_environment_variables:",
     "  - name: ATOMIC_MAIL_CREDENTIALS_DIR",
     "    prompt: Atomic Mail credentials directory",
-    `    help: Default on Hermes is ${HERMES_CREDENTIALS_DIR} (not ~/.atomicmail). Override only for multi-account setups.`,
+    `    help: Default on Hermes is ${HERMES_CREDENTIALS_DIR} (not ~/.atomicmail). The skill launcher sets ATOMIC_MAIL_CREDENTIALS_DIR when unset. Override only for multi-account setups.`,
     "    required_for: register and jmap_request credential paths",
     "  - name: ATOMIC_MAIL_AUTH_URL",
     "    prompt: Atomic Mail auth service URL",

@@ -72,7 +72,7 @@ skills toolset and Node.js 20+ (for the bundled launcher).
 In-repo tap (updated on each GitHub release):
 
 ```bash
-hermes skills install Atomic-Mail/agentic-clients/integrations/hermes/atomicmail
+hermes skills install Atomic-Mail/atomic-mail-agentic/integrations/hermes/atomicmail
 ```
 
 ### Credentials

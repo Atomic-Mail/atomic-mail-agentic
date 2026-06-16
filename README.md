@@ -78,7 +78,7 @@ openclaw skills install atomicmail
 ### 👩🏻 Hermes
 
 ```bash
-hermes skills install Atomic-Mail/agentic-clients/integrations/hermes/atomicmail
+hermes skills install Atomic-Mail/atomic-mail-agentic/integrations/hermes/atomicmail
 ```
 
 ### 💻 AgentSkill

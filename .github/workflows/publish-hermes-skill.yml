@@ -3,6 +3,18 @@ name: Publish Hermes skill
 on:
   release:
     types: [published]
+  push:
+    branches: [main, master, develop]
+    paths:
+      - .github/workflows/publish-hermes-skill.yml
+      - docs/SKILL.md
+      - shared/**
+      - ts/build_hermes_skill.ts
+      - ts/hermes_skill_build.test.ts
+      - ts/lib/build_hermes_skill.ts
+      - ts/lib/build_skill_bundle.ts
+      - ts/lib/hermes_skill_*.ts
+      - ts/src/**
   workflow_dispatch:
     inputs:
       version:
@@ -19,7 +31,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: publish-hermes-skill-${{ github.event.release.tag_name || inputs.version || github.run_id }}
+  group: publish-hermes-skill-${{ github.event.release.tag_name || inputs.version || github.sha }}
   cancel-in-progress: false
 
 jobs:
@@ -31,6 +43,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Deno
         uses: denoland/setup-deno@v2
@@ -43,7 +57,13 @@ jobs:
         env:
           RELEASE_TAG: ${{ github.event.release.tag_name || inputs.version }}
         run: |
-          VERSION=$(deno run -A resolve_release_version.ts "$RELEASE_TAG")
+          set -euo pipefail
+          if [[ -n "$RELEASE_TAG" ]]; then
+            VERSION=$(deno run -A resolve_release_version.ts "$RELEASE_TAG")
+          else
+            TAG=$(git describe --tags --abbrev=0)
+            VERSION=$(deno run -A resolve_release_version.ts "$TAG")
+          fi
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "Publishing skill version: $VERSION"
 

@@ -183,7 +183,7 @@ The script always:
 
 - Rebuilds `integrations/dify/atomicmail/vendor/`
 - Regenerates `integrations/dify/atomicmail/requirements.txt` with
-  `dify_plugin>=0.5.0,<0.7.0`
+  `dify_plugin>=0.9.0,<1.0.0`
 
 ### Runtime wiring
 
@@ -225,7 +225,7 @@ Verification date: 2026-06-15
   - `help(topic="presets")` returns non-empty text (`len == 269`).
 - Plugin startup smoke:
   - Python 3.12 venv created in `integrations/dify/atomicmail/.venv312`.
-  - `pip install -r requirements.txt` succeeds with `dify_plugin 0.6.2`.
+  - `pip install -r requirements.txt` succeeds with `dify_plugin>=0.9.0`.
   - `python -m main` starts briefly under venv with no `ImportError` /
     `ModuleNotFoundError`.
 

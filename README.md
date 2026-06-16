@@ -15,13 +15,13 @@
 
 # Atomic Mail Agentic
 
+**Give your agent a real inbox**
+
 <p align="center">
   <a href="https://atomicmail.ai">Website</a> ·
   <a href="https://atomic-mail.github.io/atomic-mail-agentic/">Docs</a> ·
   <a href="https://github.com/Atomic-Mail/atomic-mail-agentic/issues">Issues</a>
 </p>
-
-**Give your agent a real inbox**
 
 ---
 

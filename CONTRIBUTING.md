@@ -121,10 +121,11 @@ clawhub skill publish ../integrations_dist/clawhub/atomicmail \
 ### Hermes skill (maintainers)
 
 Build output: `integrations_dist/hermes/atomicmail/` (gitignored). Published
-copies land in `integrations/hermes/atomicmail/` for the in-repo tap.
+copies land in `integrations/hermes/atomicmail/` for the in-repo tap (committed
+to git — bootstrap once, then updated by CI).
 
-CI workflow: `.github/workflows/publish-hermes-skill.yml` (on GitHub release, or
-`workflow_dispatch`).
+CI workflow: `.github/workflows/publish-hermes-skill.yml` (on GitHub release,
+push to `main`/`develop` when Hermes skill sources change, or `workflow_dispatch`).
 
 Dry-run locally (build + verify only — same as CI `dry_run: true`):
 
@@ -144,7 +145,7 @@ No extra secrets are required — the workflow uses the default `GITHUB_TOKEN`
 After publish, users can install from the in-repo tap:
 
 ```bash
-hermes skills install Atomic-Mail/agentic-clients/integrations/hermes/atomicmail
+hermes skills install Atomic-Mail/atomic-mail-agentic/integrations/hermes/atomicmail
 ```
 
 The Hermes build ships a `.skillignore` and omits TypeScript declaration/source-map

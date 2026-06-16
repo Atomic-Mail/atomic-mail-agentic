@@ -1,9 +1,9 @@
 <p align="center">
-  <a href="https://github.com/Atomic-Mail/atomic-mail-agentic/actions"><img src="https://shieldcn.dev/badge/CI-success-5BE481.svg?split=true&labelColor=000000&color=5BE481&valueColor=000000&labelTextColor=FFFFFF&height=40&fontSize=16" alt="CI success"/></a>
-  <a href="https://github.com/Atomic-Mail/atomic-mail-agentic/releases"><img src="https://shieldcn.dev/badge/version-0.3.11-5BE481.svg?split=true&labelColor=000000&color=5BE481&valueColor=000000&labelTextColor=FFFFFF&height=40&fontSize=16" alt="version 0.3.11"/></a>
-  <a href="https://atomicmail.ai"><img src="https://shieldcn.dev/badge/website-atomicmail.ai-5BE481.svg?split=true&labelColor=000000&color=5BE481&valueColor=000000&labelTextColor=FFFFFF&height=40&fontSize=16" alt="website atomicmail.ai"/></a>
-  <a href="https://clawhub.ai/atomicmail/atomicmail"><img src="https://shieldcn.dev/badge/ClawHub-skill-5BE481.svg?split=true&labelColor=000000&color=5BE481&valueColor=000000&labelTextColor=FFFFFF&height=40&fontSize=16" alt="ClawHub skill"/></a>
-  <a href="https://github.com/langgenius/dify-plugins/tree/main/Atomic-Mail/atomic-mail-agentic"><img src="https://shieldcn.dev/badge/Dify-plugin-5BE481.svg?split=true&labelColor=000000&color=5BE481&valueColor=000000&labelTextColor=FFFFFF&height=40&fontSize=16" alt="Dify plugin"/></a>
+  <a href="https://github.com/Atomic-Mail/atomic-mail-agentic/actions"><img src="https://shieldcn.dev/badge/CI-success-5BE481.svg?split=true&labelColor=000000&color=5BE481&valueColor=000000&labelTextColor=FFFFFF&height=32&fontSize=16" alt="CI success"/></a>&nbsp;&nbsp;
+  <a href="https://github.com/Atomic-Mail/atomic-mail-agentic/releases"><img src="https://shieldcn.dev/badge/version-0.3.11-5BE481.svg?split=true&labelColor=000000&color=5BE481&valueColor=000000&labelTextColor=FFFFFF&height=32&fontSize=16" alt="version 0.3.11"/></a>&nbsp;&nbsp;
+  <a href="https://atomicmail.ai"><img src="https://shieldcn.dev/badge/website-atomicmail.ai-5BE481.svg?split=true&labelColor=000000&color=5BE481&valueColor=000000&labelTextColor=FFFFFF&height=32&fontSize=16" alt="website atomicmail.ai"/></a>&nbsp;&nbsp;
+  <a href="https://clawhub.ai/atomicmail/atomicmail"><img src="https://shieldcn.dev/badge/ClawHub-skill-5BE481.svg?split=true&labelColor=000000&color=5BE481&valueColor=000000&labelTextColor=FFFFFF&height=32&fontSize=16" alt="ClawHub skill"/></a>&nbsp;&nbsp;
+  <a href="https://github.com/langgenius/dify-plugins/tree/main/Atomic-Mail/atomic-mail-agentic"><img src="https://shieldcn.dev/badge/Dify-plugin-5BE481.svg?split=true&labelColor=000000&color=5BE481&valueColor=000000&labelTextColor=FFFFFF&height=32&fontSize=16" alt="Dify plugin"/></a>
 </p>
 
 <p align="center">

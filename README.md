@@ -85,6 +85,7 @@ npx --package=@atomicmail/agent-skill-github atomicmail help
 ### ⚙️ REST API 
 
 *For custom connectors and advanced logic only*
+
 Refer to documentation: [docs/rest-auth.md](docs/rest-auth.md).
 
 ## 🤖 What Your Agent Can Do

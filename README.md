@@ -146,7 +146,7 @@ npm run docs:dev
 ## 🗂️ File Structure
 
 ```text
-agentic-clients/
+/
 ├── ts/
 │   ├── src/mcp/        # MCP entrypoint + MCP tools
 │   ├── src/skill/      # AgentSkill CLI entrypoint

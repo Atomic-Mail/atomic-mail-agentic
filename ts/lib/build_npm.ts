@@ -6,7 +6,32 @@ import {
 } from "../npm_package_meta.ts";
 import { renderSkillMd } from "./skill_md_transform.ts";
 
-export type NpmProduct = "mcp" | "skill";
+type NpmEntryPoint =
+  | {
+    kind: "bin";
+    name: string;
+    path: string;
+  }
+  | {
+    kind: "module";
+    path: string;
+  };
+
+export type NpmProduct = "mcp" | "skill" | "langchain";
+interface ExtraFile {
+  path: string;
+  targetPath: string;
+}
+
+interface ProductConfigEntry {
+  baseName: string;
+  entryPoint: NpmEntryPoint;
+  description: string;
+  keywords: readonly string[];
+  readme: { path: string; targetPath: string };
+  extraFiles: readonly ExtraFile[];
+  packageExtras?: Record<string, unknown>;
+}
 export interface NpmChannelMcpbConfig {
   artifactBaseName?: string;
 }
@@ -29,11 +54,14 @@ const SHARED_ROOT_DIR = "../shared";
 const SHARED_PRESET_DIR = `${SHARED_ROOT_DIR}/presets`;
 const LICENSE_FILE = { path: "../LICENSE", targetPath: "LICENSE" };
 
-const PRODUCT_CONFIG = {
+const PRODUCT_CONFIG: Record<NpmProduct, ProductConfigEntry> = {
   mcp: {
     baseName: "@atomicmail/mcp",
-    binName: "atomicmail-mcp",
-    entryPath: "./src/mcp/main.ts",
+    entryPoint: {
+      kind: "bin",
+      name: "atomicmail-mcp",
+      path: "./src/mcp/main.ts",
+    } satisfies NpmEntryPoint,
     description:
       "Atomic Mail MCP server — local stdio proxy with PoW auth and JMAP, for AI agents.",
     keywords: [
@@ -49,12 +77,15 @@ const PRODUCT_CONFIG = {
       "proof-of-work",
     ],
     readme: { path: "../docs/mcp.md", targetPath: "README.md" },
-    extraFiles: [] as const,
+    extraFiles: [],
   },
   skill: {
     baseName: "@atomicmail/agent-skill",
-    binName: "atomicmail",
-    entryPath: "./src/skill/cli.ts",
+    entryPoint: {
+      kind: "bin",
+      name: "atomicmail",
+      path: "./src/skill/cli.ts",
+    } satisfies NpmEntryPoint,
     description:
       "Atomic Mail AgentSkill — register, jmap_request, and help CLI for AI agents.",
     keywords: [
@@ -70,9 +101,38 @@ const PRODUCT_CONFIG = {
       "proof-of-work",
     ],
     readme: { path: "../docs/skill-install.md", targetPath: "README.md" },
-    extraFiles: [] as const,
+    extraFiles: [],
   },
-} as const;
+  langchain: {
+    baseName: "@atomicmail/langchain",
+    entryPoint: {
+      kind: "module",
+      path: "./src/langchain/mod.ts",
+    } satisfies NpmEntryPoint,
+    description:
+      "Atomic Mail LangChain toolkit — register, jmap_request, and help tools for JS/TS agents.",
+    keywords: [
+      "atomic-mail",
+      "atomicmail",
+      "langchain",
+      "toolkit",
+      "agent",
+      "ai",
+      "jmap",
+      "email",
+      "proof-of-work",
+    ],
+    readme: { path: "../docs/langchain.md", targetPath: "README.md" },
+    extraFiles: [],
+    packageExtras: {
+      dependencies: {
+        "@langchain/core": "^1.1.49",
+        "langchain": "^1.4.5",
+        "zod": "^4.4.3",
+      },
+    },
+  },
+};
 
 const GITHUB_PACKAGES = {
   mcp: {
@@ -82,6 +142,10 @@ const GITHUB_PACKAGES = {
   skill: {
     packageName: "@atomic-mail/agent-skill",
     outDir: "skill_npm_gpr",
+  },
+  langchain: {
+    packageName: "@atomic-mail/langchain",
+    outDir: "langchain_npm_gpr",
   },
 } as const;
 
@@ -127,6 +191,9 @@ export function assertChannelSupported(
   channel?: string,
 ): void {
   if (!channel) return;
+  if (product === "langchain") {
+    throw new Error("Unsupported npm channel for langchain");
+  }
 
   const config = getChannelConfig(channel);
   if (!config) {
@@ -140,11 +207,18 @@ export function assertChannelSupported(
 }
 
 export function getOutputDir(product: NpmProduct, channel?: string): string {
-  const prefix = product === "mcp" ? "mcp_npm" : "skill_npm";
+  const prefix = product === "mcp"
+    ? "mcp_npm"
+    : product === "skill"
+    ? "skill_npm"
+    : "langchain_npm";
   return channel ? `${prefix}_${channel}` : prefix;
 }
 
 export function getPackageName(product: NpmProduct, channel?: string): string {
+  if (product === "langchain" && channel) {
+    throw new Error("Unsupported npm channel for langchain");
+  }
   const { baseName } = PRODUCT_CONFIG[product];
   return channel ? `${baseName}-${channel}` : baseName;
 }
@@ -161,6 +235,7 @@ export function listConfiguredPackageTargets(
   const targets: NpmPackageTarget[] = [
     { product: "mcp" },
     { product: "skill" },
+    { product: "langchain" },
   ];
 
   for (const channel of loadChannels()) {
@@ -185,6 +260,25 @@ export function listConfiguredPackageDirs(
 export function buildHomepage(channel?: string): string {
   const campaign = channel ?? "website";
   return `https://atomicmail.ai?utm_source=npm&utm_medium=package&utm_campaign=${campaign}`;
+}
+
+function buildEntryPoints(entryPoint: NpmEntryPoint):
+  | string[]
+  | Array<{
+    kind: "bin";
+    name: string;
+    path: string;
+  }> {
+  if (entryPoint.kind === "module") {
+    return [entryPoint.path];
+  }
+  return [
+    {
+      kind: "bin",
+      name: entryPoint.name,
+      path: entryPoint.path,
+    },
+  ];
 }
 
 function channelDescription(base: string, channel?: string): string {
@@ -265,13 +359,7 @@ export async function buildNpmPackage(
   await emptyDir(dir);
 
   await build({
-    entryPoints: [
-      {
-        kind: "bin",
-        name: config.binName,
-        path: config.entryPath,
-      },
-    ],
+    entryPoints: buildEntryPoints(config.entryPoint),
     outDir: `./${dir}`,
     shims: {
       deno: false,
@@ -304,6 +392,7 @@ export async function buildNpmPackage(
       devDependencies: {
         "@types/node": "^20.12.0",
       },
+      ...(config.packageExtras ?? {}),
     },
     async postBuild() {
       await copyFileIfExists(
@@ -347,7 +436,7 @@ export async function buildGithubPackagesNpm(
   version: string,
 ): Promise<string[]> {
   const dirs: string[] = [];
-  for (const product of ["mcp", "skill"] as const) {
+  for (const product of ["mcp", "skill", "langchain"] as const) {
     const gpr = GITHUB_PACKAGES[product];
     const config = PRODUCT_CONFIG[product];
     const dir = await buildNpmPackage({
@@ -367,7 +456,7 @@ export async function buildGithubPackagesNpm(
 }
 
 export function listGithubPackagesDirs(): string[] {
-  return ["mcp_npm_gpr", "skill_npm_gpr"];
+  return ["langchain_npm_gpr", "mcp_npm_gpr", "skill_npm_gpr"];
 }
 
 export interface ParsedBuildArgs {

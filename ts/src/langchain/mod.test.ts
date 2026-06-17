@@ -103,6 +103,28 @@ Deno.test("langchain register forwards forced semantics", async () => {
   assertStringIncludes(out as string, "hourly");
 });
 
+Deno.test("langchain help returns bundled topic content", async () => {
+  const fakeSession = {
+    credentialDir: "/tmp/atomicmail",
+  } as unknown as AgentSession;
+  const tool = getTool("help", fakeSession);
+
+  const out = await tool.invoke({ topic: "cron" });
+  assertStringIncludes(out as string, "hourly");
+});
+
+Deno.test("langchain exports register/jmap/help tools", () => {
+  const fakeSession = {
+    credentialDir: "/tmp/atomicmail",
+  } as unknown as AgentSession;
+  const tools = buildAtomicMailTools(makeContext(fakeSession));
+  assertEquals(tools.map((tool) => tool.name), [
+    "register",
+    "jmap_request",
+    "help",
+  ]);
+});
+
 async function assertRejectsMessage(
   fn: () => Promise<unknown>,
   expectedSubstring: string,

@@ -1,11 +1,14 @@
 ---
 name: atomicmail
 description: Read and write email through the Atomic Mail ESP from an AI agent. Handles proof-of-work authentication and JMAP so the agent thinks in JMAP method calls. Use when the user asks to register an email inbox, list mailboxes, fetch or send email.
-version: 0.3.13
+version: 0.3.14
 author: Atomic Mail
 license: MIT
 platforms: [macos, linux, windows]
 metadata:
+  openclaw:
+    requires: {"bins":["node"]}
+    homepage: https://atomicmail.ai
   hermes:
     tags: [Productivity, Email, Communication, blueprint]
     config:
@@ -70,9 +73,9 @@ package.
 ## Commands
 
 ```bash
-${HERMES_SKILL_DIR}/scripts/atomicmail register --username "myagent"
+{baseDir}/scripts/atomicmail register --username "myagent"
 
-${HERMES_SKILL_DIR}/scripts/atomicmail jmap_request --ops-file list_inbox.json
+{baseDir}/scripts/atomicmail jmap_request --ops-file list_inbox.json
 ```
 
 Run **`atomicmail --help`** or **`atomicmail <command> --help`** for flags.
@@ -81,14 +84,14 @@ Run **`atomicmail --help`** or **`atomicmail <command> --help`** for flags.
 
 - `authUrl`: `https://auth.atomicmail.ai`
 - `apiUrl`: `https://api.atomicmail.ai`
-- credentials directory: `~/.hermes/atomicmail`
+- credentials directory: `~/.atomicmail`
 
 ## Workflow
 
 ### 1. Register (new account)
 
 ```bash
-${HERMES_SKILL_DIR}/scripts/atomicmail register \
+{baseDir}/scripts/atomicmail register \
   --username "alice"
 ```
 
@@ -113,14 +116,14 @@ credentials in the **same** directory (after backing it up).
 ### 2. Register (existing API key, in case losing the credentials file)
 
 ```bash
-${HERMES_SKILL_DIR}/scripts/atomicmail register \
+{baseDir}/scripts/atomicmail register \
   --api-key "..."
 ```
 
 ### 3. JMAP request
 
 ```bash
-${HERMES_SKILL_DIR}/scripts/atomicmail jmap_request \
+{baseDir}/scripts/atomicmail jmap_request \
   --ops '[["Mailbox/get", {"accountId": "$ACCOUNT_ID"}, "m0"]]'
 ```
 
@@ -132,14 +135,14 @@ applies to `--ops` and `--ops-file`).
 Preset file:
 
 ```bash
-${HERMES_SKILL_DIR}/scripts/atomicmail jmap_request \
+{baseDir}/scripts/atomicmail jmap_request \
   --ops-file list_inbox.json
 ```
 
 With custom placeholders:
 
 ```bash
-${HERMES_SKILL_DIR}/scripts/atomicmail jmap_request \
+{baseDir}/scripts/atomicmail jmap_request \
   --ops-file send_mail.json \
   --vars '{"TO":"alice@example.com","SUBJECT":"Hello","BODY":"Hi there"}'
 ```
@@ -222,8 +225,8 @@ For operator OS-scheduling patterns on terminal hosts, see `help --topic cron`.
 ### 4. Help
 
 ```bash
-${HERMES_SKILL_DIR}/scripts/atomicmail help
-${HERMES_SKILL_DIR}/scripts/atomicmail help --topic jmap_cheatsheet
+{baseDir}/scripts/atomicmail help
+{baseDir}/scripts/atomicmail help --topic jmap_cheatsheet
 ```
 
 ## Security
@@ -239,7 +242,7 @@ with repeatable **`--attachment PATH`** (RFC 8620 upload — same flow as MCP
 **`atomicmail help --topic jmap_cheatsheet`**.
 
 ```bash
-${HERMES_SKILL_DIR}/scripts/atomicmail jmap_request \
+{baseDir}/scripts/atomicmail jmap_request \
   --ops-file send_mail_attachment.json \
   --vars '{"TO":"you@example.com","SUBJECT":"Hi","BODY":"See file","ATTACHMENT_BASE64":"SGVsbG8=","ATTACHMENT_TYPE":"text/plain","ATTACHMENT_NAME":"note.txt"}'
 ```
@@ -251,9 +254,9 @@ ${HERMES_SKILL_DIR}/scripts/atomicmail jmap_request \
 - Credentials path: `--credentials-dir` or `ATOMIC_MAIL_CREDENTIALS_DIR`
 - PoW salt: `--scrypt-salt` or `ATOMIC_MAIL_SCRYPT_SALT`
 
-## Hermes Agent notes
+## Platform notes
 
 - **Credentials directory:** Default `~/.hermes/atomicmail` on Hermes (not `~/.atomicmail`). The bundled skill launcher sets `ATOMIC_MAIL_CREDENTIALS_DIR` when unset; operator env or `atomicmail.credentials_dir` config overrides it.
 - **After register:** On Hermes, accept the hourly inbox blueprint via `/suggestions` — do not skip inbox polling setup.
-- **Never cron raw CLI:** Do not schedule `${HERMES_SKILL_DIR}/scripts/atomicmail jmap_request` alone without an agent turn. The Hermes blueprint uses `no_agent: false` so each run is a full agent session with `list_inbox.json`.
+- **Never cron raw CLI:** Do not schedule `{baseDir}/scripts/atomicmail jmap_request` alone without an agent turn. The Hermes blueprint uses `no_agent: false` so each run is a full agent session with `list_inbox.json`.
 - **Multi-account:** Pass `--credentials-dir` on `register` / `jmap_request` only when operating multiple inboxes at once — not needed for the default single-inbox flow.

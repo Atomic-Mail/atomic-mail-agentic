@@ -93,24 +93,21 @@ cd ts && deno test --allow-read --allow-env --allow-write
 cd ts
 deno run -A build_mcp_npm.ts <version>    # -> ts/mcp_npm/
 deno run -A build_skill_npm.ts <version>  # -> ts/skill_npm/
-deno run -A build_all_npm.ts <version>    # default + all channel variants
-deno run -A build_clawhub_skill.ts <version>  # -> integrations_dist/clawhub/atomicmail/
-deno run -A build_hermes_skill.ts <version>   # -> integrations_dist/hermes/atomicmail/
+deno run -A build_all_npm.ts <version>    # default + npm channel variants
+deno run -A build_skill.ts <version>      # -> dist/skill/atomicmail/
 ```
 
-`build_clawhub_skill.ts` and `build_hermes_skill.ts` require `skill_npm/` (run
-`build_skill_npm.ts` or `build_all_npm.ts` first). CI publishes the built skill
-via `.github/workflows/publish-clawhub-skill.yml` on GitHub release using
-explicit semver (`clawhub skill publish --version <release>`), matching the git
-tag.
+`build_skill.ts` consumes `skill_npm/` (run `build_skill_npm.ts` or
+`build_all_npm.ts` first) and produces the unified skill bundle used by tap and
+channel publish flows.
 
 Local ClawHub publish (maintainers, after building):
 
 ```bash
 cd ts
 deno run -A build_skill_npm.ts <version>
-deno run -A build_clawhub_skill.ts <version>
-clawhub skill publish ../integrations_dist/clawhub/atomicmail \
+deno run -A build_skill.ts <version>
+clawhub skill publish ../dist/skill/atomicmail \
   --slug atomicmail \
   --name "Atomic Mail" \
   --version <version> \
@@ -118,39 +115,66 @@ clawhub skill publish ../integrations_dist/clawhub/atomicmail \
   --changelog "Release <version>"
 ```
 
-### Hermes skill (maintainers)
+### Unified skill tap (maintainers)
 
-Build output: `integrations_dist/hermes/atomicmail/` (gitignored). Published
-copies land in `integrations/hermes/atomicmail/` for the in-repo tap (committed
-to git — bootstrap once, then updated by CI).
+Build output: `dist/skill/atomicmail/` (gitignored). Published copies land in
+`integrations/skill/atomicmail/` for the in-repo tap (committed to git —
+bootstrap once, then updated by CI).
 
-CI workflow: `.github/workflows/publish-hermes-skill.yml` (on GitHub release,
-push to `main`/`develop` when Hermes skill sources change, or `workflow_dispatch`).
+CI publish flow syncs the unified skill tap on release and manual dispatch.
 
 Dry-run locally (build + verify only — same as CI `dry_run: true`):
 
 ```bash
 cd ts
 deno run -A build_skill_npm.ts <version>
-deno run -A build_hermes_skill.ts <version>
-deno test --allow-read --allow-env --allow-write --allow-run hermes_skill_build.test.ts
+deno run -A build_skill.ts <version>
+deno test --allow-read --allow-env --allow-write --allow-run skill_build.test.ts
 ```
 
-First CI run: trigger **Publish Hermes skill** manually with `dry_run: true` to
+First CI run: trigger the skill publish workflow with `dry_run: true` to
 validate build and verify jobs before enabling real publishes.
 
 No extra secrets are required — the workflow uses the default `GITHUB_TOKEN`
-(`contents: write`) to commit the built skill to `integrations/hermes/atomicmail/`.
+(`contents: write`) to commit the built skill to
+`integrations/skill/atomicmail/`.
 
 After publish, users can install from the in-repo tap:
 
 ```bash
-hermes skills install Atomic-Mail/atomic-mail-agentic/integrations/hermes/atomicmail
+hermes skills install Atomic-Mail/atomic-mail-agentic/integrations/skill/atomicmail
 ```
 
-The Hermes build ships a `.skillignore` and omits TypeScript declaration/source-map
-artifacts so `hermes skills install` passes Hermes's community security scanner
-(PoW registration, JWT parsing, and cron help docs otherwise trigger false positives).
+The unified skill build ships a `.skillignore` and omits TypeScript
+declaration/source-map artifacts so `hermes skills install` passes Hermes's
+community security scanner (PoW registration, JWT parsing, and cron help docs
+otherwise trigger false positives).
+
+### Unified rollout release verification (maintainers)
+
+To validate unified skill release readiness from a single npm overlay build,
+run from repo root:
+
+```bash
+bash test/checklists/verify_unified_skill_release.sh <version>
+```
+
+Omit `<version>` to use `ts/src/mcp/version.ts`. This script:
+
+- builds `skill_npm/` once, then emits:
+  - `dist/skill/atomicmail/`
+  - `integrations_dist/clawhub/atomicmail/`
+  - `integrations_dist/hermes/atomicmail/`
+- checks SKILL frontmatter expectations for bundled/openclaw/hermes metadata
+- verifies launcher behavior for bundled, ClawHub, and Hermes artifacts
+- confirms npm overlay parity by checksum for:
+  - `lib/esm/skill/cli.js`
+  - `lib/shared/manifest.json`
+  - `lib/presets/list_inbox.json`
+
+If your branch already switched to unified in-repo tap sync
+(`integrations/skill/atomicmail/`), treat that sync as an additional release
+gate generated from the same build output.
 
 GitHub Packages (`@atomic-mail/*` on `npm.pkg.github.com`):
 

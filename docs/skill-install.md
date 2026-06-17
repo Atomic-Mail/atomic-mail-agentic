@@ -69,10 +69,10 @@ skills toolset and Node.js 20+ (for the bundled launcher).
 
 ### Install
 
-In-repo tap (updated on each GitHub release):
+Unified in-repo tap (updated on each GitHub release):
 
 ```bash
-hermes skills install Atomic-Mail/atomic-mail-agentic/integrations/hermes/atomicmail
+hermes skills install Atomic-Mail/atomic-mail-agentic/integrations/skill/atomicmail
 ```
 
 ### Credentials
@@ -129,8 +129,9 @@ See `atomicmail help --topic cron` for the full prompt and delivery options.
   https://hermes-agent.nousresearch.com/docs/developer-guide/creating-skills
 - Hermes cron (manual fallback):
   https://hermes-agent.nousresearch.com/docs/user-guide/features/cron
-- Maintainer publish workflow: [CONTRIBUTING.md](../CONTRIBUTING.md) (Hermes skill
-  section)
+- Maintainer publish workflow:
+  [CONTRIBUTING.md](https://github.com/Atomic-Mail/agentic-clients/blob/develop/CONTRIBUTING.md)
+  (unified skill section)
 
 ## `jmap_request`, presets, and placeholders
 

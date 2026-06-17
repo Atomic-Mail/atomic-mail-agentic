@@ -6,7 +6,7 @@
   <a href="https://github.com/Atomic-Mail/atomic-mail-agentic/issues"><img src="https://shieldcn.dev/badge/issues-open-5BE481.svg?split=true&labelColor=000000&color=5BE481&valueColor=000000&labelTextColor=FFFFFF&height=32&fontSize=16" alt="issues open"/></a>&nbsp;&nbsp;
   <a href="https://clawhub.ai/atomicmail/atomicmail"><img src="https://shieldcn.dev/badge/ClawHub-skill-5BE481.svg?split=true&labelColor=000000&color=5BE481&valueColor=000000&labelTextColor=FFFFFF&height=32&fontSize=16" alt="ClawHub skill"/></a>&nbsp;&nbsp;
   <a href="https://hermes-agent.nousresearch.com/docs/developer-guide/creating-skills"><img src="https://shieldcn.dev/badge/Hermes-skill-5BE481.svg?split=true&labelColor=000000&color=5BE481&valueColor=000000&labelTextColor=FFFFFF&height=32&fontSize=16" alt="Hermes skill"/></a>&nbsp;&nbsp;
-  <a href="https://github.com/langgenius/dify-plugins/tree/main/Atomic-Mail/atomic-mail-agentic"><img src="https://shieldcn.dev/badge/Dify-plugin-5BE481.svg?split=true&labelColor=000000&color=5BE481&valueColor=000000&labelTextColor=FFFFFF&height=32&fontSize=16" alt="Dify plugin"/></a>&nbsp;&nbsp;
+  <a href="https://marketplace.dify.ai/plugin/atomicmail/atomicmail"><img src="https://shieldcn.dev/badge/Dify-plugin-5BE481.svg?split=true&labelColor=000000&color=5BE481&valueColor=000000&labelTextColor=FFFFFF&height=32&fontSize=16" alt="Dify plugin"/></a>&nbsp;&nbsp;
   <a href="https://registry.modelcontextprotocol.io/?q=atomic-mail"><img src="https://shieldcn.dev/badge/MCP-registry-5BE481.svg?split=true&labelColor=000000&color=5BE481&valueColor=000000&labelTextColor=FFFFFF&height=32&fontSize=16" alt="MCP registry"/></a>
 </p>
 
@@ -78,7 +78,7 @@ openclaw skills install atomicmail
 ### 👩🏻 Hermes
 
 ```bash
-hermes skills install Atomic-Mail/atomic-mail-agentic/integrations/hermes/atomicmail
+hermes skills install clawhub/atomicmail
 ```
 
 ### 💻 AgentSkill
@@ -159,7 +159,7 @@ agentic-clients/
 │   └── src/lib/agent/  # shared auth, session, JMAP, presets, help-content
 ├── py/                 # Python client parity layer and tests
 ├── integrations/dify/   # Dify plugin integration and packaging docs
-├── integrations/hermes/ # Hermes skill tap (published atomicmail skill)
+├── integrations/skill/  # Unified in-repo skill tap (published atomicmail skill)
 ├── docs/                # VitePress docs and shipped SKILL/README sources
 ├── test/checklists/     # manual release QA
 ├── CONTRIBUTING.md

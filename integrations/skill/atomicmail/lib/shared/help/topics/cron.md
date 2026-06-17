@@ -98,8 +98,8 @@ Cron (manual fallback): https://hermes-agent.nousresearch.com/docs/user-guide/fe
 
 #### Recommended: skill + blueprint
 
-1. Install the **Atomic Mail** Hermes skill from the in-repo tap
-   (`hermes skills install Atomic-Mail/agentic-clients/integrations/hermes/atomicmail`).
+1. Install the **Atomic Mail** skill from the unified in-repo tap
+   (`hermes skills install Atomic-Mail/atomic-mail-agentic/integrations/skill/atomicmail`).
 2. After the first successful `register`, accept the hourly inbox **blueprint**
    via `/suggestions`.
 

@@ -1,0 +1,74 @@
+name: Publish Python packages
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Semver to publish (e.g. 0.1.2 or v1.0.0)
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: publish-pypi-${{ github.event.release.tag_name || inputs.version || github.run_id }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment: pypi
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Resolve and validate version
+        id: version
+        working-directory: ts
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name || inputs.version }}
+        run: |
+          VERSION=$(deno run -A resolve_release_version.ts "$RELEASE_TAG")
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Publishing Python packages at version: $VERSION"
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install build tooling
+        run: python -m pip install --upgrade pip build
+
+      - name: Sync release version into pyproject.toml files
+        working-directory: py
+        run: python scripts/sync_release_version.py "${{ steps.version.outputs.version }}"
+
+      - name: Bundle shared assets for atomicmail-shared wheel
+        run: bash py/scripts/bundle_shared_assets.sh
+
+      - name: Build atomicmail-shared wheel
+        working-directory: py
+        run: python -m build --outdir dist .
+
+      - name: Build langchain-atomicmail wheel
+        working-directory: py/langchain
+        run: python -m build --outdir ../dist .
+
+      - name: Publish Python packages to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: py/dist
+          print-hash: true
+          skip-existing: true
+          verbose: true

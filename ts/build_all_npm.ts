@@ -1,4 +1,4 @@
-// Build all npm products (mcp + agent-skill) for default and every channel.
+// Build all npm products (mcp + agent-skill + langchain).
 //
 // Usage:
 //   deno run -A build_all_npm.ts <version>   # CI / release (semver required)

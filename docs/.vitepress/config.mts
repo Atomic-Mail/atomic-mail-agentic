@@ -51,6 +51,12 @@ export default defineConfig({
         ],
       },
       {
+        text: "LangChain",
+        items: [
+          { text: "@atomicmail/langchain", link: "/langchain" },
+        ],
+      },
+      {
         text: "REST API + JMAP",
         items: [
           { text: "REST authentication flow", link: "/rest-auth" },

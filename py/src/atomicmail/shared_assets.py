@@ -10,11 +10,22 @@ from typing import Any
 _SHARED_ENV = "ATOMIC_MAIL_SHARED_DIR"
 
 
+def _bundled_shared_dir() -> Path | None:
+    bundled = Path(__file__).resolve().parent / "vendor" / "shared"
+    if (bundled / "consts.json").exists():
+        return bundled
+    return None
+
+
 def shared_dir() -> Path:
     """Resolve the shared asset directory."""
     from_env = os.getenv(_SHARED_ENV)
     if from_env:
         return Path(from_env).expanduser().resolve()
+
+    bundled = _bundled_shared_dir()
+    if bundled is not None:
+        return bundled
 
     here = Path(__file__).resolve()
     for parent in [here, *here.parents]:

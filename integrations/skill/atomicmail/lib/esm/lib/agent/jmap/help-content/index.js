@@ -1,4 +1,5 @@
 // Assembled help topics for MCP `help` and AgentSkill `help`.
+import { readNpmPackageReadme } from "../../../core/read-npm-package-readme.js";
 import { tryReadSharedJson, tryReadSharedText, } from "../../../core/shared-assets.js";
 import { helpTopicAuth } from "./auth.js";
 import { helpTopicCron } from "./cron.js";
@@ -22,7 +23,7 @@ const fallbackTopics = {
     multi_account: helpTopicMultiAccount,
     troubleshooting: helpTopicTroubleshooting,
 };
-const DEFAULT_README_STUB = 'Topic "readme" returns a built-in stub. No runtime package README lookup is performed. From MCP use {"topic":"readme"}; from the CLI: `atomicmail help --topic readme`.';
+const DEFAULT_README_STUB = 'Topic "readme" returns a built-in stub in AgentSkill runtimes. From MCP, topic "readme" returns the package README.md.';
 const DEFAULT_UNKNOWN_TOPIC = "Unknown topic \"{topic}\". Available topics: {topics}, readme";
 export const HELP_TOPICS = manifest
     ? Object.fromEntries(manifest.help.topic_order.map((topic) => {
@@ -41,12 +42,15 @@ const HELP_README_STUB = manifest
 export function normalizeHelpTopic(topic) {
     return topic.toLowerCase().replace(/[\s-]/g, "_");
 }
-export function getHelp(topic) {
+export async function getHelp(topic, runtime = "skill") {
     if (!topic) {
         return HELP_TOPICS["overview"];
     }
     const key = normalizeHelpTopic(topic);
     if (key === "readme") {
+        if (runtime === "mcp") {
+            return await readNpmPackageReadme();
+        }
         return HELP_README_STUB;
     }
     const unknownTemplate = errors?.help_unknown_topic_template ??

@@ -266,7 +266,7 @@ Options:
     }
     process.stdout.write(bodyText.endsWith("\n") ? bodyText : bodyText + "\n");
 }
-function cmdHelp(argv) {
+async function cmdHelp(argv) {
     let parsed;
     try {
         parsed = parseArgs({
@@ -286,12 +286,12 @@ function cmdHelp(argv) {
         process.stdout.write(`Usage: atomicmail help [--topic TOPIC]
 
 Topics include: overview, installation, auth, jmap_cheatsheet, tools, presets, troubleshooting, readme.
-Topic readme prints a built-in stub (no runtime package README lookup).
+Topic readme prints the built-in SKILL stub.
 `);
         process.exit(0);
     }
     const topic = parsed.values.topic;
-    process.stdout.write(getHelp(topic) + "\n");
+    process.stdout.write(await getHelp(topic, "skill") + "\n");
 }
 async function main() {
     const argv = process.argv.slice(2);
@@ -308,7 +308,7 @@ async function main() {
             await cmdJmapRequest(rest);
             break;
         case "help":
-            cmdHelp(rest);
+            await cmdHelp(rest);
             break;
         default:
             process.stderr.write(`Unknown command: ${cmd}\n\n`);

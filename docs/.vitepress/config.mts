@@ -2,8 +2,15 @@ import { defineConfig } from "vitepress";
 import llmstxt from "vitepress-plugin-llms";
 import { copyOrDownloadAsMarkdownButtons } from "vitepress-plugin-llms";
 
+const repositoryName = process.env.GITHUB_REPOSITORY?.split("/")[1];
+const pagesBase =
+  process.env.GITHUB_ACTIONS && repositoryName
+    ? `/${repositoryName}/`
+    : "/";
+
 // https://vitepress.dev/reference/site-config
 export default defineConfig({
+  base: pagesBase,
   lang: "en-US",
   title: "Atomic Mail Agentic",
   description: "API, MCP and AgentSkill Documentation",

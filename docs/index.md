@@ -16,7 +16,7 @@ hero:
       link: https://atomicmail.ai
     - theme: alt
       text: LLMs
-      link: /llms-full.txt
+      link: ./llms-full.txt
 
 features:
   - title: MCP Server

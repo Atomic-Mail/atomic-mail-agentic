@@ -3,6 +3,11 @@
   "gh-pages",
   "modelcontextprotocol",
   {
+    "name": "mcpso",
+    "products": ["mcp"],
+    "publish": true
+  },
+  {
     "name": "anthropic",
     "products": ["mcp"],
     "publish": false,

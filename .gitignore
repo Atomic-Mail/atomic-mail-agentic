@@ -40,6 +40,8 @@ __pycache__/
 **/__pycache__/
 *.pyc
 **/*.pyc
+*.egg-info/
+**/*.egg-info/
 .pytest_cache/
 **/.pytest_cache/
 .venv312/

@@ -10,6 +10,7 @@ const pagesBase = process.env.GITHUB_ACTIONS && repositoryName
 // https://vitepress.dev/reference/site-config
 export default defineConfig({
   base: pagesBase,
+  head: [["link", { rel: "icon", href: `${pagesBase}favicon.ico` }]],
   lang: "en-US",
   title: "Atomic Mail Agentic",
   description: "API, MCP and AgentSkill Documentation",

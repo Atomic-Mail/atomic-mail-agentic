@@ -9,7 +9,7 @@
     "hermes": "~/.hermes/atomicmail"
   },
   "cliInvocations": {
-    "npm": "npx --package=@atomicmail/agent-skill atomicmail",
+    "npm": "npx --package=@atomicmail/agent-skill-gh-pages atomicmail",
     "bundledBody": "{baseDir}/scripts/atomicmail",
     "hermesBlueprint": "${HERMES_SKILL_DIR}/scripts/atomicmail"
   },

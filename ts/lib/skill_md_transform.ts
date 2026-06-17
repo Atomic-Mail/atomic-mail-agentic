@@ -2,7 +2,7 @@ export const DEFAULT_SKILL_MANIFEST_PATH = "../shared/skill/manifest.json";
 export const DEFAULT_SKILL_TEMPLATE_PATH = "../shared/skill/SKILL.template.md";
 
 export const NPX_SKILL_INVOCATION =
-  "npx --package=@atomicmail/agent-skill atomicmail";
+  "npx --package=@atomicmail/agent-skill-gh-pages atomicmail";
 export const BUNDLED_CLI_INVOCATION = "{baseDir}/scripts/atomicmail";
 export const HERMES_CLI_INVOCATION = "${HERMES_SKILL_DIR}/scripts/atomicmail";
 export const HERMES_CREDENTIALS_DIR = "~/.hermes/atomicmail";

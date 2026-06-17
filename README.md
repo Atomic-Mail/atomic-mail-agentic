@@ -16,13 +16,13 @@
 
 # Atomic Mail Agentic
 
+**Give your agent a real inbox**
+
 <p align="center">
   <a href="https://atomicmail.ai">Website</a> ·
   <a href="https://atomic-mail.github.io/atomic-mail-agentic/">Docs</a> ·
   <a href="https://github.com/Atomic-Mail/atomic-mail-agentic/issues">Issues</a>
 </p>
-
-**Give your agent a real inbox**
 
 ---
 
@@ -92,15 +92,16 @@ npx --package=@atomicmail/agent-skill-github atomicmail help
 ### ⚙️ REST API 
 
 *For custom connectors and advanced logic only*
+
 Refer to documentation: [docs/rest-auth.md](docs/rest-auth.md).
 
 ## 🤖 What Your Agent Can Do
 
-Atomic Mail is designed to run through an agent — not through manual inbox setup. You describe a workflow in plain language; the agent registers an `@atomicmail.ai` address, sends and receives mail, and keeps the thread going. You do not configure SMTP, copy API keys between tabs, or memorize JMAP.
+Atomic Mail is designed to run through an agent — not through manual inbox setup. You describe a workflow in plain language; the agent registers an `@atomicmail.ai` address, sends and receives mail, and keeps the thread going. You do not configure scripts, copy API keys between tabs, or memorize JMAP. Everything is automagical.
 
 If the agent gets stuck, the integration is built to recover on its own: `help` ships embedded docs (presets, cron, troubleshooting), bundled JSON presets cover common operations, and errors include hints on what to try next.
 
-**Example workflows** (from [atomicmail.ai](https://atomicmail.ai)):
+#### Example workflows
 
 **Newsletter digest** — *"Subscribe your inbox to these newsletters, read everything, and email me a daily digest of what matters for AI tooling."* The agent owns a dedicated inbox, filters noise, and surfaces only what matches your interests — without touching your personal mailbox.
 

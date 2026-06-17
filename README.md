@@ -6,7 +6,7 @@
   <a href="https://github.com/Atomic-Mail/atomic-mail-agentic/issues"><img src="https://shieldcn.dev/badge/issues-open-5BE481.svg?split=true&labelColor=000000&color=5BE481&valueColor=000000&labelTextColor=FFFFFF&height=32&fontSize=16" alt="issues open"/></a>&nbsp;&nbsp;
   <a href="https://clawhub.ai/atomicmail/atomicmail"><img src="https://shieldcn.dev/badge/ClawHub-skill-5BE481.svg?split=true&labelColor=000000&color=5BE481&valueColor=000000&labelTextColor=FFFFFF&height=32&fontSize=16" alt="ClawHub skill"/></a>&nbsp;&nbsp;
   <a href="https://hermes-agent.nousresearch.com/docs/developer-guide/creating-skills"><img src="https://shieldcn.dev/badge/Hermes-skill-5BE481.svg?split=true&labelColor=000000&color=5BE481&valueColor=000000&labelTextColor=FFFFFF&height=32&fontSize=16" alt="Hermes skill"/></a>&nbsp;&nbsp;
-  <a href="https://github.com/langgenius/dify-plugins/tree/main/Atomic-Mail/atomic-mail-agentic"><img src="https://shieldcn.dev/badge/Dify-plugin-5BE481.svg?split=true&labelColor=000000&color=5BE481&valueColor=000000&labelTextColor=FFFFFF&height=32&fontSize=16" alt="Dify plugin"/></a>&nbsp;&nbsp;
+  <a href="https://marketplace.dify.ai/plugin/atomicmail/atomicmail"><img src="https://shieldcn.dev/badge/Dify-plugin-5BE481.svg?split=true&labelColor=000000&color=5BE481&valueColor=000000&labelTextColor=FFFFFF&height=32&fontSize=16" alt="Dify plugin"/></a>&nbsp;&nbsp;
   <a href="https://registry.modelcontextprotocol.io/?q=atomic-mail"><img src="https://shieldcn.dev/badge/MCP-registry-5BE481.svg?split=true&labelColor=000000&color=5BE481&valueColor=000000&labelTextColor=FFFFFF&height=32&fontSize=16" alt="MCP registry"/></a>
 </p>
 
@@ -16,13 +16,13 @@
 
 # Atomic Mail Agentic
 
+**Give your agent a real inbox**
+
 <p align="center">
   <a href="https://atomicmail.ai">Website</a> ·
   <a href="https://atomic-mail.github.io/atomic-mail-agentic/">Docs</a> ·
   <a href="https://github.com/Atomic-Mail/atomic-mail-agentic/issues">Issues</a>
 </p>
-
-**Give your agent a real inbox**
 
 ---
 
@@ -78,7 +78,7 @@ openclaw skills install atomicmail
 ### 👩🏻 Hermes
 
 ```bash
-hermes skills install Atomic-Mail/atomic-mail-agentic/integrations/hermes/atomicmail
+hermes skills install clawhub/atomicmail
 ```
 
 ### 💻 AgentSkill
@@ -92,15 +92,16 @@ npx --package=@atomicmail/agent-skill-github atomicmail help
 ### ⚙️ REST API 
 
 *For custom connectors and advanced logic only*
+
 Refer to documentation: [docs/rest-auth.md](docs/rest-auth.md).
 
 ## 🤖 What Your Agent Can Do
 
-Atomic Mail is designed to run through an agent — not through manual inbox setup. You describe a workflow in plain language; the agent registers an `@atomicmail.ai` address, sends and receives mail, and keeps the thread going. You do not configure SMTP, copy API keys between tabs, or memorize JMAP.
+Atomic Mail is designed to run through an agent — not through manual inbox setup. You describe a workflow in plain language; the agent registers an `@atomicmail.ai` address, sends and receives mail, and keeps the thread going. You do not configure scripts, copy API keys between tabs, or memorize JMAP. Everything is automagical.
 
 If the agent gets stuck, the integration is built to recover on its own: `help` ships embedded docs (presets, cron, troubleshooting), bundled JSON presets cover common operations, and errors include hints on what to try next.
 
-**Example workflows** (from [atomicmail.ai](https://atomicmail.ai)):
+#### Example workflows
 
 **Newsletter digest** — *"Subscribe your inbox to these newsletters, read everything, and email me a daily digest of what matters for AI tooling."* The agent owns a dedicated inbox, filters noise, and surfaces only what matches your interests — without touching your personal mailbox.
 
@@ -136,8 +137,8 @@ If repo docs and installed behavior ever drift, trust `help` from the same insta
 **Prerequisites:** Node.js 20+, Deno 2.7+.
 
 ```bash
-git clone https://github.com/Atomic-Mail/agentic-clients.git
-cd agentic-clients/ts
+git clone https://github.com/Atomic-Mail/atomic-mail-agentic.git
+cd atomic-mail-agentic/ts
 
 deno test --allow-read --allow-env --allow-write
 ```
@@ -152,14 +153,14 @@ npm run docs:dev
 ## 🗂️ File Structure
 
 ```text
-agentic-clients/
+/
 ├── ts/
 │   ├── src/mcp/        # MCP entrypoint + MCP tools
 │   ├── src/skill/      # AgentSkill CLI entrypoint
 │   └── src/lib/agent/  # shared auth, session, JMAP, presets, help-content
 ├── py/                 # Python client parity layer and tests
 ├── integrations/dify/   # Dify plugin integration and packaging docs
-├── integrations/hermes/ # Hermes skill tap (published atomicmail skill)
+├── integrations/skill/  # Unified in-repo skill tap (published atomicmail skill)
 ├── docs/                # VitePress docs and shipped SKILL/README sources
 ├── test/checklists/     # manual release QA
 ├── CONTRIBUTING.md

@@ -4,6 +4,7 @@ import {
   ATOMICMAIL_GITHUB_PACKAGES_PUBLISH_CONFIG,
   ATOMICMAIL_NPM_PACKAGE_META,
 } from "../npm_package_meta.ts";
+import { renderSkillMd } from "./skill_md_transform.ts";
 
 export type NpmProduct = "mcp" | "skill";
 export interface NpmChannelMcpbConfig {
@@ -69,7 +70,7 @@ const PRODUCT_CONFIG = {
       "proof-of-work",
     ],
     readme: { path: "../docs/skill-install.md", targetPath: "README.md" },
-    extraFiles: [{ path: "../docs/SKILL.md", targetPath: "SKILL.md" }] as const,
+    extraFiles: [] as const,
   },
 } as const;
 
@@ -205,7 +206,10 @@ async function copyFileIfExists(src: string, dest: string): Promise<void> {
   }
 }
 
-async function copyDirRecursive(srcDir: string, destDir: string): Promise<void> {
+async function copyDirRecursive(
+  srcDir: string,
+  destDir: string,
+): Promise<void> {
   await Deno.mkdir(destDir, { recursive: true });
   for await (const entry of Deno.readDir(srcDir)) {
     const src = `${srcDir}/${entry.name}`;
@@ -312,6 +316,12 @@ export async function buildNpmPackage(
       );
       for (const file of config.extraFiles) {
         await copyFileIfExists(file.path, `${dir}/${file.targetPath}`);
+      }
+      if (product === "skill") {
+        await Deno.writeTextFile(
+          `${dir}/SKILL.md`,
+          renderSkillMd({ profile: "npm", version }),
+        );
       }
 
       if (channel) {

@@ -12,8 +12,8 @@ def test_help_defaults_to_overview_topic() -> None:
 def test_help_readme_topic_uses_shared_stub() -> None:
     text = get_help("readme")
     assert "built-in stub" in text
-    assert "No runtime package README lookup is performed." in text
-    assert '{"topic":"readme"}' in text
+    assert "AgentSkill runtimes" in text
+    assert "returns package `README.md`" in text
 
 
 def test_help_unknown_topic_uses_shared_template() -> None:

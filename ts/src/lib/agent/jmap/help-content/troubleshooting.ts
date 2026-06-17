@@ -61,5 +61,6 @@ attachments.
 
 The version you get from \`npx -y @atomicmail/mcp\` or
 \`npx --package=@atomicmail/agent-skill …\` may lag behind other published docs.
-If something disagrees, trust **your installed package**: run \`help\` (or
-\`help --topic readme\`) and the bundled presets that ship with that version.`;
+If something disagrees, trust **your installed package**: run \`help\` and use
+the bundled presets that ship with that version. In MCP runtimes, \`help\` with
+topic \`readme\` returns package README.md.`;

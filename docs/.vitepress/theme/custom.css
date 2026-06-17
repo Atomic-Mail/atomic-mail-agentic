@@ -10,9 +10,9 @@
 
 :root {
     --vp-c-black: #0A0A0A;
-    --vp-c-brand-1: #E85D2C;
-    --vp-c-brand-2: #E85D2C;
-    --vp-c-brand-3: #E85D2C;
+    --vp-c-brand-1: #5BE481;
+    --vp-c-brand-2: #5BE481;
+    --vp-c-brand-3: #5BE481;
 
     --vp-home-hero-name-color: var(--vp-c-brand-1);
 

@@ -14,8 +14,11 @@ Deno.test("help topics load from shared manifest order", () => {
   assertEquals(HELP_TOPIC_LIST, manifest.help.topic_order);
 });
 
-Deno.test("getHelp readme uses shared stub", () => {
-  assertEquals(getHelp("readme"), readSharedText("help/readme_stub.md").trim());
+Deno.test("getHelp readme uses shared stub for skill runtime", async () => {
+  assertEquals(
+    await getHelp("readme", "skill"),
+    readSharedText("help/readme_stub.md").trim(),
+  );
 });
 
 Deno.test("readOpsFile resolves bundled preset from shared assets", async () => {

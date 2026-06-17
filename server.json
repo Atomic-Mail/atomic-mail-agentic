@@ -5,7 +5,7 @@
   "description": "Programmable email inbox for AI agents — JMAP, PoW auth, stdio MCP server.",
   "version": "0.3.4",
   "repository": {
-    "url": "https://github.com/Atomic-Mail/agentic-clients",
+    "url": "https://github.com/Atomic-Mail/atomic-mail-agentic",
     "source": "github"
   },
   "websiteUrl": "https://atomicmail.ai",

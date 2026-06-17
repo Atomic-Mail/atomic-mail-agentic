@@ -25,7 +25,7 @@ export function registerHelpTool(server: McpServer): void {
           .string()
           .optional()
           .describe(
-            "Topic name; omit for overview. Use readme for the built-in readme stub.",
+            "Topic name; omit for overview. Use readme for package README.md.",
           ),
       }),
       annotations: {
@@ -34,9 +34,9 @@ export function registerHelpTool(server: McpServer): void {
         idempotentHint: true,
       },
     },
-    ({ topic }) => {
+    async ({ topic }) => {
       try {
-        return mcpText(getHelp(topic));
+        return mcpText(await getHelp(topic, "mcp"));
       } catch (error) {
         return mcpError(
           error instanceof Error ? error.message : String(error),

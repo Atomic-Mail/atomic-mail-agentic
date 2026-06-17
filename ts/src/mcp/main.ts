@@ -32,7 +32,7 @@ WORKFLOW
      $ATTACHMENT_0_BLOB_ID, … in the same standard JMAP batch (see send_mail_blob_attachment.json).
   4. Call help early and often — even when you think you know JMAP. Topics:
      presets (before non-trivial jmap_request), cron (after register),
-     jmap_cheatsheet, troubleshooting, …; topic readme returns a built-in stub.
+     jmap_cheatsheet, troubleshooting, …; topic readme returns this package README.
      Prefer help over guessing; it matches this package version.
 
 ${postRegisterCronReminder}

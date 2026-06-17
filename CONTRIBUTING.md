@@ -122,6 +122,9 @@ Build output: `dist/skill/atomicmail/` (gitignored). Published copies land in
 bootstrap once, then updated by CI).
 
 CI publish flow syncs the unified skill tap on release and manual dispatch.
+The release workflow now publishes ClawHub from the same unified artifact
+(`dist/skill/atomicmail/`) that is synced to
+`integrations/skill/atomicmail/`.
 
 Dry-run locally (build + verify only — same as CI `dry_run: true`):
 

@@ -86,8 +86,17 @@ jobs:
       - name: Build ClawHub and Hermes skill packages
         working-directory: ts
         run: |
+          deno run -A build_skill.ts "${{ steps.version.outputs.version }}"
           deno run -A build_clawhub_skill.ts "${{ steps.version.outputs.version }}"
           deno run -A build_hermes_skill.ts "${{ steps.version.outputs.version }}"
+
+      - name: Upload unified skill artifact
+        if: github.event_name == 'release'
+        uses: actions/upload-artifact@v4
+        with:
+          name: unified-skill-atomicmail
+          path: dist/skill/atomicmail
+          if-no-files-found: error
 
       - name: Upload ClawHub skill artifact
         if: github.event_name == 'release'
@@ -127,12 +136,13 @@ jobs:
         working-directory: ts
         run: |
           deno run -A build_skill_npm.ts "${{ needs.build.outputs.version }}"
+          deno run -A build_skill.ts "${{ needs.build.outputs.version }}"
           deno run -A build_clawhub_skill.ts "${{ needs.build.outputs.version }}"
           deno run -A build_hermes_skill.ts "${{ needs.build.outputs.version }}"
 
       - name: Verify skill layout and launchers
         working-directory: ts
-        run: deno test --allow-read --allow-env --allow-write --allow-run clawhub_skill_build.test.ts hermes_skill_build.test.ts
+        run: deno test --allow-read --allow-env --allow-write --allow-run skill_build.test.ts clawhub_skill_build.test.ts hermes_skill_build.test.ts
 
   publish_clawhub:
     needs: [build, verify]
@@ -153,7 +163,7 @@ jobs:
       - name: Download ClawHub skill artifact
         uses: actions/download-artifact@v4
         with:
-          name: clawhub-skill-atomicmail
+          name: unified-skill-atomicmail
           path: skill
 
       - name: Setup Node.js
@@ -218,7 +228,7 @@ jobs:
       - name: Download Hermes skill artifact
         uses: actions/download-artifact@v4
         with:
-          name: hermes-skill-atomicmail
+          name: unified-skill-atomicmail
           path: skill
 
       - name: Sync skill to integrations/skill/atomicmail

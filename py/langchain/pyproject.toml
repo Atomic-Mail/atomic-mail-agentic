@@ -3,9 +3,10 @@ requires = ["setuptools>=69", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "atomicmail-shared"
+name = "langchain-atomicmail"
 version = "0.1.0"
-description = "Shared Atomic Mail Python foundation library"
+description = "LangChain tools for Atomic Mail register/help/JMAP operations"
+readme = "README.md"
 requires-python = ">=3.9"
 license = {text = "MIT"}
 authors = [
@@ -14,11 +15,12 @@ authors = [
 keywords = [
   "atomic-mail",
   "atomicmail",
+  "langchain",
+  "toolkit",
   "agent",
   "ai",
   "jmap",
   "email",
-  "mcp",
   "proof-of-work",
 ]
 classifiers = [
@@ -33,16 +35,18 @@ classifiers = [
   "Topic :: Communications :: Email",
   "Topic :: Software Development :: Libraries :: Python Modules",
 ]
-dependencies = []
+dependencies = [
+  "atomicmail-shared>=0.1.0",
+  "langchain-core>=0.3.0,<2",
+]
 
 [project.urls]
 Homepage = "https://atomicmail.ai"
 Source = "https://github.com/Atomic-Mail/atomic-mail-agentic"
-Documentation = "https://atomic-mail.github.io/atomic-mail-agentic/"
+Documentation = "https://atomic-mail.github.io/atomic-mail-agentic/langchain"
 
-[project.scripts]
-atomicmail = "atomicmail.cli:console_main"
-atomicmail-mcp = "atomicmail.mcp_server:console_main"
+[project.optional-dependencies]
+dev = ["pytest"]
 
 [tool.setuptools]
 
@@ -51,9 +55,3 @@ atomicmail-mcp = "atomicmail.mcp_server:console_main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
-
-[tool.setuptools.package-data]
-atomicmail = ["vendor/shared/**/*"]
-
-[tool.pytest.ini_options]
-testpaths = ["tests"]

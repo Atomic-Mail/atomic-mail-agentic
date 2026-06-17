@@ -27,6 +27,10 @@ features:
     details: Powerful agent skill for CLI-enabled agents
     link: /skill-install
     linkText: Open AgentSkill docs
+  - title: LangChain Toolkit
+    details: LangChain tools and toolkit class for Atomic Mail
+    link: /langchain
+    linkText: Open LangChain docs
   - title: Raw JMAP API
     details: Use any programming language or client library
     link: /jmap

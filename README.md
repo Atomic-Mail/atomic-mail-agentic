@@ -126,6 +126,7 @@ If the agent gets stuck, the integration is built to recover on its own: `help` 
 | First-time setup    | [docs/getting-started.md](docs/getting-started.md)                    |
 | MCP hosts           | [docs/mcp.md](docs/mcp.md)                                            |
 | Shell / cron agents | [docs/skill-install.md](docs/skill-install.md)                        |
+| LangChain agents    | [docs/langchain.md](docs/langchain.md)                                |
 | Agent runbook       | [docs/SKILL.md](docs/SKILL.md)                                        |
 | Raw auth + JMAP     | [docs/rest-auth.md](docs/rest-auth.md) · [docs/jmap.md](docs/jmap.md) |
 | End-to-end examples | [docs/examples.md](docs/examples.md)                                  |
@@ -157,6 +158,7 @@ npm run docs:dev
 ├── ts/
 │   ├── src/mcp/        # MCP entrypoint + MCP tools
 │   ├── src/skill/      # AgentSkill CLI entrypoint
+│   ├── src/langchain/  # LangChain toolkit and tools
 │   └── src/lib/agent/  # shared auth, session, JMAP, presets, help-content
 ├── py/                 # Python client parity layer and tests
 ├── integrations/dify/   # Dify plugin integration and packaging docs

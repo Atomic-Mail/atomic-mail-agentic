@@ -31,6 +31,9 @@ integrations_dist/
 *.log
 **/*.log
 
+# Generated Python vendor assets (CI release bundle)
+py/src/atomicmail/vendor/
+
 # Python cache/artifacts
 __pycache__/
 **/__pycache__/

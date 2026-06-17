@@ -22,7 +22,7 @@ Agent host → MCP or CLI → ts/src/lib → auth.atomicmail.ai → api.atomicma
 | `shared/` | Cross-language source of truth: presets, help topics, errors, consts |
 | `docs/` | VitePress user docs |
 | `py/` | Python library and tests |
-| `integrations/` | Channel wrappers (e.g. OpenClaw) |
+| `integrations/` | Published integration taps (for example `integrations/skill/atomicmail`) |
 
 **Edit cross-cutting content in `shared/` first**—presets, help topics, error keys, constants. npm builds bundle `shared/` into published packages. Do not edit generated `*_npm/` dirs (gitignored).
 
@@ -57,6 +57,7 @@ cd py && pytest
 - CLI → `ts/src/skill/`
 - Presets, help, errors → `shared/` (not duplicated TS/Python strings)
 - User-facing docs → `docs/` when behavior changes
+- In-repo skill tap output → `integrations/skill/atomicmail/` (CI-synced artifact; do not hand-edit)
 
 TypeScript style: 2-space indent, 80-column width (`ts/deno.json`).
 
@@ -76,6 +77,7 @@ TypeScript style: 2-space indent, 80-column width (`ts/deno.json`).
 
 - Canonical presets live in `shared/presets/`; legacy copies under `ts/src/lib/agent/jmap/presets/` are fallbacks only.
 - Help loads from `shared/help/topics/` at runtime; TS embedded fallbacks in `help-content/*.ts` can drift—prefer editing shared topics.
+- Release skill publishing uses unified `dist/skill/atomicmail/` output and then syncs `integrations/skill/atomicmail/` from that artifact.
 - Error messages: add keys to `shared/messages/errors.json`.
 - PoW salt uses UTF-8 bytes of the hex string, not `bytes.fromhex()`.
 - Prefer `help` topics over guessing JMAP details; runtime help may be more current than static docs.

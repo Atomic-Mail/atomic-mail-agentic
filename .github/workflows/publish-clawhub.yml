@@ -1,8 +1,9 @@
 name: Publish ClawHub package
 
+# Legacy OpenClaw wrapper publish path. Release skill publishing now runs via
+# publish-skills.yml from integrations/skill/atomicmail.
+
 on:
-  release:
-    types: [published]
   workflow_dispatch:
     inputs:
       version:

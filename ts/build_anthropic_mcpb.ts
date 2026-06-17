@@ -25,7 +25,7 @@ const DEFAULT_AUTHOR_URL = "https://atomicmail.ai";
 const DEFAULT_LICENSE = "MIT";
 const DEFAULT_REPOSITORY = {
   type: "git",
-  url: "git+https://github.com/Atomic-Mail/agentic-clients.git",
+  url: "git+https://github.com/Atomic-Mail/atomic-mail-agentic.git",
 };
 const MANIFEST_TEMPLATE_PATH = "./mcpb_anthropic_manifest.template.json";
 

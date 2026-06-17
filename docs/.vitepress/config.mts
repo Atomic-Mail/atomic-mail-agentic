@@ -32,13 +32,13 @@ export default defineConfig({
       {
         text: "MCP",
         items: [
-          { text: "@atomicmail/mcp", link: "/mcp" },
+          { text: "@atomicmail/mcp-gh-pages", link: "/mcp" },
         ],
       },
       {
         text: "AgentSkill",
         items: [
-          { text: "@atomicmail/agent-skill", link: "/skill-install" },
+          { text: "@atomicmail/agent-skill-gh-pages", link: "/skill-install" },
           { text: "Skill reference", link: "/SKILL" },
         ],
       },
@@ -55,7 +55,10 @@ export default defineConfig({
 
     socialLinks: [
       { icon: "x", link: "https://x.com/atomic_mail" },
-      { icon: "github", link: "https://github.com/atomicmail/agentic-clients" },
+      {
+        icon: "github",
+        link: "https://github.com/Atomic-Mail/atomic-mail-agentic",
+      },
     ],
   },
 });

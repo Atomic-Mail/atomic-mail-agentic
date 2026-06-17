@@ -2,14 +2,14 @@
 
 Thank you for your interest in contributing. Issues and pull requests are
 welcome at
-[github.com/Atomic-Mail/agentic-clients](https://github.com/Atomic-Mail/agentic-clients).
+[github.com/Atomic-Mail/atomic-mail-agentic](https://github.com/Atomic-Mail/atomic-mail-agentic).
 
 ## What to contribute
 
 - Bug fixes in the MCP server, AgentSkill CLI, or shared library under
   `ts/src/lib/`
-- Documentation improvements in `docs/` or embedded `help` content under
-  `ts/src/lib/agent/jmap/help-content/`
+- Documentation improvements in `docs/` or shared `help` content under
+  `shared/help/topics/`
 - JMAP presets, examples, and clearer error messages for agents
 - Tests that lock in behavior you are changing or adding
 
@@ -40,8 +40,8 @@ Then open a PR targeting **`develop`**, not `main`.
   checks)
 
 ```bash
-git clone https://github.com/Atomic-Mail/agentic-clients.git
-cd agentic-clients
+git clone https://github.com/Atomic-Mail/atomic-mail-agentic.git
+cd atomic-mail-agentic
 ```
 
 Source code lives in `ts/`. Documentation site source is in `docs/` (VitePress).
@@ -84,8 +84,8 @@ cd ts && deno test --allow-read --allow-env --allow-write
   CLI in `ts/src/skill/`.
 - User-facing docs: update `docs/` when behavior changes; npm READMEs are
   generated from `docs/mcp.md` and `docs/skill-install.md` at publish time.
-- Embedded agent docs: update `help` topics under
-  `ts/src/lib/agent/jmap/help-content/` when CLI/MCP behavior changes.
+- Embedded agent docs: update `shared/help/topics/` first; keep TS fallback
+  help text under `ts/src/lib/agent/jmap/help-content/` in sync when needed.
 
 ## Building npm packages (maintainers)
 

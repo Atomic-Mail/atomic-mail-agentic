@@ -136,8 +136,8 @@ If repo docs and installed behavior ever drift, trust `help` from the same insta
 **Prerequisites:** Node.js 20+, Deno 2.7+.
 
 ```bash
-git clone https://github.com/Atomic-Mail/agentic-clients.git
-cd agentic-clients/ts
+git clone https://github.com/Atomic-Mail/atomic-mail-agentic.git
+cd atomic-mail-agentic/ts
 
 deno test --allow-read --allow-env --allow-write
 ```
@@ -152,7 +152,7 @@ npm run docs:dev
 ## 🗂️ File Structure
 
 ```text
-agentic-clients/
+/
 ├── ts/
 │   ├── src/mcp/        # MCP entrypoint + MCP tools
 │   ├── src/skill/      # AgentSkill CLI entrypoint

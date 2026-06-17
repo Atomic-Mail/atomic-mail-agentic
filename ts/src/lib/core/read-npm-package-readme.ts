@@ -8,7 +8,21 @@ const MAX_DEPTH = 16;
 
 const ATOMICMAIL_NPM_NAMES = new Set([
   "@atomicmail/mcp",
+  "@atomicmail/mcp-github",
+  "@atomicmail/mcp-gh-pages",
+  "@atomicmail/mcp-modelcontextprotocol",
+  "@atomicmail/mcp-clawhub",
+  "@atomic-mail/mcp",
+  "@atomic-mail/mcp-github",
+  "@atomic-mail/mcp-gh-pages",
+  "@atomic-mail/mcp-modelcontextprotocol",
+  "@atomic-mail/mcp-clawhub",
   "@atomicmail/agent-skill",
+  "@atomicmail/agent-skill-github",
+  "@atomicmail/agent-skill-gh-pages",
+  "@atomic-mail/agent-skill",
+  "@atomic-mail/agent-skill-github",
+  "@atomic-mail/agent-skill-gh-pages",
 ]);
 
 function isEnoent(err: unknown): boolean {
@@ -66,6 +80,6 @@ export async function readNpmPackageReadme(): Promise<string> {
 
   throw new Error(
     "Could not find Atomic Mail package README.md — use a published npm install " +
-      "(@atomicmail/mcp or @atomicmail/agent-skill) for --topic readme.",
+      "(@atomicmail/mcp* channel package) for --topic readme.",
   );
 }

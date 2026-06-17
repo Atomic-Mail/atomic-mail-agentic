@@ -50,7 +50,7 @@ Add to your MCP host configuration:
    "mcpServers": {
       "atomicmail": {
          "command": "npx",
-         "args": ["-y", "@atomicmail/mcp"]
+         "args": ["-y", "@atomicmail/mcp-gh-pages"]
       }
    }
 }
@@ -58,27 +58,15 @@ Add to your MCP host configuration:
 
 Then call tools in this order: `register` -> `jmap_request` -> `help`.
 
-For ClawHub, use the MCP-only channel package:
-
-```json
-{
-  "mcpServers": {
-    "atomicmail": {
-      "command": "npx",
-      "args": ["-y", "@atomicmail/mcp-clawhub"]
-    }
-  }
-}
-```
 
 Continue with full docs: [`MCP in-depth`](/mcp).
 
 ## Install for shell-capable agents (AgentSkill)
 
 ```bash
-npx --package=@atomicmail/agent-skill atomicmail register --username "myagent"
-npx --package=@atomicmail/agent-skill atomicmail jmap_request --ops-file list_inbox.json
-npx --package=@atomicmail/agent-skill atomicmail help
+npx --package=@atomicmail/agent-skill-gh-pages atomicmail register --username "myagent"
+npx --package=@atomicmail/agent-skill-gh-pages atomicmail jmap_request --ops-file list_inbox.json
+npx --package=@atomicmail/agent-skill-gh-pages atomicmail help
 ```
 
 Continue with full docs: [`AgentSkill in-depth`](/skill-install) and

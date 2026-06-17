@@ -13,8 +13,9 @@ rotation. This skill ships a single CLI entrypoint with three commands:
 
 - Register a new inbox or log in with an existing API key.
 - Send JMAP batches (inline JSON or preset files).
-- Read built-in documentation (JMAP cheatsheet, presets, troubleshooting) or the
-  package README (`atomicmail help --topic readme`).
+- Read built-in documentation (JMAP cheatsheet, presets, troubleshooting).
+  In this skill runtime, `atomicmail help --topic readme` intentionally returns
+  a short stub.
 
 **Call `atomicmail help` early and often** — before guessing
 placeholders, `using` URNs, or cron setup. Start with `help --topic overview`,
@@ -25,9 +26,9 @@ package.
 ## Commands
 
 ```bash
-npx --package=@atomicmail/agent-skill atomicmail register --username "myagent"
+npx --package=@atomicmail/agent-skill-gh-pages atomicmail register --username "myagent"
 
-npx --package=@atomicmail/agent-skill atomicmail jmap_request --ops-file list_inbox.json
+npx --package=@atomicmail/agent-skill-gh-pages atomicmail jmap_request --ops-file list_inbox.json
 ```
 
 Run **`atomicmail --help`** or **`atomicmail <command> --help`** for flags.
@@ -43,7 +44,7 @@ Run **`atomicmail --help`** or **`atomicmail <command> --help`** for flags.
 ### 1. Register (new account)
 
 ```bash
-npx --package=@atomicmail/agent-skill atomicmail register \
+npx --package=@atomicmail/agent-skill-gh-pages atomicmail register \
   --username "alice"
 ```
 
@@ -68,14 +69,14 @@ credentials in the **same** directory (after backing it up).
 ### 2. Register (existing API key, in case losing the credentials file)
 
 ```bash
-npx --package=@atomicmail/agent-skill atomicmail register \
+npx --package=@atomicmail/agent-skill-gh-pages atomicmail register \
   --api-key "..."
 ```
 
 ### 3. JMAP request
 
 ```bash
-npx --package=@atomicmail/agent-skill atomicmail jmap_request \
+npx --package=@atomicmail/agent-skill-gh-pages atomicmail jmap_request \
   --ops '[["Mailbox/get", {"accountId": "$ACCOUNT_ID"}, "m0"]]'
 ```
 
@@ -87,14 +88,14 @@ applies to `--ops` and `--ops-file`).
 Preset file:
 
 ```bash
-npx --package=@atomicmail/agent-skill atomicmail jmap_request \
+npx --package=@atomicmail/agent-skill-gh-pages atomicmail jmap_request \
   --ops-file list_inbox.json
 ```
 
 With custom placeholders:
 
 ```bash
-npx --package=@atomicmail/agent-skill atomicmail jmap_request \
+npx --package=@atomicmail/agent-skill-gh-pages atomicmail jmap_request \
   --ops-file send_mail.json \
   --vars '{"TO":"alice@example.com","SUBJECT":"Hello","BODY":"Hi there"}'
 ```
@@ -177,8 +178,8 @@ For operator OS-scheduling patterns on terminal hosts, see `help --topic cron`.
 ### 4. Help
 
 ```bash
-npx --package=@atomicmail/agent-skill atomicmail help
-npx --package=@atomicmail/agent-skill atomicmail help --topic jmap_cheatsheet
+npx --package=@atomicmail/agent-skill-gh-pages atomicmail help
+npx --package=@atomicmail/agent-skill-gh-pages atomicmail help --topic jmap_cheatsheet
 ```
 
 ## Security
@@ -194,7 +195,7 @@ with repeatable **`--attachment PATH`** (RFC 8620 upload — same flow as MCP
 **`atomicmail help --topic jmap_cheatsheet`**.
 
 ```bash
-npx --package=@atomicmail/agent-skill atomicmail jmap_request \
+npx --package=@atomicmail/agent-skill-gh-pages atomicmail jmap_request \
   --ops-file send_mail_attachment.json \
   --vars '{"TO":"you@example.com","SUBJECT":"Hi","BODY":"See file","ATTACHMENT_BASE64":"SGVsbG8=","ATTACHMENT_TYPE":"text/plain","ATTACHMENT_NAME":"note.txt"}'
 ```

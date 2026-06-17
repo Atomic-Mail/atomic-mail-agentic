@@ -4,10 +4,10 @@ export const ATOMICMAIL_NPM_PACKAGE_META = {
   homepage: "https://atomicmail.ai",
   repository: {
     type: "git" as const,
-    url: "git+https://github.com/Atomic-Mail/agentic-clients.git",
+    url: "git+https://github.com/Atomic-Mail/atomic-mail-agentic.git",
   },
   bugs: {
-    url: "https://github.com/Atomic-Mail/agentic-clients/issues",
+    url: "https://github.com/Atomic-Mail/atomic-mail-agentic/issues",
   },
   publishConfig: {
     access: "public" as const,

@@ -2,13 +2,13 @@
   "name": "agentic-docs",
   "version": "1.0.0",
   "description": "VitePress documentation for Atomic Mail Agentic ",
-  "homepage": "https://github.com/Atomic-Mail/agentic-clients#readme",
+  "homepage": "https://github.com/Atomic-Mail/atomic-mail-agentic#readme",
   "bugs": {
-    "url": "https://github.com/Atomic-Mail/agentic-clients/issues"
+    "url": "https://github.com/Atomic-Mail/atomic-mail-agentic/issues"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Atomic-Mail/agentic-clients.git"
+    "url": "git+https://github.com/Atomic-Mail/atomic-mail-agentic.git"
   },
   "license": "MIT",
   "author": "",

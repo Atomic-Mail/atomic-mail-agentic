@@ -1,12 +1,12 @@
 ---
-description: Install and run the @atomicmail/agent-skill CLI (register, jmap_request, help) for shell-capable agents and automation.
+description: Install and run the @atomicmail/agent-skill-gh-pages CLI (register, jmap_request, help) for shell-capable agents and automation.
 ---
 
-# @atomicmail/agent-skill
+# @atomicmail/agent-skill-gh-pages
 
 Atomic Mail AgentSkill CLI for shell-capable AI agents. It exposes three
 commands: `register`, `jmap_request`, and `help`. **`jmap_request`** uses the
-same shared library as **`@atomicmail/mcp`**.
+same shared library as **`@atomicmail/mcp-gh-pages`**.
 
 ## For AI agents — run `atomicmail help`
 
@@ -26,16 +26,16 @@ other repos — **trust `help` from the package you are running**.
 ## Install / run
 
 ```bash
-npx --package=@atomicmail/agent-skill atomicmail --help
+npx --package=@atomicmail/agent-skill-gh-pages atomicmail --help
 ```
 
 ## Quick start
 
 ```bash
-npx --package=@atomicmail/agent-skill atomicmail register \
+npx --package=@atomicmail/agent-skill-gh-pages atomicmail register \
   --username "myagent"
 
-npx --package=@atomicmail/agent-skill atomicmail jmap_request \
+npx --package=@atomicmail/agent-skill-gh-pages atomicmail jmap_request \
   --ops '[["Mailbox/get", {"accountId": "$ACCOUNT_ID"}, "m0"]]'
 ```
 
@@ -69,10 +69,10 @@ skills toolset and Node.js 20+ (for the bundled launcher).
 
 ### Install
 
-In-repo tap (updated on each GitHub release):
+Unified in-repo tap (updated on each GitHub release):
 
 ```bash
-hermes skills install Atomic-Mail/atomic-mail-agentic/integrations/hermes/atomicmail
+hermes skills install Atomic-Mail/atomic-mail-agentic/integrations/skill/atomicmail
 ```
 
 ### Credentials
@@ -129,8 +129,9 @@ See `atomicmail help --topic cron` for the full prompt and delivery options.
   https://hermes-agent.nousresearch.com/docs/developer-guide/creating-skills
 - Hermes cron (manual fallback):
   https://hermes-agent.nousresearch.com/docs/user-guide/features/cron
-- Maintainer publish workflow: [CONTRIBUTING.md](../CONTRIBUTING.md) (Hermes skill
-  section)
+- Maintainer publish workflow:
+  [CONTRIBUTING.md](https://github.com/Atomic-Mail/atomic-mail-agentic/blob/develop/CONTRIBUTING.md)
+  (unified skill section)
 
 ## `jmap_request`, presets, and placeholders
 
@@ -139,7 +140,7 @@ methodCalls array or full `{ "using", "methodCalls" }`). Pass custom
 `$PLACEHOLDERS` via `--vars '{"PLACEHOLDER":"value"}'` (keys without `$`).
 
 ```bash
-npx --package=@atomicmail/agent-skill atomicmail jmap_request \
+npx --package=@atomicmail/agent-skill-gh-pages atomicmail jmap_request \
   --ops-file send_mail.json \
   --vars '{"TO":"alice@example.com","SUBJECT":"Hello","BODY":"Hi there"}'
 ```
@@ -148,7 +149,7 @@ npx --package=@atomicmail/agent-skill atomicmail jmap_request \
 `~/.atomicmail`), then bundled presets.
 
 **Details** (placeholder grammar, built-ins, shadowing, bundled preset list,
-attachments): see [@atomicmail/mcp](./mcp.md) and the embedded **`help`** topic
+attachments): see [@atomicmail/mcp-gh-pages](./mcp.md) and the embedded **`help`** topic
 **`presets`** (`atomicmail help --topic presets`).
 
 ## Shared state

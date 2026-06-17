@@ -54,6 +54,12 @@ jobs:
         working-directory: ts
         run: deno run -A build_all_npm.ts "${{ steps.version.outputs.version }}"
 
+      - name: Verify gh-pages channel artifacts
+        working-directory: ts
+        run: |
+          test -d mcp_npm_gh-pages
+          test -d skill_npm_gh-pages
+
       - name: Build anthropic MCPB bundle
         working-directory: ts
         run: deno run -A build_anthropic_mcpb.ts "${{ steps.version.outputs.version }}"

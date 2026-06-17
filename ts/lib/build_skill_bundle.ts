@@ -3,7 +3,7 @@ import { emptyDir, ensureDir } from "jsr:@std/fs@1";
 export const DEFAULT_SKILL_NPM_DIR = "./skill_npm";
 
 export const NPX_SKILL_INVOCATION =
-  "npx --package=@atomicmail/agent-skill atomicmail";
+  "npx --package=@atomicmail/agent-skill-gh-pages atomicmail";
 
 export const LAUNCHER_SCRIPT = `#!/usr/bin/env bash
 set -euo pipefail

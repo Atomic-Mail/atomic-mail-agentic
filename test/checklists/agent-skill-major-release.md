@@ -11,6 +11,31 @@ CLI / AgentSkill entrypoint `atomicmail`. Derived from `docs/SKILL.md`, `docs/sk
 - [ ] Pick a random suffix (for example `RAND="$RANDOM"` or `date +%s`) and register username **`skill-qa-<random-num>`** → mailbox **`skill-qa-<random-num>@atomicmail.ai`**.
 - [ ] For all outbound mail in this run, set **`SUBJECT`** in `--vars` to **`SKILL QA TEST - <case name>`** (replace `<case name>` with the checklist step, e.g. `simple send`, `attachment path A`).
 
+## 0. Unified build + publish-channel sanity (PR5)
+
+Run this section from a checkout that includes the unified skill build path
+(`ts/build_skill.ts`). If PR3/PR4 changes are still landing, keep this section
+as the release gate and note any branch-specific deviations in the run log.
+
+- [ ] From repo root: `bash test/checklists/verify_unified_skill_release.sh <version>` (or omit `<version>` to use `ts/src/mcp/version.ts`).
+- [ ] Confirm outputs are created from one npm overlay build:
+  - `dist/skill/atomicmail/` (bundled skill)
+  - `integrations_dist/clawhub/atomicmail/` (ClawHub publish artifact)
+  - `integrations_dist/hermes/atomicmail/` (Hermes publish/tap artifact)
+- [ ] If your branch already switched to the unified in-repo tap path, also
+      confirm sync target `integrations/skill/atomicmail/` is generated from the
+      same build (document fallback behavior in the run log).
+- [ ] Confirm script output reports matching checksums for shared runtime assets:
+  - `lib/esm/skill/cli.js`
+  - `lib/shared/manifest.json`
+  - `lib/presets/list_inbox.json`
+- [ ] Confirm script output validates SKILL frontmatter expectations:
+  - bundled skill has both `openclaw` and `hermes` metadata
+  - ClawHub skill has `openclaw` metadata + `{baseDir}/scripts/atomicmail`
+  - Hermes skill has `hermes` metadata + `${HERMES_SKILL_DIR}/scripts/atomicmail`
+- [ ] Confirm launcher checks pass (`help --topic overview`) for bundled,
+      ClawHub, and Hermes wrappers.
+
 ## 1. Install the client
 
 - [ ] Run `npx --package=@atomicmail/agent-skill atomicmail --help` (`docs/skill-install.md` / `docs/SKILL.md`) and confirm the binary resolves and prints usage for `register`, `jmap_request`, `help`.

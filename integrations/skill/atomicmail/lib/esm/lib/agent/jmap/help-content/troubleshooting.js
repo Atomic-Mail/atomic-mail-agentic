@@ -1,5 +1,4 @@
 // Help topic: troubleshooting (MCP help / AgentSkill help).
-
 export const helpTopicTroubleshooting = `\
 # Troubleshooting
 

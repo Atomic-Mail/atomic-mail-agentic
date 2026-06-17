@@ -1,5 +1,6 @@
 [
   "github",
+  "gh-pages",
   "modelcontextprotocol",
   {
     "name": "anthropic",

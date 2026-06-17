@@ -1,8 +1,8 @@
 ---
-description: Install and configure the @atomicmail/mcp stdio server, tools (register, jmap_request, help), and host-specific notes for chat-based agents.
+description: Install and configure the @atomicmail/mcp-gh-pages stdio server, tools (register, jmap_request, help), and host-specific notes for chat-based agents.
 ---
 
-# @atomicmail/mcp
+# @atomicmail/mcp-gh-pages
 
 Atomic Mail MCP server — a local stdio Model Context Protocol server that gives
 an AI agent a programmable email inbox over JMAP, with automatic Proof-of-Work
@@ -33,7 +33,7 @@ preset shadowing. If anything disagrees with docs you read elsewhere, **trust
   "mcpServers": {
     "atomicmail": {
       "command": "npx",
-      "args": ["-y", "@atomicmail/mcp"]
+      "args": ["-y", "@atomicmail/mcp-gh-pages"]
     }
   }
 }
@@ -138,7 +138,7 @@ first, then bundled presets in the package.
 
 **Preset shadowing:** a file such as `list_inbox.json` in the credential
 directory replaces the bundled preset with the same name. After upgrading
-`@atomicmail/mcp`, errors about missing placeholders often mean an **older**
+`@atomicmail/mcp-gh-pages`, errors about missing placeholders often mean an **older**
 preset copy on disk — delete or update it, or pass an absolute `ops_file` path.
 
 **Full** placeholder grammar, built-ins (`$INBOX` vs `$INBOX_MAILBOX_ID`,
@@ -203,7 +203,7 @@ Full details: MCP `help` topic **`multi_account`**.
   "mcpServers": {
     "atomicmail": {
       "command": "npx",
-      "args": ["-y", "@atomicmail/mcp"],
+      "args": ["-y", "@atomicmail/mcp-gh-pages"],
       "env": {
         "ATOMIC_MAIL_AUTH_URL": "https://custom-auth.example",
         "ATOMIC_MAIL_API_URL": "https://custom-api.example",

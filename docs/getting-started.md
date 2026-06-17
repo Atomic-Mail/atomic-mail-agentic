@@ -76,5 +76,6 @@ Continue with full docs: [`AgentSkill in-depth`](/skill-install) and
 
 - [`MCP in-depth`](/mcp)
 - [`AgentSkill in-depth`](/skill-install)
+- [`Dify plugin guide`](/dify)
 - [`REST authentication`](/rest-auth)
 - [`Raw JMAP requests`](/jmap)

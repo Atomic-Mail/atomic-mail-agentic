@@ -3,10 +3,9 @@ import llmstxt from "vitepress-plugin-llms";
 import { copyOrDownloadAsMarkdownButtons } from "vitepress-plugin-llms";
 
 const repositoryName = process.env.GITHUB_REPOSITORY?.split("/")[1];
-const pagesBase =
-  process.env.GITHUB_ACTIONS && repositoryName
-    ? `/${repositoryName}/`
-    : "/";
+const pagesBase = process.env.GITHUB_ACTIONS && repositoryName
+  ? `/${repositoryName}/`
+  : "/";
 
 // https://vitepress.dev/reference/site-config
 export default defineConfig({
@@ -34,6 +33,7 @@ export default defineConfig({
         text: "Getting Started",
         items: [
           { text: "Overview and ideal flow", link: "/getting-started" },
+          { text: "Dify plugin guide", link: "/dify" },
         ],
       },
       {

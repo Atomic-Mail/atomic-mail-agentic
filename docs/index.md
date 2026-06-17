@@ -4,9 +4,9 @@ layout: home
 description: Entry point for Atomic Mail agentic email—JMAP ESP, MCP, AgentSkill, and REST docs.
 
 hero:
-  name: "Atomic Mail"
+  name: "Atomic Mail Agentic"
   text: "API, MCP and AgentSkill Documentation"
-  tagline: Not AI for your email, but the email for your AI
+  tagline: Give your agent a real inbox
   actions:
     - theme: brand
       text: Getting Started
@@ -21,8 +21,18 @@ hero:
 features:
   - title: MCP Server
     details: Specialized stdio MCP server for chat-based agents
+    link: /mcp
+    linkText: Open MCP docs
   - title: AgentSkill
     details: Powerful agent skill for CLI-enabled agents
+    link: /skill-install
+    linkText: Open AgentSkill docs
   - title: Raw JMAP API
     details: Use any programming language or client library
+    link: /jmap
+    linkText: Open JMAP docs
+  - title: Dify Plugin
+    details: Install Atomic Mail in Dify marketplace and build workflows
+    link: /dify
+    linkText: Open Dify guide
 ---

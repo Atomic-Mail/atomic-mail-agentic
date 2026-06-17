@@ -2,15 +2,13 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-
 from langchain_core.tools import BaseTool
+from langchain_core.tools.base import BaseToolkit
 
 from .tools import get_atomicmail_tools
 
 
-@dataclass
-class AtomicMailToolkit:
+class AtomicMailToolkit(BaseToolkit):
     """Factory-style toolkit exposing Atomic Mail tools."""
 
     def get_tools(self) -> list[BaseTool]:

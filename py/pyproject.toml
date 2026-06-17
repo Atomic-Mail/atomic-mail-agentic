@@ -7,7 +7,38 @@ name = "atomicmail-shared"
 version = "0.1.0"
 description = "Shared Atomic Mail Python foundation library"
 requires-python = ">=3.9"
+license = {text = "MIT"}
+authors = [
+  {name = "Atomic Mail"},
+]
+keywords = [
+  "atomic-mail",
+  "atomicmail",
+  "agent",
+  "ai",
+  "jmap",
+  "email",
+  "mcp",
+  "proof-of-work",
+]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Communications :: Email",
+  "Topic :: Software Development :: Libraries :: Python Modules",
+]
 dependencies = []
+
+[project.urls]
+Homepage = "https://atomicmail.ai"
+Source = "https://github.com/Atomic-Mail/atomic-mail-agentic"
+Documentation = "https://atomic-mail.github.io/atomic-mail-agentic/"
 
 [project.scripts]
 atomicmail = "atomicmail.cli:console_main"
@@ -20,6 +51,9 @@ atomicmail-mcp = "atomicmail.mcp_server:console_main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+atomicmail = ["vendor/shared/**/*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

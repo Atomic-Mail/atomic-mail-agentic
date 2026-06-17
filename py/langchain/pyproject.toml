@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "langchain-atomicmail"
+version = "0.1.0"
+description = "LangChain tools for Atomic Mail register/help/JMAP operations"
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+  "atomicmail-shared>=0.1.0",
+  "langchain-core",
+]
+
+[tool.setuptools]
+
+[tool.setuptools.package-dir]
+"" = "src"
+
+[tool.setuptools.packages.find]
+where = ["src"]

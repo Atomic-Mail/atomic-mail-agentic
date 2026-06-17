@@ -36,7 +36,6 @@ classifiers = [
   "Topic :: Software Development :: Libraries :: Python Modules",
 ]
 dependencies = [
-  "atomicmail-shared>=0.1.0",
   "langchain-core>=0.3.0,<2",
 ]
 
@@ -55,3 +54,6 @@ dev = ["pytest"]
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+atomicmail = ["vendor/shared/**/*"]

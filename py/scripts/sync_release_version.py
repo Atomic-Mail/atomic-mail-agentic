@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Sync release version into Python package pyproject.toml files."""
+"""Sync release version into langchain-atomicmail pyproject.toml."""
 
 from __future__ import annotations
 
@@ -13,9 +13,9 @@ SEMVER_RE = re.compile(
     r"(?:\+([\w.-]+))?$"
 )
 
-ROOT = Path(__file__).resolve().parents[1]
-SHARED_PYPROJECT = ROOT / "pyproject.toml"
-LANGCHAIN_PYPROJECT = ROOT / "langchain" / "pyproject.toml"
+LANGCHAIN_PYPROJECT = (
+    Path(__file__).resolve().parents[1] / "langchain" / "pyproject.toml"
+)
 
 
 def parse_release_version(raw: str) -> str:
@@ -45,20 +45,6 @@ def set_project_version(path: Path, version: str) -> None:
     path.write_text(updated, encoding="utf-8")
 
 
-def set_langchain_shared_dependency(path: Path, version: str) -> None:
-    text = path.read_text(encoding="utf-8")
-    replacement = f'  "atomicmail-shared=={version}",'
-    updated, count = re.subn(
-        r'(?m)^  "atomicmail-shared[^"]*",',
-        replacement,
-        text,
-        count=1,
-    )
-    if count != 1:
-        raise SystemExit(f"Could not update atomicmail-shared dependency in {path}")
-    path.write_text(updated, encoding="utf-8")
-
-
 def main(argv: list[str]) -> int:
     if len(argv) != 2:
         print(
@@ -69,9 +55,7 @@ def main(argv: list[str]) -> int:
         return 1
 
     version = parse_release_version(argv[1])
-    set_project_version(SHARED_PYPROJECT, version)
     set_project_version(LANGCHAIN_PYPROJECT, version)
-    set_langchain_shared_dependency(LANGCHAIN_PYPROJECT, version)
     print(version)
     return 0
 

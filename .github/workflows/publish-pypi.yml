@@ -21,7 +21,11 @@ concurrency:
 jobs:
   publish:
     runs-on: ubuntu-latest
-    environment: pypi
+    # Trusted publishing on PyPI (langchain-atomicmail only):
+    #   Owner: Atomic-Mail
+    #   Repository: atomic-mail-agentic
+    #   Workflow: publish-pypi.yml
+    #   Environment name: (leave blank)
 
     steps:
       - name: Checkout repository
@@ -40,7 +44,7 @@ jobs:
         run: |
           VERSION=$(deno run -A resolve_release_version.ts "$RELEASE_TAG")
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          echo "Publishing Python packages at version: $VERSION"
+          echo "Publishing langchain-atomicmail version: $VERSION"
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -50,25 +54,21 @@ jobs:
       - name: Install build tooling
         run: python -m pip install --upgrade pip build
 
-      - name: Sync release version into pyproject.toml files
+      - name: Sync release version into langchain pyproject.toml
         working-directory: py
         run: python scripts/sync_release_version.py "${{ steps.version.outputs.version }}"
 
-      - name: Bundle shared assets for atomicmail-shared wheel
-        run: bash py/scripts/bundle_shared_assets.sh
-
-      - name: Build atomicmail-shared wheel
-        working-directory: py
-        run: python -m build --outdir dist .
+      - name: Stage atomicmail runtime for langchain-atomicmail wheel
+        run: bash py/scripts/prepare_langchain_release.sh
 
       - name: Build langchain-atomicmail wheel
         working-directory: py/langchain
-        run: python -m build --outdir ../dist .
+        run: python -m build --outdir dist .
 
-      - name: Publish Python packages to PyPI
+      - name: Publish langchain-atomicmail to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
-          packages-dir: py/dist
+          packages-dir: py/langchain/dist
           print-hash: true
           skip-existing: true
           verbose: true

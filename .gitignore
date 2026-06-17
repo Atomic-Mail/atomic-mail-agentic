@@ -33,12 +33,15 @@ integrations_dist/
 
 # Generated Python vendor assets (CI release bundle)
 py/src/atomicmail/vendor/
+py/langchain/src/atomicmail/
 
 # Python cache/artifacts
 __pycache__/
 **/__pycache__/
 *.pyc
 **/*.pyc
+*.egg-info/
+**/*.egg-info/
 .pytest_cache/
 **/.pytest_cache/
 .venv312/

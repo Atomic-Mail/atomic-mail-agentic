@@ -17,6 +17,9 @@ Published package:
 pip install langchain-atomicmail
 ```
 
+The published wheel bundles the Atomic Mail Python runtime and shared presets; no
+separate PyPI package is required.
+
 Local development in this monorepo (install core library first):
 
 ```bash

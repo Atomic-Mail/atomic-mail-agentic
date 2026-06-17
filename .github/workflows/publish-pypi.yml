@@ -21,7 +21,12 @@ concurrency:
 jobs:
   publish:
     runs-on: ubuntu-latest
-    environment: pypi
+    # Trusted publishing on PyPI must match these claims exactly (no GitHub
+    # environment — avoids invalid-publisher when PyPI has no environment set):
+    #   Owner: Atomic-Mail
+    #   Repository: atomic-mail-agentic
+    #   Workflow: publish-pypi.yml
+    # Configure separately for atomicmail-shared and langchain-atomicmail.
 
     steps:
       - name: Checkout repository

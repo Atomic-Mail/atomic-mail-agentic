@@ -17,7 +17,7 @@ type NpmEntryPoint =
     path: string;
   };
 
-export type NpmProduct = "mcp" | "skill" | "langchain";
+export type NpmProduct = "mcp" | "skill" | "langchain" | "core";
 interface ExtraFile {
   path: string;
   targetPath: string;
@@ -132,6 +132,27 @@ const PRODUCT_CONFIG: Record<NpmProduct, ProductConfigEntry> = {
       },
     },
   },
+  core: {
+    baseName: "@atomicmail/agentic-core",
+    entryPoint: {
+      kind: "module",
+      path: "./src/lib/mod.ts",
+    } satisfies NpmEntryPoint,
+    description:
+      "Atomic Mail agentic core — PoW auth, JMAP, presets, and help for integration hosts.",
+    keywords: [
+      "atomic-mail",
+      "atomicmail",
+      "agentic",
+      "core",
+      "jmap",
+      "email",
+      "proof-of-work",
+      "integration",
+    ],
+    readme: { path: "../docs/core.md", targetPath: "README.md" },
+    extraFiles: [],
+  },
 };
 
 const GITHUB_PACKAGES = {
@@ -146,6 +167,10 @@ const GITHUB_PACKAGES = {
   langchain: {
     packageName: "@atomic-mail/langchain",
     outDir: "langchain_npm_gpr",
+  },
+  core: {
+    packageName: "@atomic-mail/agentic-core",
+    outDir: "core_npm_gpr",
   },
 } as const;
 
@@ -191,8 +216,8 @@ export function assertChannelSupported(
   channel?: string,
 ): void {
   if (!channel) return;
-  if (product === "langchain") {
-    throw new Error("Unsupported npm channel for langchain");
+  if (product === "langchain" || product === "core") {
+    throw new Error(`Unsupported npm channel for ${product}`);
   }
 
   const config = getChannelConfig(channel);
@@ -211,6 +236,8 @@ export function getOutputDir(product: NpmProduct, channel?: string): string {
     ? "mcp_npm"
     : product === "skill"
     ? "skill_npm"
+    : product === "core"
+    ? "core_npm"
     : "langchain_npm";
   return channel ? `${prefix}_${channel}` : prefix;
 }
@@ -218,6 +245,9 @@ export function getOutputDir(product: NpmProduct, channel?: string): string {
 export function getPackageName(product: NpmProduct, channel?: string): string {
   if (product === "langchain" && channel) {
     throw new Error("Unsupported npm channel for langchain");
+  }
+  if (product === "core" && channel) {
+    throw new Error("Unsupported npm channel for core");
   }
   const { baseName } = PRODUCT_CONFIG[product];
   return channel ? `${baseName}-${channel}` : baseName;
@@ -236,6 +266,7 @@ export function listConfiguredPackageTargets(
     { product: "mcp" },
     { product: "skill" },
     { product: "langchain" },
+    { product: "core" },
   ];
 
   for (const channel of loadChannels()) {
@@ -365,7 +396,7 @@ export async function buildNpmPackage(
       deno: false,
     },
     test: false,
-    scriptModule: false,
+    scriptModule: product === "core" ? "commonjs" : false,
     typeCheck: false,
     compilerOptions: {
       lib: ["ES2022", "DOM"],
@@ -436,7 +467,7 @@ export async function buildGithubPackagesNpm(
   version: string,
 ): Promise<string[]> {
   const dirs: string[] = [];
-  for (const product of ["mcp", "skill", "langchain"] as const) {
+  for (const product of ["mcp", "skill", "langchain", "core"] as const) {
     const gpr = GITHUB_PACKAGES[product];
     const config = PRODUCT_CONFIG[product];
     const dir = await buildNpmPackage({
@@ -456,7 +487,7 @@ export async function buildGithubPackagesNpm(
 }
 
 export function listGithubPackagesDirs(): string[] {
-  return ["langchain_npm_gpr", "mcp_npm_gpr", "skill_npm_gpr"];
+  return ["langchain_npm_gpr", "mcp_npm_gpr", "skill_npm_gpr", "core_npm_gpr"];
 }
 
 export interface ParsedBuildArgs {

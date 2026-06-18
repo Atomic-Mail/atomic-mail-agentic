@@ -18,3 +18,6 @@ export * from "./agent/session/agent-resolve-config.ts";
 export * from "./agent/session/agent-session-for-dir.ts";
 export * from "./agent/jmap/agent-help-content.ts";
 export * from "./agent/jmap/agent-vars.ts";
+
+export * from "./integrations/key-value-credential-store.ts";
+export * from "./integrations/create-agent-session.ts";

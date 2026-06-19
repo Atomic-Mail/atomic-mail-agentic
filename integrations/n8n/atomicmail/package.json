@@ -1,0 +1,43 @@
+{
+  "name": "@atomicmail/n8n-nodes-atomicmail",
+  "version": "0.3.14",
+  "description": "Atomic Mail inbox for n8n — register, JMAP mail, and inbox polling triggers.",
+  "license": "MIT",
+  "homepage": "https://github.com/Atomic-Mail/atomic-mail-agentic/tree/develop/integrations/n8n/atomicmail",
+  "keywords": ["n8n-community-node-package", "atomicmail", "email", "jmap"],
+  "author": { "name": "Atomic Mail", "email": "hello@atomicmail.ai" },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Atomic-Mail/atomic-mail-agentic.git",
+    "directory": "integrations/n8n/atomicmail"
+  },
+  "publishConfig": { "access": "public" },
+  "scripts": {
+    "build": "n8n-node build",
+    "build:watch": "tsc --watch",
+    "dev": "n8n-node dev",
+    "lint": "n8n-node lint",
+    "lint:fix": "n8n-node lint --fix",
+    "release": "n8n-node release",
+    "prepublishOnly": "n8n-node prerelease"
+  },
+  "files": ["dist", "vendor/agentic-core"],
+  "n8n": {
+    "n8nNodesApiVersion": 1,
+    "strict": true,
+    "credentials": ["dist/credentials/AtomicMailApi.credentials.js"],
+    "nodes": [
+      "dist/nodes/AtomicMail/AtomicMail.node.js",
+      "dist/nodes/AtomicMailTrigger/AtomicMailTrigger.node.js"
+    ]
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@n8n/node-cli": "*",
+    "eslint": "9.29.0",
+    "prettier": "3.6.2",
+    "release-it": "^19.0.4",
+    "typescript": "5.9.2"
+  },
+  "peerDependencies": { "n8n-workflow": "*" }
+}

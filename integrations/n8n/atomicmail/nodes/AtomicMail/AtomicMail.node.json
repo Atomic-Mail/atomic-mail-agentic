@@ -1,0 +1,18 @@
+{
+  "node": "n8n-nodes-atomicmail.atomicMail",
+  "nodeVersion": "1.0",
+  "codexVersion": "1.0",
+  "categories": ["Communication"],
+  "resources": {
+    "credentialDocumentation": [
+      {
+        "url": "https://github.com/Atomic-Mail/atomic-mail-agentic/blob/develop/docs/n8n.md#credentials"
+      }
+    ],
+    "primaryDocumentation": [
+      {
+        "url": "https://github.com/Atomic-Mail/atomic-mail-agentic/blob/develop/docs/n8n.md"
+      }
+    ]
+  }
+}

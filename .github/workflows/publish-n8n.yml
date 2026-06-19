@@ -1,0 +1,106 @@
+# Publishes @atomicmail/n8n-nodes-atomicmail to npm with provenance.
+#
+# Starting May 2026, n8n requires community nodes to be published via GitHub Actions
+# with npm provenance. Provenance lets anyone verify the package was built by this
+# exact workflow from this repository and commit.
+#
+# ─── ONE-TIME SETUP (npm Trusted Publisher) ───────────────────────────────────
+#
+# Option A — OIDC Trusted Publishing (recommended, no long-lived secrets):
+# 1. Log in to npmjs.com and open @atomicmail/n8n-nodes-atomicmail settings.
+# 2. Under "Publish access" → "Trusted Publishers", click "Add a publisher".
+# 3. Select GitHub Actions and fill in:
+#    Repository owner: Atomic-Mail
+#    Repository name:  atomic-mail-agentic
+#    Workflow name:    publish-n8n.yml   ← must match this filename exactly
+#    Environment:      (leave blank)
+# 4. Leave NPM_TOKEN unset in this repository. GitHub OIDC authenticates publish.
+#
+# Option B — npm Automation Token (fallback):
+# 1. On npmjs.com: Access Tokens → Generate New Token → Granular Access Token.
+#    Scope it to @atomicmail/n8n-nodes-atomicmail with "Read and write" publish.
+# 2. In GitHub: Settings → Secrets and variables → Actions → New secret.
+#    Name it NPM_TOKEN and paste the token value.
+# 3. Uncomment the authToken line in the Publish step below.
+#
+# See docs/n8n.md for the full maintainer release checklist.
+
+name: Publish n8n community node
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Semver to publish (e.g. 0.1.2 or v1.0.0)
+        required: true
+        type: string
+
+permissions:
+  # Required to mint an OIDC token for npm provenance attestation.
+  id-token: write
+  contents: read
+
+concurrency:
+  group: publish-n8n-${{ github.event.release.tag_name || inputs.version || github.run_id }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Publish @atomicmail/n8n-nodes-atomicmail
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Resolve and validate version
+        id: version
+        working-directory: ts
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name || inputs.version }}
+        run: |
+          VERSION=$(deno run -A resolve_release_version.ts "$RELEASE_TAG")
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Publishing n8n package version: $VERSION"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+          cache: npm
+          cache-dependency-path: integrations/n8n/atomicmail/package-lock.json
+
+      - name: Build n8n vendor with release version
+        run: npm run build:n8n -- "${{ steps.version.outputs.version }}"
+
+      - name: Install dependencies
+        working-directory: integrations/n8n/atomicmail
+        run: npm ci
+
+      - name: Build n8n community node
+        working-directory: integrations/n8n/atomicmail
+        run: npm run build
+
+      - name: Lint n8n community node
+        working-directory: integrations/n8n/atomicmail
+        run: npm run lint
+
+      - name: Publish to npm with provenance
+        working-directory: integrations/n8n/atomicmail
+        run: |
+          # Option A (OIDC): leave NPM_TOKEN unset — npm uses GitHub OIDC when Trusted
+          # Publisher is configured for workflow filename publish-n8n.yml.
+          #
+          # Option B (token fallback): uncomment the next line when NPM_TOKEN is set.
+          # [ -n "$NPM_TOKEN" ] && npm config set //registry.npmjs.org/:_authToken "$NPM_TOKEN"
+          npm publish --provenance --access public
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}

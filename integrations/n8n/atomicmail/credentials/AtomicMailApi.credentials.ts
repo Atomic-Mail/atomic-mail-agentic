@@ -1,0 +1,57 @@
+import type { ICredentialType, INodeProperties } from 'n8n-workflow';
+
+export class AtomicMailApi implements ICredentialType {
+	name = 'atomicMailApi';
+
+	displayName = 'Atomic Mail API';
+
+	icon = 'file:atomicmail.svg' as const;
+
+	documentationUrl =
+		'https://github.com/Atomic-Mail/atomic-mail-agentic/blob/develop/docs/n8n.md';
+
+	properties: INodeProperties[] = [
+		{
+			displayName: 'API Key',
+			name: 'apiKey',
+			type: 'string',
+			typeOptions: {
+				password: true,
+			},
+			default: '',
+			description:
+				'Optional. Leave empty after **Register** (credentials are saved in workflow static data), or paste an existing Atomic Mail API key.',
+		},
+		{
+			displayName: 'Auth URL',
+			name: 'authUrl',
+			type: 'string',
+			default: 'https://auth.atomicmail.ai',
+			description: 'Auth service base URL (default https://auth.atomicmail.ai).',
+		},
+		{
+			displayName: 'API URL',
+			name: 'apiUrl',
+			type: 'string',
+			default: 'https://api.atomicmail.ai',
+			description: 'JMAP API base URL (default https://api.atomicmail.ai).',
+		},
+	];
+
+	test = {
+		request: {
+			baseURL: '={{$credentials.apiUrl || "https://api.atomicmail.ai"}}',
+			url: '/.well-known/jmap',
+			method: 'GET' as const,
+		},
+		rules: [
+			{
+				type: 'responseCode' as const,
+				properties: {
+					value: 200,
+					message: 'Could not reach the Atomic Mail JMAP endpoint.',
+				},
+			},
+		],
+	};
+}

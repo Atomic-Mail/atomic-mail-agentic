@@ -21,3 +21,4 @@ export * from "./agent/jmap/agent-vars.ts";
 
 export * from "./integrations/key-value-credential-store.ts";
 export * from "./integrations/create-agent-session.ts";
+export * from "./integrations/n8n-credential-store.ts";

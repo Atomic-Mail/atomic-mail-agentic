@@ -96,6 +96,10 @@ jobs:
       - name: Publish to npm with provenance
         working-directory: integrations/n8n/atomicmail
         run: |
+          # prepublishOnly runs `n8n-node prerelease`, which requires RELEASE_MODE
+          # (normally set by `npm run release`). We publish from CI after build:n8n
+          # stamps the version, so set it explicitly here.
+          #
           # Option A (OIDC): leave NPM_TOKEN unset — npm uses GitHub OIDC when Trusted
           # Publisher is configured for workflow filename publish-n8n.yml.
           #
@@ -103,4 +107,6 @@ jobs:
           # [ -n "$NPM_TOKEN" ] && npm config set //registry.npmjs.org/:_authToken "$NPM_TOKEN"
           npm publish --provenance --access public
         env:
+          RELEASE_MODE: "true"
+          NPM_CONFIG_PROVENANCE: "true"
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}

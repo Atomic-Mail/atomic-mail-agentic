@@ -111,7 +111,7 @@ Publishing is automated by [`.github/workflows/publish-n8n.yml`](../.github/work
 
 1. Run local verification (above).
 2. Create a GitHub release with tag `vX.Y.Z` (or dispatch the workflow with version `X.Y.Z`).
-3. Confirm the workflow: vendor build → `npm ci` → build → lint → `npm publish --provenance`.
+3. Confirm the workflow: vendor build → `npm ci` → build → lint → `npm publish --provenance` (with `RELEASE_MODE=true` for n8n-node prerelease).
 4. On npm, confirm the package shows a **Provenance** badge linked to this workflow run.
 5. Submit or update the community node listing per [n8n docs](https://docs.n8n.io/integrations/creating-nodes/deploy/submit-community-nodes/).
 

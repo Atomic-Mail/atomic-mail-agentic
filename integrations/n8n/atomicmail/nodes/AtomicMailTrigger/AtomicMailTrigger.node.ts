@@ -51,7 +51,10 @@ export class AtomicMailTrigger implements INodeType {
 	description: INodeTypeDescription = {
 		displayName: 'Atomic Mail Trigger',
 		name: 'atomicMailTrigger',
-		icon: { light: 'file:atomicmail.svg', dark: 'file:atomicmail.dark.svg' },
+		icon: {
+			light: 'file:../../icons/atomicmail.svg',
+			dark: 'file:../../icons/atomicmail.dark.svg',
+		},
 		group: ['trigger'],
 		version: 1,
 		subtitle: '={{$parameter["accountId"] || "default"}}',

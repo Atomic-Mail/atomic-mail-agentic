@@ -1,11 +1,14 @@
-import type { ICredentialType, INodeProperties } from 'n8n-workflow';
+import type { Icon, ICredentialType, INodeProperties } from 'n8n-workflow';
 
 export class AtomicMailApi implements ICredentialType {
 	name = 'atomicMailApi';
 
 	displayName = 'Atomic Mail API';
 
-	icon = 'file:atomicmail.svg' as const;
+	icon: Icon = {
+		light: 'file:../icons/atomicmail.svg',
+		dark: 'file:../icons/atomicmail.dark.svg',
+	};
 
 	documentationUrl =
 		'https://github.com/Atomic-Mail/atomic-mail-agentic/blob/develop/docs/n8n.md';

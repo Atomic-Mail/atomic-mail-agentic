@@ -105,17 +105,19 @@ Publishing is automated by [`.github/workflows/publish-n8n.yml`](../.github/work
 3. Repository owner: `Atomic-Mail`, repository: `atomic-mail-agentic`.
 4. **Workflow filename:** `publish-n8n.yml` (must match exactly — not `publish-npm.yml`).
 5. Environment: leave blank.
-6. Do **not** add `NPM_TOKEN` to GitHub unless you need the token fallback (uncomment the auth line in the workflow).
+6. Do **not** add `NPM_TOKEN` to GitHub unless you need the token fallback (the workflow configures auth when the secret is set).
+
+Requires `@n8n/node-cli` ≥ 0.23.0 (installed in `integrations/n8n/atomicmail`; currently via `"*"` in devDependencies).
 
 ### Per release
 
 1. Run local verification (above).
 2. Create a GitHub release with tag `vX.Y.Z` (or dispatch the workflow with version `X.Y.Z`).
-3. Confirm the workflow: vendor build → `npm ci` → build → lint → `npm publish --provenance`.
+3. Confirm the workflow: vendor build → `npm ci` → `npm run release` (n8n-node lint/build/publish with provenance).
 4. On npm, confirm the package shows a **Provenance** badge linked to this workflow run.
 5. Submit or update the community node listing per [n8n docs](https://docs.n8n.io/integrations/creating-nodes/deploy/submit-community-nodes/).
 
 ## See also
 
-- [integrations/n8n/README.md](../integrations/n8n/README.md)
+- [n8n integration README (monorepo)](https://github.com/Atomic-Mail/atomic-mail-agentic/blob/develop/integrations/n8n/README.md)
 - [Atomic Mail MCP / CLI overview](./SKILL.md)

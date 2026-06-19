@@ -21,7 +21,7 @@
 #    Scope it to @atomicmail/n8n-nodes-atomicmail with "Read and write" publish.
 # 2. In GitHub: Settings → Secrets and variables → Actions → New secret.
 #    Name it NPM_TOKEN and paste the token value.
-# 3. Uncomment the authToken line in the Publish step below.
+# 3. Set NPM_TOKEN in GitHub repo secrets; the Release step configures auth when set.
 #
 # See docs/n8n.md for the full maintainer release checklist.
 
@@ -85,22 +85,20 @@ jobs:
         working-directory: integrations/n8n/atomicmail
         run: npm ci
 
-      - name: Build n8n community node
-        working-directory: integrations/n8n/atomicmail
-        run: npm run build
-
-      - name: Lint n8n community node
-        working-directory: integrations/n8n/atomicmail
-        run: npm run lint
-
-      - name: Publish to npm with provenance
+      - name: Release to npm with provenance
         working-directory: integrations/n8n/atomicmail
         run: |
+          # @n8n/node-cli release (via `npm run release`) is required in CI:
+          # prepublishOnly runs `n8n-node prerelease`, which blocks direct `npm publish`
+          # unless RELEASE_MODE is set — release sets it when spawning npm publish.
+          # In GITHUB_ACTIONS, release also runs lint + build, then publishes with
+          # NPM_CONFIG_PROVENANCE=true (needs id-token: write above).
+          #
           # Option A (OIDC): leave NPM_TOKEN unset — npm uses GitHub OIDC when Trusted
           # Publisher is configured for workflow filename publish-n8n.yml.
           #
-          # Option B (token fallback): uncomment the next line when NPM_TOKEN is set.
-          # [ -n "$NPM_TOKEN" ] && npm config set //registry.npmjs.org/:_authToken "$NPM_TOKEN"
-          npm publish --provenance --access public
+          # Option B (token fallback): set NPM_TOKEN in repo secrets.
+          [ -n "$NPM_TOKEN" ] && npm config set //registry.npmjs.org/:_authToken "$NPM_TOKEN"
+          npm run release
         env:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}

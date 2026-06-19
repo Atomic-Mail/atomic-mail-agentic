@@ -1,0 +1,1 @@
+../../integrations/n8n/atomicmail/dist/credentials/AtomicMailApi.credentials.js

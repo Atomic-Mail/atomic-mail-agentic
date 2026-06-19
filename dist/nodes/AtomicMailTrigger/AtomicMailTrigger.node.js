@@ -1,0 +1,1 @@
+../../../integrations/n8n/atomicmail/dist/nodes/AtomicMailTrigger/AtomicMailTrigger.node.js

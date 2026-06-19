@@ -41,7 +41,10 @@ export class AtomicMail implements INodeType {
 	description: INodeTypeDescription = {
 		displayName: 'Atomic Mail',
 		name: 'atomicMail',
-		icon: { light: 'file:atomicmail.svg', dark: 'file:atomicmail.dark.svg' },
+		icon: {
+			light: 'file:../../icons/atomicmail.svg',
+			dark: 'file:../../icons/atomicmail.dark.svg',
+		},
 		group: ['transform'],
 		version: 1,
 		subtitle: '={{$parameter["operation"] + ": " + $parameter["resource"]}}',

@@ -94,6 +94,13 @@ npm run build && npm run lint
 npx @n8n/scan-community-package @atomicmail/n8n-nodes-atomicmail
 ```
 
+**Creator Portal vetting:** n8n resolves credential/node paths from the **repository root**, not `repository.directory`. The package declares official `dist/*.js` paths in `package.json`. Repo-root symlinks point at the package tree so vetting can find those files on GitHub:
+
+- `credentials/AtomicMailApi.credentials.ts` → `integrations/n8n/atomicmail/credentials/…`
+- `dist/credentials/*.js`, `dist/nodes/**/*.node.js` → matching paths under `integrations/n8n/atomicmail/dist/`
+
+Only the three compiled entry files under `integrations/n8n/atomicmail/dist/` are committed (not the full `dist/` tree). After changing credentials or nodes, rebuild, refresh those three `.js` files if they changed, and verify root symlinks still resolve.
+
 ## Release checklist
 
 Publishing is automated by [`.github/workflows/publish-n8n.yml`](../.github/workflows/publish-n8n.yml) on GitHub **Release published** (or manual **workflow_dispatch** with a semver). n8n requires npm packages built in GitHub Actions with provenance (from May 2026).

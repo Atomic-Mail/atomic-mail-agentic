@@ -1,0 +1,1 @@
+../integrations/n8n/atomicmail/credentials/AtomicMailApi.credentials.ts

@@ -10,6 +10,26 @@ node_modules/
 dist/
 **/dist/
 
+# n8n Creator Portal vetting — minimal committed dist/*.js + repo-root symlinks
+!integrations/n8n/atomicmail/dist/
+!integrations/n8n/atomicmail/dist/credentials/
+!integrations/n8n/atomicmail/dist/credentials/AtomicMailApi.credentials.js
+!integrations/n8n/atomicmail/dist/nodes/
+!integrations/n8n/atomicmail/dist/nodes/AtomicMail/
+!integrations/n8n/atomicmail/dist/nodes/AtomicMail/AtomicMail.node.js
+!integrations/n8n/atomicmail/dist/nodes/AtomicMailTrigger/
+!integrations/n8n/atomicmail/dist/nodes/AtomicMailTrigger/AtomicMailTrigger.node.js
+!dist/
+!dist/credentials/
+!dist/credentials/AtomicMailApi.credentials.js
+!dist/nodes/
+!dist/nodes/AtomicMail/
+!dist/nodes/AtomicMail/AtomicMail.node.js
+!dist/nodes/AtomicMailTrigger/
+!dist/nodes/AtomicMailTrigger/AtomicMailTrigger.node.js
+!credentials/
+!credentials/AtomicMailApi.credentials.ts
+
 # Local credential files (never commit secrets)
 credentials.json
 **/credentials.json

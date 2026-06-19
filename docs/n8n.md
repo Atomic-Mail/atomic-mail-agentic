@@ -117,5 +117,5 @@ Publishing is automated by [`.github/workflows/publish-n8n.yml`](../.github/work
 
 ## See also
 
-- [integrations/n8n/README.md](../integrations/n8n/README.md)
+- [n8n integration README (monorepo)](https://github.com/Atomic-Mail/atomic-mail-agentic/blob/develop/integrations/n8n/README.md)
 - [Atomic Mail MCP / CLI overview](./SKILL.md)

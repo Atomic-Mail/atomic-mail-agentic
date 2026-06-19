@@ -19,16 +19,17 @@ dist/
 !integrations/n8n/atomicmail/dist/nodes/AtomicMail/AtomicMail.node.js
 !integrations/n8n/atomicmail/dist/nodes/AtomicMailTrigger/
 !integrations/n8n/atomicmail/dist/nodes/AtomicMailTrigger/AtomicMailTrigger.node.js
-!dist/
-!dist/credentials/
-!dist/credentials/AtomicMailApi.credentials.js
-!dist/nodes/
-!dist/nodes/AtomicMail/
-!dist/nodes/AtomicMail/AtomicMail.node.js
-!dist/nodes/AtomicMailTrigger/
-!dist/nodes/AtomicMailTrigger/AtomicMailTrigger.node.js
-!credentials/
-!credentials/AtomicMailApi.credentials.ts
+!/dist/
+!/dist/credentials/
+!/dist/credentials/AtomicMailApi.credentials.js
+!/dist/nodes/
+!/dist/nodes/AtomicMail/
+!/dist/nodes/AtomicMail/AtomicMail.node.js
+!/dist/nodes/AtomicMailTrigger/
+!/dist/nodes/AtomicMailTrigger/AtomicMailTrigger.node.js
+!/credentials/
+!/credentials/AtomicMailApi.credentials.ts
+py/langchain/dist/
 
 # Local credential files (never commit secrets)
 credentials.json

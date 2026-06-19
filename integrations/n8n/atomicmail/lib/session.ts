@@ -6,7 +6,7 @@ import {
 	n8nStaticDataBackend,
 	type AgentSession,
 	type IntegrationEnv,
-} from '../vendor/agentic-core/esm/mod.js';
+} from '../vendor/agentic-core/index.js';
 
 import { isHttpUrl, optionalTrimmedString } from './props';
 

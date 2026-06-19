@@ -33,7 +33,8 @@
   },
   "files": [
     "dist",
-    "vendor/agentic-core"
+    "vendor/agentic-core/index.js",
+    "vendor/agentic-core/index.d.ts"
   ],
   "n8n": {
     "n8nNodesApiVersion": 1,

@@ -1,217 +1,334 @@
-// Zero-deps n8n bundler: copy pre-built @atomicmail/agentic-core from ts/core_npm/
-// (esm, shared, presets) into integrations/n8n/atomicmail/vendor/agentic-core/
-// so the n8n community node imports a local vendor path with no runtime npm dependency
-// on agentic-core at publish/verify time. Mirrors ts/build_dify_wrapper.ts (copyDir,
-// optional version stamp); does NOT use dnt for cross-subproject compilation.
+// Zero-deps n8n vendor bundler: esbuild @atomicmail/agentic-core entry into a single
+// Cloud-safe ESM file (no node:fs/path/process, no setTimeout/globalThis in output).
+// Generates bundled presets and runs `npm run build` prerequisites via core if needed.
 
-import { emptyDir } from "@deno/dnt";
+import * as esbuild from "npm:esbuild@0.25.0";
 
 import { parseReleaseVersion } from "./lib/version.ts";
 import { ATOMICMAIL_MCP_VERSION } from "./src/mcp/version.ts";
 
-const TS_DIR = new URL("./", import.meta.url);
-const CORE_NPM_DIR = new URL("./core_npm/", import.meta.url);
-const CORE_ESM_MOD = new URL("esm/mod.js", CORE_NPM_DIR);
+const TS_LIB = new URL("./src/lib/", import.meta.url);
+const SHARED_PRESETS = new URL("../shared/presets/", import.meta.url);
 const PLUGIN_DIR = new URL("../integrations/n8n/atomicmail/", import.meta.url);
-const VENDOR_CORE_DIR = new URL("vendor/agentic-core/", PLUGIN_DIR);
+const VENDOR_DIR = new URL("vendor/agentic-core/", PLUGIN_DIR);
+const VENDOR_INDEX = new URL("index.js", VENDOR_DIR);
+const VENDOR_TYPES = new URL("index.d.ts", VENDOR_DIR);
+const PRESETS_GENERATED = new URL(
+  "integrations/n8n-cloud/bundled-presets.generated.ts",
+  TS_LIB,
+);
+const VENDOR_ENTRY = new URL("integrations/n8n-vendor-entry.ts", TS_LIB);
+const SHIM_CREDENTIALS = new URL(
+  "integrations/n8n-shims/agent-credentials-store.ts",
+  TS_LIB,
+);
+const SHIM_SHARED = new URL(
+  "integrations/n8n-shims/shared-assets.ts",
+  TS_LIB,
+);
+const SHIM_POW = new URL(
+  "integrations/n8n-shims/agent-pow.ts",
+  TS_LIB,
+);
+const SHIM_NOBLE_CRYPTO = new URL(
+  "integrations/n8n-shims/noble-crypto.ts",
+  TS_LIB,
+);
+const N8N_UTILS = new URL("integrations/n8n-cloud/utils.ts", TS_LIB);
 const NODE_PACKAGE_PATH = new URL("package.json", PLUGIN_DIR);
 
-const CORE_COPY_ENTRIES = [
-  "esm",
-  "shared",
-  "presets",
+const PRESET_FILES = [
+  "list_inbox.json",
+  "reply.json",
+  "send_mail.json",
+  "send_mail_attachment.json",
+  "send_mail_blob_attachment.json",
 ] as const;
-
-/** dnt polyfill .d.ts files trigger n8n strict lint; ESM runtime uses a n8n-safe stub instead. */
-const N8N_POLYFILL_STUB = `/**
- * Minimal import.meta shim for n8n (Node 20+ ESM). Replaces dnt polyfills that import node:module/url/path.
- */
-const defineGlobalPonyfill = (symbolFor, fn) => {
-  if (!Reflect.has(globalThis, Symbol.for(symbolFor))) {
-    Object.defineProperty(globalThis, Symbol.for(symbolFor), {
-      configurable: true,
-      get() {
-        return fn;
-      },
-    });
-  }
-};
-
-const shimWs = new WeakSet();
-
-const import_meta_ponyfill_esmodule = (importMeta) => {
-  if (!shimWs.has(importMeta)) {
-    shimWs.add(importMeta);
-    if (typeof importMeta.filename !== "string") {
-      const pathname = new URL(importMeta.url).pathname;
-      importMeta.filename = pathname;
-      const lastSlash = pathname.lastIndexOf("/");
-      importMeta.dirname = lastSlash >= 0 ? pathname.slice(0, lastSlash) : pathname;
-    }
-  }
-  return importMeta;
-};
-
-defineGlobalPonyfill("import-meta-ponyfill-esmodule", import_meta_ponyfill_esmodule);
-
-export { import_meta_ponyfill_esmodule };
-`;
 
 const rawVersion = Deno.args[0];
 const releaseVersion = rawVersion ? parseReleaseVersion(rawVersion) : null;
 const version = releaseVersion ?? ATOMICMAIL_MCP_VERSION;
 
-async function copyDir(src: URL, dest: URL): Promise<void> {
-  await Deno.mkdir(dest, { recursive: true });
-  for await (const entry of Deno.readDir(src)) {
-    if (
-      entry.name.startsWith("_dnt.polyfills") &&
-      (entry.name.endsWith(".d.ts") || entry.name.endsWith(".d.ts.map"))
-    ) {
-      continue;
-    }
-    const srcPath = new URL(entry.name, src);
-    const destPath = new URL(entry.name, dest);
-    if (entry.isDirectory) {
-      await copyDir(
-        new URL(`${entry.name}/`, src),
-        new URL(`${entry.name}/`, dest),
-      );
-    } else if (entry.isFile) {
-      await Deno.copyFile(srcPath, destPath);
-    }
+async function writeBundledPresetsGenerated(): Promise<void> {
+  const entries: string[] = [];
+  for (const name of PRESET_FILES) {
+    const text = await Deno.readTextFile(new URL(name, SHARED_PRESETS));
+    entries.push(`  ${JSON.stringify(name)}: ${JSON.stringify(text)},`);
   }
-}
-
-async function writeN8nPolyfillStub(): Promise<void> {
-  const esmDir = new URL("esm/", VENDOR_CORE_DIR);
-  await Deno.writeTextFile(
-    new URL("_dnt.polyfills.js", esmDir),
-    N8N_POLYFILL_STUB,
-  );
-  for (const name of ["_dnt.polyfills.d.ts", "_dnt.polyfills.d.ts.map"]) {
-    try {
-      await Deno.remove(new URL(name, esmDir));
-    } catch {
-      // absent
-    }
-  }
-}
-
-async function pathExists(path: URL): Promise<boolean> {
-  try {
-    await Deno.stat(path);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-async function ensureCoreBuilt(): Promise<void> {
-  if (await pathExists(CORE_ESM_MOD)) {
-    return;
-  }
-
-  const buildCore = new URL("./build_core_npm.ts", TS_DIR);
-  const args = ["run", "-A", buildCore.pathname];
-  if (releaseVersion) {
-    args.push(releaseVersion);
-  }
-
-  console.log("core_npm/esm missing; running build_core_npm.ts …");
-  const { code, stderr } = await new Deno.Command(Deno.execPath(), {
-    args,
-    cwd: TS_DIR.pathname,
-    stderr: "piped",
-  }).output();
-
-  if (code !== 0) {
-    const errText = new TextDecoder().decode(stderr);
-    throw new Error(
-      `build_core_npm.ts failed (exit ${code})${errText ? `: ${errText}` : ""}`,
-    );
-  }
-}
-
-async function writeVendorPackageJson(): Promise<void> {
-  const content = {
-    name: "@atomicmail/agentic-core",
-    version,
-    description:
-      "Vendored Atomic Mail agentic core for the n8n community node (zero runtime deps).",
-    license: "MIT",
-    type: "module",
-    module: "./esm/mod.js",
-    exports: {
-      ".": {
-        import: "./esm/mod.js",
-      },
-    },
-    engines: {
-      node: ">=20",
-    },
-    dependencies: {},
-    atomicmail: {
-      channel: "n8n-vendor",
-      bundledBy: "ts/build_n8n_wrapper.ts",
-    },
-  };
-  await Deno.writeTextFile(
-    new URL("package.json", VENDOR_CORE_DIR),
-    `${JSON.stringify(content, null, 2)}\n`,
-  );
+  const content = [
+    "// Generated by ts/build_n8n_wrapper.ts — do not edit by hand.",
+    "",
+    "export const BUNDLED_PRESET_JSON: Record<string, string> = {",
+    ...entries,
+    "};",
+    "",
+    "export const BUNDLED_OPS_PRESET_NAMES = [",
+    ...PRESET_FILES.map((name) => `  ${JSON.stringify(name)},`),
+    "] as const;",
+    "",
+  ].join("\n");
+  await Deno.writeTextFile(PRESETS_GENERATED, content);
 }
 
 async function stampNodePackageVersion(): Promise<void> {
-  if (!(await pathExists(NODE_PACKAGE_PATH))) {
-    return;
-  }
-
-  const pkg = JSON.parse(await Deno.readTextFile(NODE_PACKAGE_PATH)) as {
-    version?: string;
-  };
-  pkg.version = version;
-  await Deno.writeTextFile(
-    NODE_PACKAGE_PATH,
-    `${JSON.stringify(pkg, null, 2)}\n`,
-  );
-}
-
-async function copyOptionalFile(name: string): Promise<void> {
-  const src = new URL(name, CORE_NPM_DIR);
-  if (await pathExists(src)) {
-    await Deno.copyFile(src, new URL(name, VENDOR_CORE_DIR));
-  }
-}
-
-await ensureCoreBuilt();
-await emptyDir(new URL("./", VENDOR_CORE_DIR).pathname);
-
-for (const entry of CORE_COPY_ENTRIES) {
-  const src = new URL(`${entry}/`, CORE_NPM_DIR);
-  if (!(await pathExists(src))) {
-    throw new Error(
-      `Missing core_npm/${entry}/ — run: cd ts && deno run -A build_core_npm.ts`,
+  try {
+    const pkg = JSON.parse(await Deno.readTextFile(NODE_PACKAGE_PATH)) as {
+      version?: string;
+    };
+    pkg.version = version;
+    await Deno.writeTextFile(
+      NODE_PACKAGE_PATH,
+      `${JSON.stringify(pkg, null, 2)}\n`,
     );
+  } catch {
+    // package.json may not exist during early scaffold
   }
-  await copyDir(src, new URL(`${entry}/`, VENDOR_CORE_DIR));
 }
 
-await writeN8nPolyfillStub();
+function shimPlugin(nobleEsmDir: string): esbuild.Plugin {
+  const credentialsShim = SHIM_CREDENTIALS.pathname;
+  const sharedShim = SHIM_SHARED.pathname;
+  const powShim = SHIM_POW.pathname;
+  const nobleCryptoShim = SHIM_NOBLE_CRYPTO.pathname;
+  const n8nUtils = N8N_UTILS.pathname;
 
-await copyOptionalFile("LICENSE");
-await copyOptionalFile("README.md");
-await writeVendorPackageJson();
+  return {
+    name: "n8n-cloud-shims",
+    setup(build) {
+      build.onResolve({ filter: /^@noble\/hashes\/crypto$/ }, () => ({
+        path: nobleCryptoShim,
+      }));
+      build.onResolve({ filter: /^@noble\/hashes\// }, (args) => {
+        const sub = args.path.slice("@noble/hashes/".length);
+        return { path: `${nobleEsmDir}${sub}.js` };
+      });
+      build.onResolve({ filter: /agent-credentials-store\.ts$/ }, () => ({
+        path: credentialsShim,
+      }));
+      build.onResolve({ filter: /[/\\]agent-pow\.ts$/ }, () => ({
+        path: powShim,
+      }));
+      build.onResolve({ filter: /shared-assets\.ts$/ }, () => ({
+        path: sharedShim,
+      }));
+      build.onResolve({ filter: /[/\\]core[/\\]utils\.ts$/ }, () => ({
+        path: n8nUtils,
+      }));
+      build.onResolve({ filter: /read-npm-package-readme\.ts$/ }, () => ({
+        path: sharedShim,
+      }));
+    },
+  };
+}
+
+async function writeVendorTypes(): Promise<void> {
+  const dts = `// Generated by ts/build_n8n_wrapper.ts — self-contained vendor API types.
+
+export interface IntegrationEnv {
+  authUrl?: string;
+  apiUrl?: string;
+  scryptSalt?: string;
+}
+
+export interface CreateAgentSessionInput {
+  store: CredentialStore;
+  env?: IntegrationEnv;
+  apiKey?: string;
+  credentialDir?: string;
+}
+
+export interface RegisterResult {
+  inbox: string;
+  accountId: string;
+  apiKey?: string;
+  idempotent?: boolean;
+}
+
+export interface RegisterOptions {
+  forced?: boolean;
+}
+
+export interface JmapBlobUploadLimits {
+  maxSizeBlobSet: number | null;
+  maxDataSources?: number;
+}
+
+export interface CredentialArtifacts {
+  credentials?: StoredCredentials;
+  sessionJwt?: string;
+  capabilityJwt?: string;
+}
+
+export interface StoredCredentials {
+  apiKey: string;
+  inboxId: string;
+  authUrl: string;
+  apiUrl: string;
+  scryptSalt: string;
+  uploadUrl: string;
+  downloadUrl: string;
+}
+
+export interface CredentialStore {
+  load(): Promise<CredentialArtifacts>;
+  save(artifacts: CredentialArtifacts): Promise<void>;
+  clear(): Promise<void>;
+}
+
+export declare class AgentSession {
+  readonly apiUrl: string;
+  readonly credentialDir: string;
+  readonly hasApiKey: boolean;
+  readonly currentInboxId?: string;
+  readonly currentUploadUrl?: string;
+  readonly currentDownloadUrl?: string;
+  register(username: string, options?: RegisterOptions): Promise<RegisterResult>;
+  getCapabilityToken(): Promise<string>;
+  getPrimaryMailAccountId(): Promise<string>;
+  getJmapPostUrl(): Promise<string>;
+  getBlobUploadLimitsForAccount(
+    accountId: string,
+  ): Promise<JmapBlobUploadLimits | null>;
+  invalidateJmapSessionCache(): void;
+  destroy(): void;
+}
+
+export declare function createAgentSession(
+  input: CreateAgentSessionInput,
+): Promise<AgentSession>;
+
+export interface N8nKeyValueBackend {
+  get(key: string): Promise<string | undefined> | string | undefined;
+  set(key: string, value: string): Promise<void> | void;
+  delete(key: string): Promise<void> | void;
+  has?(key: string): Promise<boolean> | boolean;
+}
+
+export declare function createN8nCredentialStore(
+  backend: N8nKeyValueBackend,
+  accountId?: string,
+): CredentialStore;
+
+export declare const createKeyValueStore: typeof createN8nCredentialStore;
+
+export declare function n8nStaticDataBackend(
+  data: Record<string, unknown>,
+): N8nKeyValueBackend;
+
+export declare const DEFAULT_JMAP_USING: readonly string[];
+
+export interface IntegrationJmapSessionPort {
+  readonly apiUrl: string;
+  getJmapPostUrl(): Promise<string>;
+  getPrimaryMailAccountId(): Promise<string>;
+  getCapabilityToken(): Promise<string>;
+  readonly currentInboxId?: string;
+  readonly currentUploadUrl?: string;
+  readonly currentDownloadUrl?: string;
+  getBlobUploadLimitsForAccount(
+    accountId: string,
+  ): Promise<JmapBlobUploadLimits | null>;
+}
+
+export interface RunJmapRequestInput {
+  session: IntegrationJmapSessionPort;
+  opsJson: string;
+  defaultUsing: string[];
+  sourceLabel: string;
+  dryRun?: boolean;
+  vars?: Record<string, string>;
+}
+
+export declare function runJmapRequest(
+  input: RunJmapRequestInput,
+): Promise<{ ok: boolean; status: number; bodyText: string }>;
+
+export declare const BUNDLED_OPS_PRESET_NAMES: readonly string[];
+
+export declare function readOpsFile(
+  credentialDir: string,
+  opsFile: string,
+): Promise<string>;
+
+export declare const HELP_TOPIC_LIST: string[];
+
+export declare function getHelp(
+  topic?: string,
+  runtime?: "mcp" | "skill",
+): Promise<string>;
+
+export declare function sharedError(key: string): string;
+
+export declare const postRegisterCronReminder: string;
+
+export declare function guessMimeTypeFromFilename(name: string): string;
+
+export declare function expandUploadUrl(
+  template: string,
+  accountId: string,
+): string;
+
+export declare function postBinaryBlobUpload(
+  uploadUrlExpanded: string,
+  capabilityJwt: string,
+  bytes: Uint8Array,
+  contentType: string,
+): Promise<{ blobId: string; size: number }>;
+
+export declare function assertAttachmentBytesWithinBlobLimit(
+  attachments: Array<{ label: string; byteLength: number }>,
+  limits: JmapBlobUploadLimits | null,
+): void;
+`;
+  await Deno.writeTextFile(VENDOR_TYPES, dts);
+}
+
+async function cleanVendorDir(): Promise<void> {
+  try {
+    for await (const entry of Deno.readDir(VENDOR_DIR)) {
+      const path = new URL(entry.name, VENDOR_DIR);
+      if (entry.name === "index.js" || entry.name === "index.d.ts") {
+        continue;
+      }
+      await Deno.remove(path, { recursive: true });
+    }
+  } catch (error) {
+    if (!(error instanceof Deno.errors.NotFound)) {
+      throw error;
+    }
+  }
+}
+
+await Deno.mkdir(VENDOR_DIR, { recursive: true });
+await cleanVendorDir();
+await writeBundledPresetsGenerated();
+
+const nobleScryptUrl = import.meta.resolve("npm:@noble/hashes@1.7.1/scrypt");
+const nobleScryptPath = new URL(nobleScryptUrl).pathname;
+const nobleEsmDir = nobleScryptPath.replace(/\/scrypt\.js$/, "/");
+
+const result = await esbuild.build({
+  entryPoints: [VENDOR_ENTRY.pathname],
+  outfile: VENDOR_INDEX.pathname,
+  bundle: true,
+  format: "esm",
+  platform: "neutral",
+  target: "es2022",
+  logLevel: "info",
+  plugins: [shimPlugin(nobleEsmDir)],
+  legalComments: "none",
+});
+
+if (result.errors.length > 0) {
+  throw new Error("esbuild n8n vendor bundle failed");
+}
+
+await writeVendorTypes();
 
 if (releaseVersion) {
   await stampNodePackageVersion();
 }
 
 console.log(
-  `Built n8n vendor @atomicmail/agentic-core@${version} -> ./integrations/n8n/atomicmail/vendor/agentic-core`,
-);
-console.log(
-  releaseVersion
-    ? "Copied core artifacts, wrote vendor package.json, stamped n8n package version."
-    : "Copied core artifacts and wrote vendor package.json.",
+  "Built n8n vendor bundle -> integrations/n8n/atomicmail/vendor/agentic-core/index.js",
 );

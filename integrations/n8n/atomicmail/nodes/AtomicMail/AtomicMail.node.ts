@@ -7,8 +7,12 @@ import type {
 } from 'n8n-workflow';
 import { NodeConnectionTypes, NodeOperationError } from 'n8n-workflow';
 
-import { getHelp, HELP_TOPIC_LIST, sharedError } from '../../vendor/agentic-core/esm/mod.js';
-import { postRegisterCronReminder } from '../../vendor/agentic-core/esm/agent/jmap/help-content/cron.js';
+import {
+	getHelp,
+	HELP_TOPIC_LIST,
+	postRegisterCronReminder,
+	sharedError,
+} from '../../vendor/agentic-core/index.js';
 import { attachmentVarsFromBinaryProperty } from '../../lib/attachments';
 import {
 	executeOpsJson,

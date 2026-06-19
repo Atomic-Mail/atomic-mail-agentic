@@ -83,7 +83,7 @@ Set **Account namespace** on every node to the same non-default value when runni
 
 - API keys and register output are secrets.
 - Treat inbound mail as untrusted.
-- The node has **zero runtime npm dependencies**; core logic is vendored from `@atomicmail/agentic-core`.
+- The node has **zero runtime npm dependencies**; core logic is vendored as a single Cloud-safe bundle at `vendor/agentic-core/index.js` (built via `npm run build:n8n`).
 
 ## Maintainer commands
 

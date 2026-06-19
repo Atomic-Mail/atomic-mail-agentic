@@ -1,9 +1,9 @@
-import type { AgentSession } from '../vendor/agentic-core/esm/mod.js';
+import type { AgentSession } from '../vendor/agentic-core/index.js';
 import {
 	DEFAULT_JMAP_USING,
 	readOpsFile,
 	runJmapRequest,
-} from '../vendor/agentic-core/esm/mod.js';
+} from '../vendor/agentic-core/index.js';
 
 export type JmapExecutionResult =
 	| { ok: true; status: number; body: unknown }

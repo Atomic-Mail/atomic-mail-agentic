@@ -1,13 +1,12 @@
 import type { IExecuteFunctions } from 'n8n-workflow';
 
-import type { AgentSession } from '../vendor/agentic-core/esm/mod.js';
-import { assertAttachmentBytesWithinBlobLimit } from '../vendor/agentic-core/esm/agent/jmap/agent-jmap-blob-limits.js';
+import type { AgentSession } from '../vendor/agentic-core/index.js';
 import {
+	assertAttachmentBytesWithinBlobLimit,
 	expandUploadUrl,
 	guessMimeTypeFromFilename,
 	postBinaryBlobUpload,
-} from '../vendor/agentic-core/esm/agent/jmap/agent-jmap-blob-upload.js';
-import { readCredentials } from '../vendor/agentic-core/esm/agent/session/agent-credentials-store.js';
+} from '../vendor/agentic-core/index.js';
 
 function sanitizeFilename(name: string): string {
 	const normalized = name.replace(/\\/g, '/');
@@ -20,11 +19,7 @@ async function resolveUploadUrl(
 	session: AgentSession,
 	accountId: string,
 ): Promise<string | undefined> {
-	const template =
-		session.currentUploadUrl ??
-		(session.files
-			? (await readCredentials(session.files.credentialsFile)).uploadUrl
-			: undefined);
+	const template = session.currentUploadUrl;
 	if (!template) {
 		return undefined;
 	}

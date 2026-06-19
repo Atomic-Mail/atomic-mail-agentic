@@ -21,7 +21,7 @@ import {
   extractJmapApiUrl,
   extractPrimaryMailAccountId,
   fetchJmapWellKnown,
-} from "../jmap/agent-jmap.ts";
+} from "../jmap/agent-jmap-run.ts";
 import {
   fetchCapability,
   performPoWAndSession,

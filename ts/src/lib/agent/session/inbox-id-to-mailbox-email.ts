@@ -1,6 +1,4 @@
-import process from "node:process";
-
-/** Subset of `process.env` read for `$INBOX` normalization (tests may pass a stub). */
+/** Optional inbox domain override for `$INBOX` normalization. */
 export type InboxEmailEnv = { ATOMIC_MAIL_INBOX_DOMAIN?: string };
 
 /**
@@ -8,8 +6,8 @@ export type InboxEmailEnv = { ATOMIC_MAIL_INBOX_DOMAIN?: string };
  * substitution (`From`, submission `envelope`, etc.).
  *
  * Credentials may store only the local-part (`alice`); production mailboxes
- * live at `alice@atomicmail.ai`. Custom stacks can set
- * `ATOMIC_MAIL_INBOX_DOMAIN` (hostname only, optional leading `@` stripped).
+ * live at `alice@atomicmail.ai`. Pass `ATOMIC_MAIL_INBOX_DOMAIN` via `env`
+ * when not using the default domain.
  */
 const DEFAULT_INBOX_DOMAIN = "atomicmail.ai";
 
@@ -21,9 +19,7 @@ export function inboxIdToMailboxEmail(
   if (trimmed.length === 0) return inboxId;
   if (trimmed.includes("@")) return trimmed;
 
-  const raw = (env !== undefined
-    ? env.ATOMIC_MAIL_INBOX_DOMAIN
-    : process.env.ATOMIC_MAIL_INBOX_DOMAIN)?.trim();
+  const raw = env?.ATOMIC_MAIL_INBOX_DOMAIN?.trim();
   const domain = raw && raw.length > 0
     ? raw.replace(/^@+/, "")
     : DEFAULT_INBOX_DOMAIN;

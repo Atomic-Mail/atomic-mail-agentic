@@ -80,7 +80,7 @@ npx @n8n/scan-community-package @atomicmail/n8n-nodes-atomicmail
 
 ## Runtime dependencies
 
-Zero runtime npm dependencies. The node imports vendored `@atomicmail/agentic-core` from `vendor/agentic-core/esm/mod.js` (copied by `npm run build:n8n`).
+Zero runtime npm dependencies. The node imports vendored agentic core from `vendor/agentic-core/index.js` (single esbuild bundle produced by `npm run build:n8n`).
 
 ## Security
 

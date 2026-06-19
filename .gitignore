@@ -10,7 +10,7 @@ node_modules/
 dist/
 **/dist/
 
-# n8n Creator Portal vetting — minimal committed dist/*.js + repo-root symlinks
+# n8n Creator Portal vetting — minimal committed dist/*.js + repo-root copies
 !integrations/n8n/atomicmail/dist/
 !integrations/n8n/atomicmail/dist/credentials/
 !integrations/n8n/atomicmail/dist/credentials/AtomicMailApi.credentials.js

@@ -28,6 +28,7 @@
     "dev": "n8n-node dev",
     "lint": "n8n-node lint",
     "lint:fix": "n8n-node lint --fix",
+    "sync:vetting-paths": "node scripts/sync-vetting-paths.mjs",
     "release": "n8n-node release",
     "prepublishOnly": "n8n-node prerelease"
   },

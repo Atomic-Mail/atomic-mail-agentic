@@ -1,4 +1,9 @@
-import type { Icon, ICredentialType, INodeProperties } from 'n8n-workflow';
+import type {
+	Icon,
+	ICredentialTestRequest,
+	ICredentialType,
+	INodeProperties,
+} from 'n8n-workflow';
 
 export class AtomicMailApi implements ICredentialType {
 	name = 'atomicMailApi';
@@ -41,15 +46,15 @@ export class AtomicMailApi implements ICredentialType {
 		},
 	];
 
-	test = {
+	test: ICredentialTestRequest = {
 		request: {
 			baseURL: '={{$credentials.apiUrl || "https://api.atomicmail.ai"}}',
 			url: '/.well-known/jmap',
-			method: 'GET' as const,
+			method: 'GET',
 		},
 		rules: [
 			{
-				type: 'responseCode' as const,
+				type: 'responseCode',
 				properties: {
 					value: 200,
 					message: 'Could not reach the Atomic Mail JMAP endpoint.',

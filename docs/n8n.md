@@ -91,15 +91,18 @@ Set **Account namespace** on every node to the same non-default value when runni
 npm run build:n8n          # refresh vendor/agentic-core
 cd integrations/n8n/atomicmail
 npm run build && npm run lint
+npm run sync:vetting-paths # copy entry files to repo root for Creator Portal
 npx @n8n/scan-community-package @atomicmail/n8n-nodes-atomicmail
 ```
 
-**Creator Portal vetting:** n8n resolves credential/node paths from the **repository root**, not `repository.directory`. The package declares official `dist/*.js` paths in `package.json`. Repo-root symlinks point at the package tree so vetting can find those files on GitHub:
+**Creator Portal vetting:** n8n resolves credential/node paths from the **repository root**, not `repository.directory`. GitHub raw URLs **do not follow symlinks** (they return the link target path as plain text), so repo-root copies are required — not symlinks:
 
-- `credentials/AtomicMailApi.credentials.ts` → `integrations/n8n/atomicmail/credentials/…`
-- `dist/credentials/*.js`, `dist/nodes/**/*.node.js` → matching paths under `integrations/n8n/atomicmail/dist/`
+- `credentials/AtomicMailApi.credentials.ts`
+- `dist/credentials/AtomicMailApi.credentials.js`
+- `dist/nodes/AtomicMail/AtomicMail.node.js`
+- `dist/nodes/AtomicMailTrigger/AtomicMailTrigger.node.js`
 
-Only the three compiled entry files under `integrations/n8n/atomicmail/dist/` are committed (not the full `dist/` tree). After changing credentials or nodes, rebuild, refresh those three `.js` files if they changed, and verify root symlinks still resolve.
+After changing credentials or nodes: `npm run build`, then `npm run sync:vetting-paths`, and commit the package tree plus the four repo-root copies (only the three compiled entry files under `integrations/n8n/atomicmail/dist/`, not the full `dist/` tree).
 
 ## Release checklist
 

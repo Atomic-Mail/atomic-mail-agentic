@@ -23,7 +23,7 @@
     "access": "public"
   },
   "scripts": {
-    "build": "n8n-node build",
+    "build": "n8n-node build && node scripts/copy-vendor-to-dist.mjs",
     "build:watch": "tsc --watch",
     "dev": "n8n-node dev",
     "lint": "n8n-node lint",
@@ -33,9 +33,7 @@
     "prepublishOnly": "n8n-node prerelease"
   },
   "files": [
-    "dist",
-    "vendor/agentic-core/index.js",
-    "vendor/agentic-core/index.d.ts"
+    "dist"
   ],
   "n8n": {
     "n8nNodesApiVersion": 1,

@@ -38,7 +38,7 @@ Create an **Atomic Mail API** credential (optional):
 | Auth URL | No | Default `https://auth.atomicmail.ai` |
 | API URL | No | Default `https://api.atomicmail.ai` |
 
-Credential test validates URL shape only — it does **not** run PoW. Use **Register** or **List Inbox** to verify connectivity.
+Credential test checks that the **Auth URL** is reachable — it does **not** validate your API key (PoW login is required). Use **Register** or **List Inbox** to verify connectivity.
 
 ## Nodes
 

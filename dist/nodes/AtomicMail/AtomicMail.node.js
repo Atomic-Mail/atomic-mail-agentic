@@ -61,7 +61,10 @@ class AtomicMail {
                     displayOptions: {
                         show: { resource: ['account'] },
                     },
-                    options: [{ name: 'Register', value: 'register', action: 'Register an inbox' }],
+                    options: [
+                        { name: 'Ensure Registered', value: 'ensureRegistered', action: 'Register only if no session is stored' },
+                        { name: 'Register', value: 'register', action: 'Register an inbox' },
+                    ],
                     default: 'register',
                 },
                 {
@@ -140,7 +143,7 @@ class AtomicMail {
                     required: true,
                     description: 'Desired inbox username (5–21 characters, before @atomicmail.ai)',
                     displayOptions: {
-                        show: { resource: ['account'], operation: ['register'] },
+                        show: { resource: ['account'], operation: ['register', 'ensureRegistered'] },
                     },
                 },
                 {
@@ -150,7 +153,7 @@ class AtomicMail {
                     default: false,
                     description: 'Whether to replace existing credentials in this account namespace after backing them up',
                     displayOptions: {
-                        show: { resource: ['account'], operation: ['register'] },
+                        show: { resource: ['account'], operation: ['register', 'ensureRegistered'] },
                     },
                 },
                 {
@@ -301,7 +304,7 @@ class AtomicMail {
         };
     }
     async execute() {
-        var _a;
+        var _a, _b, _c, _d;
         const items = this.getInputData();
         const returnData = [];
         for (let itemIndex = 0; itemIndex < items.length; itemIndex++) {
@@ -319,27 +322,60 @@ class AtomicMail {
                     continue;
                 }
                 const accountId = (0, props_1.normalizeAccountId)(this.getNodeParameter('accountId', itemIndex));
+                const itemJson = (_a = items[itemIndex]) === null || _a === void 0 ? void 0 : _a.json;
                 const credentials = (0, session_1.credentialsFromData)(await this.getCredentials('atomicMailApi').catch(() => undefined));
                 const inlineApiKey = this.getNodeParameter('apiKey', itemIndex, '');
-                if (resource === 'account' && operation === 'register') {
+                if (resource === 'account' && operation === 'ensureRegistered') {
+                    if (await (0, session_1.hasStoredCredentials)(staticData, accountId)) {
+                        const stored = await (0, session_1.loadStoredAuthSummary)(staticData, accountId);
+                        const session = await (0, session_1.resolveSessionForExecute)(staticData, accountId, credentials, inlineApiKey, false, itemJson);
+                        const accountIdResolved = await session.getPrimaryMailAccountId();
+                        returnData.push({
+                            json: {
+                                ...(0, session_1.authPassthrough)(itemJson),
+                                skipped: true,
+                                idempotent: true,
+                                inbox: (_c = (_b = stored === null || stored === void 0 ? void 0 : stored.inbox) !== null && _b !== void 0 ? _b : session.currentInboxId) !== null && _c !== void 0 ? _c : '',
+                                accountId: accountIdResolved,
+                                ...((stored === null || stored === void 0 ? void 0 : stored.apiKey) ? { apiKey: stored.apiKey } : {}),
+                            },
+                            pairedItem: { item: itemIndex },
+                        });
+                        continue;
+                    }
+                }
+                if (resource === 'account' &&
+                    (operation === 'register' || operation === 'ensureRegistered')) {
                     const username = (0, props_1.requiredString)(this.getNodeParameter('username', itemIndex), 'username');
                     const forced = this.getNodeParameter('forced', itemIndex, false);
-                    const session = await (0, session_1.resolveSessionForExecute)(staticData, accountId, credentials, inlineApiKey, false);
+                    const session = await (0, session_1.resolveSessionForExecute)(staticData, accountId, credentials, inlineApiKey, false, itemJson);
                     const result = await session.register(username, { forced });
+                    const merged = {
+                        ...(0, session_1.authPassthrough)(itemJson),
+                        ...result,
+                    };
+                    if (!merged.apiKey) {
+                        const stored = await (0, session_1.loadStoredAuthSummary)(staticData, accountId);
+                        if (stored === null || stored === void 0 ? void 0 : stored.apiKey)
+                            merged.apiKey = stored.apiKey;
+                        if ((stored === null || stored === void 0 ? void 0 : stored.inbox) && !merged.inbox)
+                            merged.inbox = stored.inbox;
+                    }
                     returnData.push({
                         json: {
-                            ...result,
+                            ...merged,
                             _next: [index_js_1.postRegisterCronReminder],
                         },
                         pairedItem: { item: itemIndex },
                     });
                     continue;
                 }
-                const session = await (0, session_1.resolveSessionForExecute)(staticData, accountId, credentials, inlineApiKey, true);
+                const session = await (0, session_1.resolveSessionForExecute)(staticData, accountId, credentials, inlineApiKey, true, itemJson);
                 if (resource === 'inbox' && operation === 'list') {
                     const result = unwrapJmapResult(this, itemIndex, await (0, jmap_1.executePreset)(session, 'list_inbox.json'));
                     returnData.push({
                         json: {
+                            ...(0, session_1.authPassthrough)(itemJson),
                             ok: true,
                             status: result.status,
                             body: result.body,
@@ -363,13 +399,14 @@ class AtomicMail {
                         TO: to,
                         SUBJECT: subject,
                         BODY: body,
-                        ...((_a = attachmentResult.vars) !== null && _a !== void 0 ? _a : {}),
+                        ...((_d = attachmentResult.vars) !== null && _d !== void 0 ? _d : {}),
                     };
                     const result = unwrapJmapResult(this, itemIndex, await (0, jmap_1.executePreset)(session, attachmentResult.vars
                         ? 'send_mail_blob_attachment.json'
                         : 'send_mail.json', vars));
                     returnData.push({
                         json: {
+                            ...(0, session_1.authPassthrough)(itemJson),
                             ok: true,
                             status: result.status,
                             body: result.body,
@@ -387,6 +424,7 @@ class AtomicMail {
                     }));
                     returnData.push({
                         json: {
+                            ...(0, session_1.authPassthrough)(itemJson),
                             ok: true,
                             status: result.status,
                             body: result.body,
@@ -424,6 +462,7 @@ class AtomicMail {
                     const result = unwrapJmapResult(this, itemIndex, jmapResult);
                     returnData.push({
                         json: {
+                            ...(0, session_1.authPassthrough)(itemJson),
                             ok: true,
                             status: result.status,
                             body: result.body,

@@ -1,0 +1,44 @@
+# Local n8n demo stack for recording / testing @atomicmail/n8n-nodes-atomicmail.
+#
+# Register (PoW) runs synchronously in the main n8n Node.js process — not in task
+# runners. More container CPU/RAM speeds scrypt; N8N_RUNNERS_* does not apply.
+#
+# Prerequisite (Docker Desktop on macOS): Settings → Resources — give the VM at
+# least as much RAM/CPU as the limits below (recommended: 8 GB RAM, 4 CPUs on a
+# 16 GB MacBook).
+#
+# First run:
+#   docker volume create n8n_demo_data
+#   docker compose -f integrations/n8n/docker-compose.demo.yml up -d
+#
+# Recreate after changing limits/env (data volume is preserved):
+#   docker compose -f integrations/n8n/docker-compose.demo.yml up -d --force-recreate
+
+services:
+  n8n-demo:
+    image: docker.n8n.io/n8nio/n8n
+    container_name: n8n-demo
+    ports:
+      - "5678:5678"
+    deploy:
+      resources:
+        limits:
+          cpus: "4"
+          memory: 4g
+    shm_size: 256m
+    environment:
+      GENERIC_TIMEZONE: UTC
+      TZ: UTC
+      N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS: "true"
+      N8N_COMMUNITY_PACKAGES_ENABLED: "true"
+      # Main-process heap headroom (Register PoW runs here, not in runners).
+      NODE_OPTIONS: "--max-old-space-size=3072"
+      # Do not kill long PoW runs (Register can take minutes).
+      EXECUTIONS_TIMEOUT: "-1"
+    volumes:
+      - n8n_demo_data:/home/node/.n8n
+    restart: unless-stopped
+
+volumes:
+  n8n_demo_data:
+    external: true

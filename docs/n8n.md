@@ -23,6 +23,28 @@ npm run build
 
 Copy or link the package into your n8n custom extensions path, or run `npm run dev` for local development.
 
+### Local Docker demo (video / QA)
+
+Use the tuned compose file at [`integrations/n8n/docker-compose.demo.yml`](../integrations/n8n/docker-compose.demo.yml):
+
+```bash
+docker volume create n8n_demo_data
+docker compose -f integrations/n8n/docker-compose.demo.yml up -d
+```
+
+Open **http://localhost:5678**, then install `@atomicmail/n8n-nodes-atomicmail` under **Settings → Community nodes**.
+
+**Register PoW is CPU-bound.** It runs in the main n8n Node.js process (pure-JS scrypt in the bundled core), not in n8n task runners. `N8N_RUNNERS_*` env vars only affect the **Code** node — they do not speed up **Register**.
+
+To make Register faster on macOS:
+
+1. **Docker Desktop → Settings → Resources** — allocate at least **8 GB RAM** and **4 CPUs** to the Docker VM (must be ≥ container limits).
+2. The compose file caps the container at **4 CPUs / 4 GB RAM** and sets `NODE_OPTIONS=--max-old-space-size=3072` plus `EXECUTIONS_TIMEOUT=-1` so PoW is not killed mid-run.
+3. Close other heavy containers/workflows while recording Register.
+4. For maximum demo speed, run n8n natively (`npm run dev` in `integrations/n8n/atomicmail`) instead of Docker.
+
+Monitor during Register: `docker stats n8n-demo` — one CPU near 100% confirms CPU-bound PoW.
+
 ## Credentials {#credentials}
 
 The **Atomic Mail API** credential is optional:
@@ -31,7 +53,7 @@ The **Atomic Mail API** credential is optional:
 - **Auth URL** — default `https://auth.atomicmail.ai`
 - **API URL** — default `https://api.atomicmail.ai`
 
-The credential **Test** step validates URL shape only. It does **not** run proof-of-work (PoW). To verify an API key end-to-end, run **List Inbox** or activate the polling trigger.
+The credential **Test** step checks that the **Auth URL** is reachable (`POST /api/v1/challenge`). It does **not** validate your API key — Atomic Mail keys require a proof-of-work login before JMAP calls. To verify an API key end-to-end, run **List Inbox** or activate the polling trigger.
 
 ### Register vs credential key
 

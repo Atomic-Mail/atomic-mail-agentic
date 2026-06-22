@@ -38,16 +38,16 @@ class AtomicMailApi {
         ];
         this.test = {
             request: {
-                baseURL: '={{$credentials.apiUrl || "https://api.atomicmail.ai"}}',
-                url: '/.well-known/jmap',
-                method: 'GET',
+                baseURL: '={{$credentials.authUrl || "https://auth.atomicmail.ai"}}',
+                url: '/api/v1/challenge',
+                method: 'POST',
             },
             rules: [
                 {
                     type: 'responseCode',
                     properties: {
                         value: 200,
-                        message: 'Could not reach the Atomic Mail JMAP endpoint.',
+                        message: 'Could not reach the Atomic Mail auth service. Check Auth URL and API URL.',
                     },
                 },
             ],

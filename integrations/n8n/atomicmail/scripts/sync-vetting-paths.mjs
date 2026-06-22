@@ -1,15 +1,21 @@
 #!/usr/bin/env node
 /**
- * Copy n8n credential/node entry files to repo-root paths expected by the
- * Creator Portal vetting process (which reads GitHub raw content at the
- * repository root and does not follow symlinks).
+ * Copy n8n credential/node entry files for Creator Portal vetting.
+ *
+ * Canonical sources live under integrations/n8n/atomicmail/. Mirrors are
+ * written to integrations/n8n/vetting/ and compiled dist/*.js files are
+ * also copied to repo-root dist/ (Creator Portal resolves n8n.* paths from
+ * the repository root, not repository.directory; GitHub raw does not follow
+ * symlinks).
  */
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const packageDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const repoRoot = path.resolve(packageDir, '../../..');
+const n8nDir = path.resolve(packageDir, '..');
+const vettingDir = path.join(n8nDir, 'vetting');
+const repoRoot = path.resolve(n8nDir, '../..');
 
 const vettingPaths = [
 	'credentials/AtomicMailApi.credentials.ts',
@@ -18,10 +24,7 @@ const vettingPaths = [
 	'dist/nodes/AtomicMailTrigger/AtomicMailTrigger.node.js',
 ];
 
-for (const relPath of vettingPaths) {
-	const src = path.join(packageDir, relPath);
-	const dest = path.join(repoRoot, relPath);
-
+function copyFile(src, dest) {
 	if (!fs.existsSync(src)) {
 		console.error(`Missing source file: ${src}`);
 		process.exit(1);
@@ -37,5 +40,19 @@ for (const relPath of vettingPaths) {
 	}
 
 	fs.copyFileSync(src, dest);
-	console.log(`Synced ${relPath}`);
+}
+
+for (const relPath of vettingPaths) {
+	const src = path.join(packageDir, relPath);
+	const vettingDest = path.join(vettingDir, relPath);
+	copyFile(src, vettingDest);
+	console.log(`Synced integrations/n8n/vetting/${relPath}`);
+}
+
+for (const relPath of vettingPaths) {
+	if (!relPath.startsWith('dist/')) continue;
+	const src = path.join(vettingDir, relPath);
+	const repoDest = path.join(repoRoot, relPath);
+	copyFile(src, repoDest);
+	console.log(`Synced repo-root ${relPath}`);
 }

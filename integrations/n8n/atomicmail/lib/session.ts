@@ -10,6 +10,44 @@ import {
 
 import { isHttpUrl, optionalTrimmedString } from './props';
 
+/** Auth fields forwarded through multi-step workflows (Register → List → Send). */
+export function authPassthrough(itemJson: IDataObject | undefined): IDataObject {
+	if (!itemJson) return {};
+	const out: IDataObject = {};
+	const apiKey = optionalTrimmedString(itemJson.apiKey);
+	const inbox = optionalTrimmedString(itemJson.inbox);
+	const accountId = optionalTrimmedString(itemJson.accountId);
+	if (apiKey) out.apiKey = apiKey;
+	if (inbox) out.inbox = inbox;
+	if (accountId) out.accountId = accountId;
+	return out;
+}
+
+export function apiKeyFromItemJson(itemJson: IDataObject | undefined): string | undefined {
+	return optionalTrimmedString(itemJson?.apiKey);
+}
+
+export async function hasStoredCredentials(
+	staticData: IDataObject,
+	accountId: string,
+): Promise<boolean> {
+	const store = createN8nCredentialStore(n8nStaticDataBackend(staticData), accountId);
+	const loaded = await store.load();
+	return Boolean(loaded.credentials?.apiKey);
+}
+
+export async function loadStoredAuthSummary(
+	staticData: IDataObject,
+	accountId: string,
+): Promise<{ apiKey: string; inbox: string } | undefined> {
+	const store = createN8nCredentialStore(n8nStaticDataBackend(staticData), accountId);
+	const loaded = await store.load();
+	const apiKey = optionalTrimmedString(loaded.credentials?.apiKey);
+	const inbox = optionalTrimmedString(loaded.credentials?.inboxId);
+	if (!apiKey || !inbox) return undefined;
+	return { apiKey, inbox };
+}
+
 export interface AtomicMailCredentialFields {
 	apiKey?: string;
 	authUrl?: string;
@@ -113,9 +151,12 @@ export async function resolveSessionForExecute(
 	credentials: AtomicMailCredentialFields | undefined,
 	inlineApiKey: unknown,
 	requireStored = true,
+	itemJson?: IDataObject,
 ): Promise<AgentSession> {
 	const mergedApiKey =
-		optionalTrimmedString(inlineApiKey) ?? apiKeyFromCredentials(credentials);
+		optionalTrimmedString(inlineApiKey) ??
+		apiKeyFromItemJson(itemJson) ??
+		apiKeyFromCredentials(credentials);
 
 	if (requireStored) {
 		await assertStoredCredentials(staticData, accountId, mergedApiKey);

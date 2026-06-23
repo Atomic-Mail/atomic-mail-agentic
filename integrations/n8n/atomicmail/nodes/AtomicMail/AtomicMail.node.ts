@@ -21,7 +21,10 @@ import {
 	type JmapExecutionResult,
 } from '../../lib/jmap';
 import {
+	authPassthrough,
 	credentialsFromData,
+	hasStoredCredentials,
+	loadStoredAuthSummary,
 	resolveSessionForExecute,
 } from '../../lib/session';
 import { normalizeAccountId, optionalTrimmedString, requiredString } from '../../lib/props';
@@ -85,7 +88,10 @@ export class AtomicMail implements INodeType {
 				displayOptions: {
 					show: { resource: ['account'] },
 				},
-				options: [{ name: 'Register', value: 'register', action: 'Register an inbox' }],
+				options: [
+					{ name: 'Ensure Registered', value: 'ensureRegistered', action: 'Register only if no session is stored' },
+					{ name: 'Register', value: 'register', action: 'Register an inbox' },
+				],
 				default: 'register',
 			},
 			{
@@ -165,7 +171,7 @@ export class AtomicMail implements INodeType {
 				required: true,
 				description: 'Desired inbox username (5–21 characters, before @atomicmail.ai)',
 				displayOptions: {
-					show: { resource: ['account'], operation: ['register'] },
+					show: { resource: ['account'], operation: ['register', 'ensureRegistered'] },
 				},
 			},
 			{
@@ -175,7 +181,7 @@ export class AtomicMail implements INodeType {
 				default: false,
 				description: 'Whether to replace existing credentials in this account namespace after backing them up',
 				displayOptions: {
-					show: { resource: ['account'], operation: ['register'] },
+					show: { resource: ['account'], operation: ['register', 'ensureRegistered'] },
 				},
 			},
 			{
@@ -347,12 +353,43 @@ export class AtomicMail implements INodeType {
 				}
 
 				const accountId = normalizeAccountId(this.getNodeParameter('accountId', itemIndex));
+				const itemJson = items[itemIndex]?.json;
 				const credentials = credentialsFromData(
 					await this.getCredentials('atomicMailApi').catch(() => undefined),
 				);
 				const inlineApiKey = this.getNodeParameter('apiKey', itemIndex, '') as string;
 
-				if (resource === 'account' && operation === 'register') {
+				if (resource === 'account' && operation === 'ensureRegistered') {
+					if (await hasStoredCredentials(staticData, accountId)) {
+						const stored = await loadStoredAuthSummary(staticData, accountId);
+						const session = await resolveSessionForExecute(
+							staticData,
+							accountId,
+							credentials,
+							inlineApiKey,
+							false,
+							itemJson,
+						);
+						const accountIdResolved = await session.getPrimaryMailAccountId();
+						returnData.push({
+							json: {
+								...authPassthrough(itemJson),
+								skipped: true,
+								idempotent: true,
+								inbox: stored?.inbox ?? session.currentInboxId ?? '',
+								accountId: accountIdResolved,
+								...(stored?.apiKey ? { apiKey: stored.apiKey } : {}),
+							},
+							pairedItem: { item: itemIndex },
+						});
+						continue;
+					}
+				}
+
+				if (
+					resource === 'account' &&
+					(operation === 'register' || operation === 'ensureRegistered')
+				) {
 					const username = requiredString(
 						this.getNodeParameter('username', itemIndex),
 						'username',
@@ -364,11 +401,21 @@ export class AtomicMail implements INodeType {
 						credentials,
 						inlineApiKey,
 						false,
+						itemJson,
 					);
 					const result = await session.register(username, { forced });
+					const merged: IDataObject = {
+						...authPassthrough(itemJson),
+						...result,
+					};
+					if (!merged.apiKey) {
+						const stored = await loadStoredAuthSummary(staticData, accountId);
+						if (stored?.apiKey) merged.apiKey = stored.apiKey;
+						if (stored?.inbox && !merged.inbox) merged.inbox = stored.inbox;
+					}
 					returnData.push({
 						json: {
-							...result,
+							...merged,
 							_next: [postRegisterCronReminder],
 						},
 						pairedItem: { item: itemIndex },
@@ -382,6 +429,7 @@ export class AtomicMail implements INodeType {
 					credentials,
 					inlineApiKey,
 					true,
+					itemJson,
 				);
 
 				if (resource === 'inbox' && operation === 'list') {
@@ -392,6 +440,7 @@ export class AtomicMail implements INodeType {
 					);
 					returnData.push({
 						json: {
+							...authPassthrough(itemJson),
 							ok: true,
 							status: result.status,
 							body: result.body as IDataObject,
@@ -438,6 +487,7 @@ export class AtomicMail implements INodeType {
 					);
 					returnData.push({
 						json: {
+							...authPassthrough(itemJson),
 							ok: true,
 							status: result.status,
 							body: result.body as IDataObject,
@@ -460,6 +510,7 @@ export class AtomicMail implements INodeType {
 					);
 					returnData.push({
 						json: {
+							...authPassthrough(itemJson),
 							ok: true,
 							status: result.status,
 							body: result.body as IDataObject,
@@ -507,6 +558,7 @@ export class AtomicMail implements INodeType {
 					const result = unwrapJmapResult(this, itemIndex, jmapResult);
 					returnData.push({
 						json: {
+							...authPassthrough(itemJson),
 							ok: true,
 							status: result.status,
 							body: result.body as IDataObject,

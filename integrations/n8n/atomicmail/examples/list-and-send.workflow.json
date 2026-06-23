@@ -1,0 +1,254 @@
+{
+  "name": "List and send",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "fdf9137a-c0ba-4e63-859c-a02ec780f5ee",
+      "name": "When clicking 'Execute workflow'",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "const ACCOUNT = 'default';\nconst sd = $getWorkflowStaticData('global');\nconst credKey = `atomicmail:${ACCOUNT}:account:${ACCOUNT}:credentials.json`;\n\nlet apiKey, inbox;\nif (sd[credKey]) {\n  try {\n    const cred = JSON.parse(sd[credKey]);\n    apiKey = cred.apiKey;\n    inbox = cred.inboxId;\n  } catch {}\n}\n\nreturn [{\n  json: {\n    needsRegister: !apiKey,\n    apiKey: apiKey ?? null,\n    inbox: inbox ?? null,\n    accountId: ACCOUNT,\n  },\n}];"
+      },
+      "id": "c1111111-0001-4000-8000-000000000001",
+      "name": "Check Session",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [220, 0]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "if-needs-register",
+              "leftValue": "={{ $json.needsRegister }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "c1111111-0001-4000-8000-000000000002",
+      "name": "Needs Register?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [440, 0]
+    },
+    {
+      "parameters": {
+        "resource": "account",
+        "operation": "register",
+        "accountId": "default",
+        "username": "n8nlistandsend",
+        "forced": false
+      },
+      "id": "c1111111-0001-4000-8000-000000000003",
+      "name": "Register",
+      "type": "@atomicmail/n8n-nodes-atomicmail.atomicMail",
+      "typeVersion": 1,
+      "position": [660, -120]
+    },
+    {
+      "parameters": {
+        "mode": "manual",
+        "duplicateItem": false,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a1",
+              "name": "apiKey",
+              "value": "={{ $json.apiKey }}",
+              "type": "string"
+            },
+            {
+              "id": "a2",
+              "name": "inbox",
+              "value": "={{ $json.inbox }}",
+              "type": "string"
+            },
+            {
+              "id": "a3",
+              "name": "accountId",
+              "value": "={{ $json.accountId }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "c1111111-0001-4000-8000-000000000004",
+      "name": "Set Auth (after Register)",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [880, -120]
+    },
+    {
+      "parameters": {
+        "mode": "manual",
+        "duplicateItem": false,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a1",
+              "name": "apiKey",
+              "value": "={{ $('Check Session').item.json.apiKey }}",
+              "type": "string"
+            },
+            {
+              "id": "a2",
+              "name": "inbox",
+              "value": "={{ $('Check Session').item.json.inbox }}",
+              "type": "string"
+            },
+            {
+              "id": "a3",
+              "name": "accountId",
+              "value": "={{ $('Check Session').item.json.accountId }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "c1111111-0001-4000-8000-000000000005",
+      "name": "Set Auth (from static)",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [660, 120]
+    },
+    {
+      "parameters": {
+        "resource": "inbox",
+        "operation": "list",
+        "accountId": "default",
+        "apiKey": "={{ $json.apiKey }}"
+      },
+      "id": "8dd471f7-cb05-4ce5-9007-31420c915f34",
+      "name": "List inbox messages",
+      "type": "@atomicmail/n8n-nodes-atomicmail.atomicMail",
+      "typeVersion": 1,
+      "position": [1100, 0]
+    },
+    {
+      "parameters": {
+        "resource": "email",
+        "operation": "send",
+        "accountId": "default",
+        "apiKey": "={{ $json.apiKey }}",
+        "to": "alex.v@atomicmail.cc",
+        "subject": "Hello from n8n!",
+        "body": "How are you"
+      },
+      "id": "54a094a4-d080-4d47-919c-9e6b59f6c53f",
+      "name": "Send an email",
+      "type": "@atomicmail/n8n-nodes-atomicmail.atomicMail",
+      "typeVersion": 1,
+      "position": [1320, 0]
+    }
+  ],
+  "connections": {
+    "When clicking 'Execute workflow'": {
+      "main": [
+        [
+          {
+            "node": "Check Session",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Session": {
+      "main": [
+        [
+          {
+            "node": "Needs Register?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Needs Register?": {
+      "main": [
+        [
+          {
+            "node": "Register",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Set Auth (from static)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Register": {
+      "main": [
+        [
+          {
+            "node": "Set Auth (after Register)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Auth (after Register)": {
+      "main": [
+        [
+          {
+            "node": "List inbox messages",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Auth (from static)": {
+      "main": [
+        [
+          {
+            "node": "List inbox messages",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "List inbox messages": {
+      "main": [
+        [
+          {
+            "node": "Send an email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

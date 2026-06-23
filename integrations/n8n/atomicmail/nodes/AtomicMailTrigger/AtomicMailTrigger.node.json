@@ -1,5 +1,5 @@
 {
-  "node": "n8n-nodes-atomicmail.atomicMailTrigger",
+  "node": "@atomicmail/n8n-nodes-atomicmail.atomicMailTrigger",
   "nodeVersion": "1.0",
   "codexVersion": "1.0",
   "categories": ["Communication"],

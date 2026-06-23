@@ -16,6 +16,15 @@ npm run dev
 
 Open n8n at `http://localhost:5678`, add **Atomic Mail** or **Atomic Mail Trigger**, and configure credentials or run **Register**.
 
+### Docker demo (tuned for Register PoW)
+
+```bash
+docker volume create n8n_demo_data
+docker compose -f integrations/n8n/docker-compose.demo.yml up -d
+```
+
+See [docs/n8n.md — Local Docker demo](../../docs/n8n.md#local-docker-demo-video--qa) for resource tuning notes.
+
 ## Package
 
 | Item | Value |

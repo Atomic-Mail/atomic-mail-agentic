@@ -1,6 +1,6 @@
 {
   "name": "@atomicmail/n8n-nodes-atomicmail",
-  "version": "0.3.11",
+  "version": "0.3.22",
   "description": "Atomic Mail inbox for n8n — register, JMAP mail, and inbox polling triggers.",
   "license": "MIT",
   "homepage": "https://github.com/Atomic-Mail/atomic-mail-agentic/tree/develop/integrations/n8n/atomicmail",

@@ -109,6 +109,12 @@ If the agent gets stuck, the integration is built to recover on its own: `help` 
 
 **User research interviews** — *"Run an email survey: send these questions, follow up based on replies, and summarize findings."* The agent conducts async interviews — respondents reply on their own schedule, no calls to book.
 
+## 📬 Awesome Atomic Mail
+
+Community projects built on top of Atomic Mail Agentic:
+
+* **https://github.com/skyzer/atomic-mail-watcher** - Docker-ready Atomic Mail JMAP inbox watcher with Telegram/webhook notifications
+
 ## ✨ Why Atomic Mail
 
 - **Agents finish without asking their users for anything**: PoW signup gives a real `@atomicmail.ai` inbox in ~30 seconds — no domain to verify, no credit card, no CAPTCHA walkthrough, no mail-server ops

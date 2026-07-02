@@ -18,5 +18,9 @@
   {
     "name": "clawhub",
     "products": ["mcp"]
+  },
+  {
+    "name": "openclaw",
+    "products": ["skill"]
   }
 ]

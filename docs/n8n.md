@@ -1,6 +1,16 @@
+---
+description: Install and configure the @atomicmail/n8n-nodes-atomicmail community node—auth model, action node, New Email trigger, presets, and a worked triage workflow.
+---
+
 # Atomic Mail on n8n
 
 Install the community node `@atomicmail/n8n-nodes-atomicmail` to give n8n workflows a real `@atomicmail.ai` inbox via JMAP.
+
+## Auth model
+
+The n8n node uses the **proof-of-work** path — the workflow owns its inbox, no human sign-in, no OAuth. Either run the **Register** action once (PoW signup, credentials stored in workflow-global static data) or paste an existing API key into an **Atomic Mail API** credential. Details in [Credentials](#credentials) below; the underlying HTTP chain is [REST authentication](/rest-auth).
+
+If you would rather a **person** own the mailbox and authorize n8n against it, use n8n's generic HTTP Request node with an OAuth 2.0 credential pointed at [our authorization server](/oauth) — the settings are the same ones listed on the [Make.com page](/make#connection-settings), including the mandatory `resource` parameter and the `X-Atomic-Account-Id` header.
 
 ## Install
 
@@ -32,7 +42,7 @@ docker volume create n8n_demo_data
 docker compose -f integrations/n8n/docker-compose.demo.yml up -d
 ```
 
-Open **http://localhost:5678**, then install `@atomicmail/n8n-nodes-atomicmail` under **Settings → Community nodes**.
+Open **`http://localhost:5678`**, then install `@atomicmail/n8n-nodes-atomicmail` under **Settings → Community nodes**.
 
 **Register PoW is CPU-bound.** It runs in the main n8n Node.js process (pure-JS scrypt in the bundled core), not in n8n task runners. `N8N_RUNNERS_*` env vars only affect the **Code** node — they do not speed up **Register**.
 
@@ -97,6 +107,28 @@ Bundled presets (via **JMAP → Request → Preset File**):
 
 Session placeholders `$ACCOUNT_ID`, `$INBOX`, `$INBOX_MAILBOX_ID` are resolved automatically. Pass additional `$VAR` tokens in **Vars JSON**.
 
+## Worked example: triage inbound mail
+
+A minimal five-node workflow that reads new mail, summarises it, and replies:
+
+1. **Atomic Mail Trigger** — *New Email*, poll every 5 minutes. Emits one item per new message (`id`, `subject`, `from`, `preview`, `receivedAt`).
+2. **Atomic Mail** — *Email → Get* is not needed if `preview` is enough; for the full body use **JMAP → Request** with inline `ops`:
+
+   ```json
+   [["Email/get", {
+     "accountId": "$ACCOUNT_ID",
+     "ids": ["{{ $json.id }}"],
+     "properties": ["subject", "from", "textBody", "bodyValues"],
+     "fetchAllBodyValues": true
+   }, "g0"]]
+   ```
+
+3. **AI Agent / LLM node** — classify and draft a reply from the body text.
+4. **IF** — route urgent vs. everything else.
+5. **Atomic Mail** — *Email → Reply* with the message `id` and the drafted body.
+
+The trigger seeds a watermark on first activation, so activating it does not replay existing mail.
+
 ## Multi-account
 
 Set **Account namespace** on every node to the same non-default value when running multiple inboxes in one workflow. Register once per namespace.
@@ -153,3 +185,5 @@ Requires `@n8n/node-cli` ≥ 0.23.0 (installed in `integrations/n8n/atomicmail`;
 
 - [n8n integration README (monorepo)](https://github.com/Atomic-Mail/atomic-mail-agentic/blob/develop/integrations/n8n/README.md)
 - [Atomic Mail MCP / CLI overview](./SKILL.md)
+- [Raw JMAP requests](/jmap) — the method shapes behind every node
+- Other integrations: [Make.com](/make) · [LangChain](/langchain) · [Dify](/dify) · [Remote MCP](/mcp-remote)

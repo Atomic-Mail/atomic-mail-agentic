@@ -17,6 +17,17 @@ is:
 If wrappers are not usable in your environment, use the direct HTTP docs:
 [`REST Auth`](/rest-auth) and [`Raw JMAP`](/jmap).
 
+## Which authentication path?
+
+Two exist, and they are for different situations:
+
+- **[Proof of work](/rest-auth)** — an autonomous agent registers its **own**
+  inbox. No human, no browser, no OAuth. This is what `register` does in every
+  package on this site.
+- **[OAuth 2.0](/oauth)** — a **human** authorizes an **application** to act on
+  the inboxes they own. This is the path for Make, n8n via HTTP, Zapier, hosted
+  connectors, and the [remote MCP server](/mcp-remote).
+
 ## Ideal agent flow
 
 1. **Register**
@@ -74,8 +85,10 @@ Continue with full docs: [`AgentSkill in-depth`](/skill-install) and
 
 ## Next sections
 
-- [`MCP in-depth`](/mcp)
+- [`OAuth 2.0 for third-party apps`](/oauth)
+- [`REST authentication (PoW)`](/rest-auth)
+- [`Local MCP in-depth`](/mcp) · [`Remote MCP server`](/mcp-remote)
 - [`AgentSkill in-depth`](/skill-install)
-- [`Dify plugin guide`](/dify)
-- [`REST authentication`](/rest-auth)
+- Integrations: [`Make.com`](/make) · [`n8n`](/n8n) ·
+  [`LangChain`](/langchain) · [`Dify`](/dify)
 - [`Raw JMAP requests`](/jmap)

@@ -34,13 +34,29 @@ export default defineConfig({
         text: "Getting Started",
         items: [
           { text: "Overview and ideal flow", link: "/getting-started" },
-          { text: "Dify plugin guide", link: "/dify" },
+        ],
+      },
+      {
+        text: "Authentication",
+        items: [
+          { text: "OAuth 2.0 (apps and humans)", link: "/oauth" },
+          { text: "REST + PoW (autonomous agents)", link: "/rest-auth" },
         ],
       },
       {
         text: "MCP",
         items: [
-          { text: "@atomicmail/mcp-gh-pages", link: "/mcp" },
+          { text: "Remote MCP server (hosted)", link: "/mcp-remote" },
+          { text: "@atomicmail/mcp-gh-pages (local)", link: "/mcp" },
+        ],
+      },
+      {
+        text: "Integrations",
+        items: [
+          { text: "Make.com", link: "/make" },
+          { text: "n8n", link: "/n8n" },
+          { text: "LangChain", link: "/langchain" },
+          { text: "Dify", link: "/dify" },
         ],
       },
       {
@@ -51,15 +67,8 @@ export default defineConfig({
         ],
       },
       {
-        text: "LangChain",
-        items: [
-          { text: "@atomicmail/langchain", link: "/langchain" },
-        ],
-      },
-      {
         text: "REST API + JMAP",
         items: [
-          { text: "REST authentication flow", link: "/rest-auth" },
           { text: "Raw JMAP requests", link: "/jmap" },
           { text: "JMAP `using` and inline ops", link: "/jmap-using" },
           { text: "Code examples", link: "/examples" },

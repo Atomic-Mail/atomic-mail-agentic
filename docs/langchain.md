@@ -10,6 +10,14 @@ same shared runtime used by MCP and AgentSkill. It provides both:
 - a ready-to-use tools array (`createAtomicMailTools`)
 - a toolkit class (`AtomicMailToolkit`)
 
+## Auth model
+
+Proof of work — the agent owns its own inbox, no human sign-in. `register`
+performs PoW signup and the shared runtime rotates session and capability tokens
+for you; the underlying HTTP chain is [REST authentication](/rest-auth). If a
+**person** should own the mailbox and authorize your app instead, use
+[OAuth 2.0](/oauth) with a plain HTTP client.
+
 ## Install
 
 ```bash
@@ -75,3 +83,9 @@ const inbox = await jmapRequest.invoke({
 const docs = await help.invoke({ topic: "presets" });
 console.log(inbox, docs);
 ```
+
+## See also
+
+- [Raw JMAP requests](/jmap) — the method shapes `jmap_request` sends
+- Other integrations: [Make.com](/make) · [n8n](/n8n) · [Dify](/dify) ·
+  [Remote MCP](/mcp-remote)

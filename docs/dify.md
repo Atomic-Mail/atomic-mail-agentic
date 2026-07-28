@@ -7,6 +7,13 @@ description: Use Atomic Mail in Dify from marketplace install to Agent/Workflow 
 Atomic Mail is available in the Dify marketplace as a tool plugin for Dify
 Agent and Workflow apps.
 
+## Auth model
+
+Proof of work — the plugin's `register` tool creates or recovers an inbox the
+app itself owns, with no human sign-in. The underlying HTTP chain is
+[REST authentication](/rest-auth). If a **person** should own the mailbox and
+authorize the app instead, use [OAuth 2.0](/oauth) from a Dify HTTP Request node.
+
 ## How to install in Dify
 
 1. Open **Plugins** in your Dify workspace.
@@ -77,3 +84,9 @@ polling on a capable host, or use manual fetch reminders.
 
 For exact prompt patterns and runtime-specific guidance, use Atomic Mail `help`
 topic `cron`.
+
+## See also
+
+- [Raw JMAP requests](/jmap) — the method shapes behind `jmap_request`
+- Other integrations: [Make.com](/make) · [n8n](/n8n) · [LangChain](/langchain) ·
+  [Remote MCP](/mcp-remote)

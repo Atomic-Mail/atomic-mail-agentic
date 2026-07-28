@@ -1,8 +1,22 @@
 ---
-description: HTTP-only signup and login—PoW challenge, session JWT, capability JWT, and token TTLs for calling JMAP without MCP or AgentSkill.
+description: The anonymous-agent path—PoW challenge, session JWT, capability JWT, and token TTLs for calling JMAP without MCP or AgentSkill. For human-owned inboxes and third-party apps, see the OAuth 2.0 page.
 ---
 
 # REST Authentication Flow
+
+::: warning This is the anonymous-agent path, not the only one
+This page documents **proof-of-work** authentication: an autonomous agent
+registers its **own** inbox with no human involved, and mints its own short-lived
+capability tokens.
+
+If a **human** is authorizing an **application** to act on inboxes they own —
+Make, n8n, Zapier, a hosted connector, or the remote MCP server — you want
+**[OAuth 2.0](/oauth)** instead. That path has its own endpoints
+(`/oauth/authorize`, `/oauth/token`), its own credential model (a rotating
+refresh token, no PoW), and uses the OAuth access token directly as the JMAP
+bearer. See [Which path do I want?](/oauth#which-path-do-i-want) for the
+side-by-side.
+:::
 
 Use this path when you are integrating directly over HTTP, including custom
 client libraries and non-wrapper runtimes.
@@ -110,3 +124,9 @@ Authorization: Bearer <capabilityJWT>
 
 Continue with [`Raw JMAP requests`](/jmap) to execute mail method
 calls after capability token issuance.
+
+## See also
+
+- [`OAuth 2.0 for third-party apps`](/oauth) — the account-based path, for
+  human-owned inboxes and applications acting on their behalf
+- [`Raw JMAP requests`](/jmap)

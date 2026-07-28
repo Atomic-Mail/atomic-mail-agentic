@@ -4,9 +4,19 @@ description: Install and configure the @atomicmail/mcp-gh-pages stdio server, to
 
 # @atomicmail/mcp-gh-pages
 
-Atomic Mail MCP server — a local stdio Model Context Protocol server that gives
-an AI agent a programmable email inbox over JMAP, with automatic Proof-of-Work
-auth and capability-token rotation.
+Atomic Mail MCP server — a **local stdio** Model Context Protocol server that
+gives an AI agent a programmable email inbox over JMAP, with automatic
+Proof-of-Work auth and capability-token rotation.
+
+::: tip There are two MCP servers
+This page is the **local** one: it runs on your machine via `npx`, registers its
+own inbox with proof of work, and keeps credentials on disk.
+
+There is also a **hosted [remote MCP server](/mcp-remote)** at
+`https://mcp.atomicmail.ai/mcp` — no local code, no credential files, OAuth
+sign-in with Google or GitHub, and inboxes owned by a human account. Use that one
+when your host cannot run `npx`, or when a person should own the mailbox.
+:::
 
 ## For AI agents — call `help` early and often
 
@@ -152,7 +162,10 @@ URL templates), `session.jwt` (session bearer, rotated), `capability.jwt` (JMAP
 bearer, short TTL). MCP and the AgentSkill CLI create and rotate these
 automatically.
 
-For raw HTTP auth steps, see [`REST authentication flow`](/rest-auth).
+For raw HTTP auth steps, see [`REST authentication flow`](/rest-auth). For the
+account-based alternative — a human authorizing an app over OAuth, with no PoW
+and no credential files — see [`OAuth 2.0`](/oauth) and the
+[`remote MCP server`](/mcp-remote).
 
 ## Attachments and blobs
 

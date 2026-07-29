@@ -3,7 +3,7 @@
 import "../_dnt.polyfills.js";
 import process from "node:process";
 import { parseArgs } from "node:util";
-import { AgentSession, DEFAULT_API_URL, DEFAULT_AUTH_URL, DEFAULT_JMAP_USING, DEFAULT_POW_SCRYPT_SALT_HEX, defaultFilesFromOutDir, expandCredentialDirInput, getHelp, parseUserVarsJson, persistLoginWithApiKey, readCredentials, readOpsFile, runJmapRequest, sharedError, } from "../lib/mod.js";
+import { AgentSession, DEFAULT_API_URL, DEFAULT_AUTH_URL, DEFAULT_JMAP_USING, DEFAULT_POW_SCRYPT_SALT_HEX, defaultFilesFromOutDir, expandCredentialDirInput, getHelp, parseUserVarsJson, parseUtm, persistLoginWithApiKey, readCredentials, readOpsFile, runJmapRequest, sharedError, } from "../lib/mod.js";
 const USAGE = `Atomic Mail — AgentSkill
 
 Usage:
@@ -16,6 +16,7 @@ Commands:
 
 Examples:
   atomicmail register --username alice
+  atomicmail register --username alice --utm "utm_source=blog&utm_campaign=launch"
   atomicmail register --api-key UUID
   atomicmail jmap_request --ops-file list_inbox.json
   atomicmail jmap_request --credentials-dir ./.atomic-mail --ops-file send.json --vars '{"TO":"a@b.com","SUBJECT":"Hi"}'
@@ -48,6 +49,7 @@ async function cmdRegister(argv) {
                 username: { type: "string" },
                 "api-key": { type: "string" },
                 "credentials-dir": { type: "string" },
+                utm: { type: "string" },
                 forced: { type: "boolean" },
                 quiet: { type: "boolean" },
                 help: { type: "boolean", short: "h" },
@@ -71,6 +73,8 @@ Options:
   --username NAME      New account (5–21 characters; mutually exclusive with --api-key)
   --api-key KEY        Existing API key (mutually exclusive with --username)
   --credentials-dir DIR  Credential directory (default: ~/.atomicmail)
+  --utm STRING         Install-attribution, URL-query style (only with --username) [env: ATOMICMAIL_UTM]
+                       e.g. "utm_source=blog&utm_medium=cpc&utm_campaign=launch"
   --forced             Allow replacing existing credentials with a new account
   --quiet              Less stderr output
   --help, -h           This message
@@ -92,6 +96,9 @@ jmap_request alone.
         env.ATOMIC_MAIL_SCRYPT_SALT ?? DEFAULT_POW_SCRYPT_SALT_HEX;
     const dir = parsed.values["credentials-dir"];
     const credentialDir = expandCredentialDirInput(dir);
+    // UTM install-attribution: --utm flag takes precedence over ATOMICMAIL_UTM.
+    // Parsing never throws, so a malformed value simply sends no utm fields.
+    const utm = parseUtm(parsed.values.utm ?? env.ATOMICMAIL_UTM);
     const username = parsed.values.username;
     const apiKey = parsed.values["api-key"];
     if (!!username === !!apiKey) {
@@ -113,6 +120,7 @@ jmap_request alone.
         });
         const result = await session.register(username, {
             forced: parsed.values.forced === true,
+            utm,
         });
         log(`Wrote credentials under ${credentialDir}`);
         process.stdout.write(JSON.stringify(result, null, 2) + "\n");

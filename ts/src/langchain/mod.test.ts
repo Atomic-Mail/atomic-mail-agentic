@@ -15,6 +15,7 @@ function makeContext(session: AgentSession) {
       capabilityFile: "/tmp/atomicmail/capability.jwt",
     },
     source: "defaults",
+    utm: {},
   };
   return { defaultConfig, defaultSession: session };
 }

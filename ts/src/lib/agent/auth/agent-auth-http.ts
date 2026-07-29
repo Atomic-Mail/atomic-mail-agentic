@@ -2,6 +2,7 @@
 
 import { decodeJwtPayload } from "./agent-jwt.ts";
 import { solvePow } from "./agent-pow.ts";
+import type { UtmParams } from "./agent-utm.ts";
 
 export async function fetchChallenge(authUrl: string): Promise<{
   challengeJWT: string;
@@ -52,6 +53,12 @@ export async function exchangeSession(
     nonce: string;
     apiKey?: string;
     username?: string;
+    // UTM install-attribution (username signup only); present fields only.
+    utm_source?: string;
+    utm_medium?: string;
+    utm_campaign?: string;
+    utm_term?: string;
+    utm_content?: string;
   },
 ): Promise<SessionResponse> {
   const { challengeJWT, ...payload } = body;
@@ -65,7 +72,9 @@ export async function exchangeSession(
   });
   const text = await res.text();
   if (!res.ok) {
-    throw new Error(`auth-service /api/v1/session returned ${res.status}: ${text}`);
+    throw new Error(
+      `auth-service /api/v1/session returned ${res.status}: ${text}`,
+    );
   }
   const sessionJWT = readBearerToken(
     res.headers.get("Authorization"),
@@ -110,6 +119,8 @@ export interface PerformPoWInput {
   scryptSalt: string;
   apiKey?: string;
   username?: string;
+  /** Parsed UTM install-attribution; forwarded on the username signup path. */
+  utm?: UtmParams;
   onPowProgress?: (nonce: bigint) => void;
 }
 
@@ -130,6 +141,8 @@ export async function performPoWAndSession(
     nonce,
     apiKey: input.apiKey,
     username: input.username,
+    // Only present utm_* fields are spread in, so absent ones stay off the body.
+    ...(input.utm ?? {}),
   });
 }
 

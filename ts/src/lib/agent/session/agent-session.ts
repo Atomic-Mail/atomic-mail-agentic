@@ -26,6 +26,7 @@ import {
   fetchCapability,
   performPoWAndSession,
 } from "../auth/agent-auth-http.ts";
+import type { UtmParams } from "../auth/agent-utm.ts";
 
 export interface AgentSessionConfig {
   authUrl: string;
@@ -52,6 +53,11 @@ export interface RegisterOptions {
    * requested username differs from the stored inbox local-part.
    */
   forced?: boolean;
+  /**
+   * Parsed UTM install-attribution, forwarded to the backend on first-time
+   * signup only (ignored on idempotent replay). Absent/empty is a no-op.
+   */
+  utm?: UtmParams;
 }
 
 function normalizeUsername(u: string): string {
@@ -288,6 +294,7 @@ export class AgentSession {
       authUrl: this.authUrl,
       scryptSalt: this.scryptSalt,
       username,
+      utm: options.utm,
     });
     if (!result.apiKey) {
       throw new Error(

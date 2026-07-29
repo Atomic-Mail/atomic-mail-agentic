@@ -14,6 +14,7 @@ import {
   type SkillFiles,
   tryReadCredentials,
 } from "./agent-credentials-store.ts";
+import { parseUtm, type UtmParams } from "../auth/agent-utm.ts";
 
 export type ConfigSource =
   | "credentials-file"
@@ -30,6 +31,11 @@ export interface ResolvedAgentConfig {
   credentialDir: string;
   files: SkillFiles;
   source: ConfigSource;
+  /**
+   * Parsed UTM install-attribution from `ATOMICMAIL_UTM` (stdio-only MCP has no
+   * flag, so env is its only carrier). Empty object when unset/garbage.
+   */
+  utm: UtmParams;
 }
 
 /**
@@ -84,6 +90,7 @@ export async function resolveAgentConfigFromEnv(): Promise<
     DEFAULT_POW_SCRYPT_SALT_HEX;
   const apiKey = envApiKey ?? fileCreds?.apiKey;
   const inboxId = fileCreds?.inboxId;
+  const utm = parseUtm(env.ATOMICMAIL_UTM);
 
   const usingFile = fileCreds !== undefined;
   const usingEnv = !!(envAuthUrl || envApiUrl || envSalt || envApiKey);
@@ -104,5 +111,6 @@ export async function resolveAgentConfigFromEnv(): Promise<
     credentialDir,
     files,
     source,
+    utm,
   };
 }

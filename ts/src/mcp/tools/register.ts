@@ -66,7 +66,12 @@ export function registerRegisterTool(
           credentials_dir,
           "register",
         );
-        const result = await session.register(username, { forced });
+        // UTM install-attribution rides in from ATOMICMAIL_UTM (stdio MCP has
+        // no CLI flag); applied on username signup only.
+        const result = await session.register(username, {
+          forced,
+          utm: ctx.defaultConfig.utm,
+        });
         return mcpText(JSON.stringify(result, null, 2));
       } catch (error) {
         return mcpError(

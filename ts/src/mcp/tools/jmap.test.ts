@@ -10,7 +10,9 @@ type ToolHandler = (
 
 interface CapturedTool {
   name: string;
-  config: { inputSchema: { safeParse: (value: unknown) => { success: boolean } } };
+  config: {
+    inputSchema: { safeParse: (value: unknown) => { success: boolean } };
+  };
   handler: ToolHandler;
 }
 
@@ -19,7 +21,9 @@ function makeCapturedJmapTool(ctx: McpSessionContext): CapturedTool {
   const fakeServer = {
     registerTool(
       name: string,
-      config: { inputSchema: { safeParse: (value: unknown) => { success: boolean } } },
+      config: {
+        inputSchema: { safeParse: (value: unknown) => { success: boolean } };
+      },
       handler: ToolHandler,
     ) {
       captured = { name, config, handler };
@@ -51,6 +55,7 @@ function makeContextWithSession(
       capabilityFile: "/tmp/atomicmail/capability.jwt",
     },
     source: "defaults",
+    utm: {},
   };
   return {
     defaultConfig,

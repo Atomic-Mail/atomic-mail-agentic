@@ -178,3 +178,23 @@ MCP `help` topic `multi_account` or [mcp.md](./mcp.md#multiple-accounts--agents)
   `ATOMIC_MAIL_API_URL`
 - Credentials path: `--credentials-dir` or `ATOMIC_MAIL_CREDENTIALS_DIR`
 - PoW salt: `--scrypt-salt` or `ATOMIC_MAIL_SCRYPT_SALT`
+- Install attribution: `--utm` or `ATOMICMAIL_UTM` (see below)
+
+## Install attribution (UTM)
+
+Optionally tag a `register` with where the install came from. Pass a
+URL-query-style string of `utm_*` fields on the `register` command:
+
+```bash
+npx --package=@atomicmail/agent-skill atomicmail register \
+  --username "myagent" \
+  --utm "utm_source=blog&utm_medium=cpc&utm_campaign=launch"
+```
+
+- Recognized keys: `utm_source`, `utm_medium`, `utm_campaign`, `utm_term`,
+  `utm_content`. Anything else in the string is ignored; each value is capped at
+  64 characters.
+- The `--utm` flag takes precedence over the `ATOMICMAIL_UTM` environment
+  variable when both are set.
+- Attribution applies to new-account signup only (`--username`), not `--api-key`
+  login. It never blocks registration — a malformed value simply sends nothing.

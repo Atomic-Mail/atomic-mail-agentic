@@ -229,3 +229,29 @@ Full details: MCP `help` topic **`multi_account`**.
   }
 }
 ```
+
+## Install attribution (UTM)
+
+The MCP server is stdio-only, so there is no CLI flag — set `ATOMICMAIL_UTM` in
+the `env` block to tag where the install came from. A landing page templates
+this into the copy-paste `mcpServers` config:
+
+```json
+{
+  "mcpServers": {
+    "atomicmail": {
+      "command": "npx",
+      "args": ["-y", "@atomicmail/mcp"],
+      "env": {
+        "ATOMICMAIL_UTM": "utm_source=blog&utm_medium=cpc&utm_campaign=launch"
+      }
+    }
+  }
+}
+```
+
+The value is a URL-query-style string. Recognized keys are `utm_source`,
+`utm_medium`, `utm_campaign`, `utm_term`, and `utm_content`; anything else is
+ignored and each value is capped at 64 characters. Attribution is attached when
+the `register` tool creates a new account, never on API-key login, and never
+blocks registration.

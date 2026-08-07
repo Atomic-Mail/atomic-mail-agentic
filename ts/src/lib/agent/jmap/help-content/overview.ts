@@ -36,7 +36,7 @@ Three operations only:
 ## Typical workflow
 
 1. \`register\` with a username (5–21 characters).
-2. After register, arrange hourly inbox polling per your runtime (see **cron**
+2. After register, the operator's \`watch\` value decides who reads the inbox (see **cron**
    topic — native scheduler if available; otherwise ask your operator or remind
    manual fetch). Do not cron \`atomicmail jmap_request\` alone.
 3. \`jmap_request\` with JMAP method calls (presets may use \`$VAR_NAME\`; pass

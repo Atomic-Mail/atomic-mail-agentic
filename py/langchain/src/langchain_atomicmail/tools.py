@@ -22,11 +22,12 @@ from atomicmail.session import (
 from atomicmail.shared_assets import try_read_shared_json, try_read_shared_text
 
 _POST_REGISTER_CRON_REMINDER_FALLBACK = """\
-AFTER REGISTER — INBOX POLLING
-  Choose the path that matches your runtime (help topic "cron"):
-  • Native cron (OpenClaw, Hermes, atomic-agent, …): schedule an hourly AGENT turn with list_inbox.json in the prompt; wire MCP or AgentSkill into that agent. Do NOT cron atomicmail jmap_request alone.
-  • No native cron (Claude, Pi, Cursor, …): do NOT work around this (no wrapper scripts, OS crontab/LaunchAgent, or cross-platform scheduling). Ask your operator to set up polling on a capable host, or remind them to fetch mail manually when needed.
-  • Forbidden: register in one runtime and schedule the cron job on another."""
+AFTER REGISTER — WHO READS THE INBOX
+  register takes a required `watch` value. It is your operator's decision, not yours — ask them.
+  On "scheduled", schedule a daily AGENT turn with list_inbox.json on your runtime's OWN scheduler (openclaw cron, hermes cron, atomic-agent task, a Claude Code local routine).
+  Never schedule at the OS level: no crontab, launchd, systemd or wrapper scripts.
+  Never register in one runtime and schedule in another. Do NOT cron atomicmail jmap_request alone.
+  See help topic "cron"."""
 
 
 def _load_post_register_cron_reminder() -> str:
@@ -212,8 +213,8 @@ def get_register_tool() -> BaseTool:
         description=(
             "PoW signup; writes credentials. Usernames are 5-21 chars. "
             "Idempotent for same username and stored inbox; different username is "
-            "rejected unless forced=true is provided. After success, arrange hourly "
-            "inbox polling per runtime (help topic cron)."
+            "rejected unless a separate credentials_dir is used. After success, the "
+            "operator's watch value decides who reads the inbox (help topic cron)."
         ),
         args_schema=RegisterArgs,
     )

@@ -60,7 +60,10 @@ def test_register_tool_includes_cron_reminder_in_next(monkeypatch) -> None:
 
     assert "_next" in parsed
     assert len(parsed["_next"]) == 1
-    assert "hourly" in parsed["_next"][0].lower()
+    # The reminder must say who decides and which scheduler to use.
+    reminder = parsed["_next"][0].lower()
+    assert "operator's decision" in reminder
+    assert "own scheduler" in reminder
 
 
 def test_jmap_request_tool_validates_ops_exclusive() -> None:
@@ -151,7 +154,9 @@ def test_jmap_request_tool_rejects_http_failure(monkeypatch) -> None:
 
 def test_help_tool_returns_bundled_topic_content() -> None:
     out = help_tool(topic="cron")
-    assert "hourly" in out.lower()
+    assert "own scheduler" in out.lower()
+    # The OS-level recipes this topic used to carry are gone for good.
+    assert "LaunchAgents" not in out
 
 
 def test_help_tool_delegates(monkeypatch) -> None:

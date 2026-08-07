@@ -14,6 +14,11 @@ from .jmap_request import (
     JmapAttachmentInput,
     jmap_request,
 )
+from .register_watch import (
+    register_watch_required_error,
+    resolve_register_watch,
+    watch_scheduled_setup,
+)
 from .session import register
 
 _SERVER_NAME = "atomicmail"
@@ -22,8 +27,11 @@ _INSTRUCTIONS = (
     "Atomic Mail MCP — programmable inbox for AI agents.\n\n"
     "Use register first, then jmap_request for mailbox operations. "
     "Use help early and often (presets, cron, jmap_cheatsheet, troubleshooting). "
-    "After register, arrange hourly inbox polling per help topic cron: native "
-    "scheduler if available; otherwise ask operator or remind manual fetch. "
+    "The username is the permanent public address on every message this inbox "
+    "sends — ask your operator for it rather than inventing one. register also "
+    "requires watch: whether a recurring job wakes an agent to read this inbox. "
+    "Also the operator's decision — ask them. On watch=\"scheduled\", schedule on "
+    "your runtime's OWN scheduler, never at the OS level (help topic cron). "
     "Do not cron jmap_request alone."
 )
 
@@ -62,9 +70,10 @@ def _tool_specs() -> list[dict[str, Any]]:
             "title": "Register an Atomic Mail inbox",
             "description": (
                 "PoW signup; writes credentials. Usernames are 5–21 characters. "
-                "Idempotent for the same username and stored inbox; a different username "
-                "is rejected unless forced=true is provided. After success, arrange "
-                "hourly inbox polling per help topic cron."
+                "Idempotent for the same username and stored inbox. To register another "
+                "account alongside an existing one, pass credentials_dir with a separate "
+                "path. The watch value is your operator's decision, not the agent's — "
+                "ask them before calling."
             ),
             "inputSchema": {
                 "type": "object",
@@ -72,7 +81,20 @@ def _tool_specs() -> list[dict[str, Any]]:
                     "username": {"type": "string", "minLength": 5, "maxLength": 21},
                     "credentials_dir": {"type": "string"},
                     "forced": {"type": "boolean"},
+                    "watch": {
+                        "type": "string",
+                        "enum": ["scheduled", "on-demand"],
+                        "description": (
+                            "Whether a recurring job is set up to read this inbox "
+                            "unattended. A standing commitment on your operator's "
+                            "machine, so it is their decision — ask them; do not choose "
+                            'or infer it. The two values are "scheduled" and '
+                            '"on-demand"; what each one means is in help topic cron. '
+                            "Omit it and the call returns the requirement."
+                        ),
+                    },
                 },
+                "required": ["watch"],
                 "additionalProperties": False,
             },
         },
@@ -163,13 +185,24 @@ def handle_tool_call(name: str, arguments: Mapping[str, Any] | None) -> dict[str
                 return _tool_error("Registration failed: username must be a non-empty string.")
             if forced_error is not None:
                 return _tool_error(f"Registration failed: {forced_error}")
+            # `watch` is a wrapper-only precondition — enforced here and never
+            # threaded into session.register().
+            try:
+                watch = resolve_register_watch(args.get("watch"))
+            except ValueError:
+                return _tool_error(register_watch_required_error())
             credentials_dir = args.get("credentials_dir")
             result = register(
                 username=username,
                 credentials_dir=credentials_dir if isinstance(credentials_dir, str) else None,
                 forced=forced if forced is not None else False,
             )
-            return _tool_success(json.dumps(asdict(result), indent=2))
+            text = json.dumps(asdict(result), indent=2)
+            if watch == "scheduled":
+                # The scheduled prompt must carry a literal credentials path:
+                # scheduled sessions inherit no environment on any host.
+                text = f"{text}\n\n{watch_scheduled_setup(credentials_dir=credentials_dir if isinstance(credentials_dir, str) else None, inbox_id=getattr(result, 'inbox', None))}"
+            return _tool_success(text)
         except Exception as err:
             return _tool_error(f"Registration failed: {err}")
 

@@ -3,9 +3,9 @@ import { assertEquals, assertThrows } from "@std/assert";
 import {
   assertBlobUploadEnvelopeWithinLimits,
   decodedBase64ByteLength,
+  type JmapBlobUploadLimits,
   tryComputeUploadDataOctets,
   utf8ByteLength,
-  type JmapBlobUploadLimits,
 } from "./agent-jmap-blob-limits.ts";
 
 Deno.test("utf8ByteLength counts UTF-8 octets", () => {
@@ -119,7 +119,10 @@ Deno.test("assertBlobUploadEnvelopeWithinLimits allows chained Blob/upload with 
             accountId: "A1",
             create: {
               "b4": {
-                data: [{ "data:asText": "The quick brown fox jumped over the lazy dog." }],
+                data: [{
+                  "data:asText":
+                    "The quick brown fox jumped over the lazy dog.",
+                }],
               },
             },
           },

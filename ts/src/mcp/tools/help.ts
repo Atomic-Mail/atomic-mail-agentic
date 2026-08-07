@@ -3,10 +3,7 @@
 import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp";
 
-import {
-  getHelp,
-  HELP_TOPIC_LIST,
-} from "../../lib/mod.ts";
+import { getHelp, HELP_TOPIC_LIST } from "../../lib/mod.ts";
 import { mcpError, mcpText } from "../mcp-result.ts";
 
 export function registerHelpTool(server: McpServer): void {

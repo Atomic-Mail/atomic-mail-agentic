@@ -1,10 +1,7 @@
 import { assertEquals, assertStringIncludes } from "@std/assert";
 
 import { readSharedJson, readSharedText } from "../../core/shared-assets.ts";
-import {
-  BUNDLED_OPS_PRESET_NAMES,
-  readOpsFile,
-} from "./agent-jmap.ts";
+import { BUNDLED_OPS_PRESET_NAMES, readOpsFile } from "./agent-jmap.ts";
 import { getHelp, HELP_TOPIC_LIST } from "./help-content/index.ts";
 
 Deno.test("help topics load from shared manifest order", () => {
@@ -22,10 +19,12 @@ Deno.test("getHelp readme uses shared stub for skill runtime", async () => {
 });
 
 Deno.test("readOpsFile resolves bundled preset from shared assets", async () => {
-  const credsDir = await Deno.makeTempDir({ prefix: "atomicmail-shared-jmap-" });
+  const credsDir = await Deno.makeTempDir({
+    prefix: "atomicmail-shared-jmap-",
+  });
   try {
     const raw = await readOpsFile(credsDir, BUNDLED_OPS_PRESET_NAMES[0]);
-    assertStringIncludes(raw, "\"methodCalls\"");
+    assertStringIncludes(raw, '"methodCalls"');
   } finally {
     await Deno.remove(credsDir, { recursive: true });
   }

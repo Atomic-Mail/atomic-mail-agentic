@@ -36,3 +36,14 @@ Notable changes to Atomic Mail Agentic. Format loosely follows
 - `--forced` removed from `--help` (both CLIs) and from the MCP tool descriptions;
   its danger is documented only in the refusal error.
 - Default inbox-check interval is once daily (`0 9 * * *`).
+- **Hermes schedule now pins `--skill atomicmail` in the emitted `cron create`
+  command** instead of only advising it in prose, so the daily job loads the
+  Atomic Mail tool directly rather than depending on the binary resolving on
+  `PATH` in a scheduled session that inherits no environment. Verify/least-privilege
+  text was updated to match, with a fallback note for builds without the skill.
+- **Claude Code schedule now names the real local mechanism** — the
+  `scheduled-tasks` MCP (`create_scheduled_task` / `list_scheduled_tasks` /
+  `delete_scheduled_task`, stored under `~/.claude/scheduled-tasks/`) — rather than
+  the Claude Desktop "Routines" UI, which does not exist in the Claude Code CLI.
+  Routines are kept as a Desktop-only footnote, and a first-run tool-approval step
+  was added so unattended runs do not stall on a permission prompt.

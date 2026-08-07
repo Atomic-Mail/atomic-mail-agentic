@@ -49,11 +49,11 @@
       "kind": "command",
       "label": "Hermes' own scheduler",
       "command": [
-        "hermes cron create \"{CRON}\" \"{PROMPT}\" --name \"{JOB_NAME}\" --deliver origin"
+        "hermes cron create \"{CRON}\" \"{PROMPT}\" --name \"{JOB_NAME}\" --deliver origin --skill atomicmail"
       ],
-      "verify": "hermes cron list",
+      "verify": "hermes cron list  — {JOB_NAME} must be listed with the atomicmail skill attached; a job that shows no skill will wake each day unable to read anything.",
       "remove": "hermes cron remove {JOB_NAME}",
-      "least_privilege": "Restrict what the job may do before you leave it unattended: it reads mail written by strangers, so it needs no terminal, browser or delegation toolsets. Set them per job with enabled_toolsets on the cronjob tool (for example enabled_toolsets=[\"file\"]), or configure the `cron` platform once in `hermes tools`. Do not use --no-agent: that runs a script with no model, so nobody reads the mail. If the Atomic Mail skill is installed, add --skill atomicmail so the job does not depend on the command resolving on PATH."
+      "least_privilege": "Restrict what the job may do before you leave it unattended: it reads mail written by strangers, so it needs no terminal, browser or delegation toolsets. Set them per job with enabled_toolsets on the cronjob tool (for example enabled_toolsets=[\"file\"]), or configure the `cron` platform once in `hermes tools`. Do not use --no-agent: that runs a script with no model, so nobody reads the mail. The command above pins --skill atomicmail so the scheduled run loads the Atomic Mail tool directly rather than hoping the binary resolves on PATH — a scheduled session inherits none of the environment that ran register. If this Hermes build has no atomicmail skill installed, drop that flag and make sure the atomicmail command is on the job's PATH instead; otherwise the job fires daily and reads nothing."
     },
     "atomic-agent": {
       "kind": "command",
@@ -68,21 +68,21 @@
       "kind": "instruction",
       "label": "Claude Code's own scheduler",
       "instruction": [
-        "Use a **local** routine. While the credentials live on this machine, only a local routine can read them: a cloud routine runs on Anthropic infrastructure with no access to local files, so it cannot reach the credentials directory below. So the choice is made for you — local.",
+        "Schedule this on Claude Code's own durable scheduler — the **scheduled-tasks** MCP — not a session loop. It runs locally on this machine, so it can read the credentials stored below; a scheduler running off-machine could not reach them, which is also why the choice is made for you.",
         "",
-        "Create it with Routines -> New routine -> Local, schedule preset {PRESET}, or just ask in-session: create a local routine named {JOB_NAME} that runs {HUMAN} at {TIME} and does the following. Point it at a folder you trust, then press Run now once and approve the tools it asks for, so later runs do not stall on a permission prompt with nobody watching. A local routine only fires while the Desktop app is open and the computer is awake.",
+        "Create it with the create_scheduled_task tool, or just ask in-session: create a scheduled task named {JOB_NAME} that runs {HUMAN} at {TIME} and does the following. It is written under ~/.claude/scheduled-tasks/{JOB_NAME}/ and must come out enabled. Run it once by hand and approve the tools it asks for, so later unattended runs do not stall on a permission prompt with nobody watching.",
         "",
         "The prompt to schedule is:",
         "",
         "{PROMPT}",
         "",
-        "Do not use /loop for this. It is scoped to the current session and expires after seven days, so the inbox would quietly stop being checked.",
+        "Do not use /loop or any session-only timer for this: both are scoped to the current session and expire (in Claude Code /loop lasts at most seven days), so the inbox would quietly stop being checked.",
         "",
-        "Footnote — only if this inbox must be checked with the laptop closed: a **cloud** routine (Routines -> New routine -> Cloud, or /schedule in the CLI) fires even when this machine is off, but it cannot read local credentials, so it works only with Atomic Mail connected as a remote MCP connector (not the local stdio server). Minimum interval is one hour."
+        "Footnote — if you are running in the Claude Desktop app instead, it has no scheduled-tasks MCP, only the Routines UI: create it there with Routines -> New routine -> Local, schedule preset {PRESET}. Use Local, not Cloud — a cloud routine runs on Anthropic infrastructure and cannot read local credentials, so it works only with Atomic Mail connected as a remote MCP connector, and a local routine only fires while the Desktop app is open and the machine is awake."
       ],
-      "verify": "Ask: what scheduled tasks do I have? — {JOB_NAME} must be listed and Active.",
-      "remove": "Delete the {JOB_NAME} routine from the Routines list, or ask: delete the {JOB_NAME} scheduled task.",
-      "least_privilege": "A cloud routine runs fully autonomously — no permission prompts — and includes every connector on your account by default, each usable for writes without asking. Remove every connector the job does not need, leaving Atomic Mail. A local routine keeps its permission mode, so approve only the tools the one command needs on the first Run now."
+      "verify": "Ask: what scheduled tasks do I have? (or list_scheduled_tasks) — {JOB_NAME} must be listed and enabled.",
+      "remove": "Delete the {JOB_NAME} scheduled task (delete_scheduled_task, or ask: delete the {JOB_NAME} scheduled task); in the Desktop app, remove the {JOB_NAME} routine from the Routines list instead.",
+      "least_privilege": "A scheduled task runs unattended, so pin its tools down: it only needs to read this inbox and report back — no file writes, no editing, no spawning further tasks. Approve just those on the first manual run and decline the rest. (Desktop cloud routines are worse here: they include every connector on your account by default, each usable for writes without asking — remove all but Atomic Mail.)"
     }
   },
   "block": {

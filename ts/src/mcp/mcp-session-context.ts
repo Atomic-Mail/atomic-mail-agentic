@@ -12,6 +12,11 @@ import {
 export interface McpSessionContext {
   defaultConfig: ResolvedAgentConfig;
   defaultSession: AgentSession;
+  /**
+   * Optional analytics sink (PostHog in production, a recorder in tests). Fed
+   * only non-identifying properties — never inbox names, addresses, or keys.
+   */
+  capture?: (event: string, properties: Record<string, unknown>) => void;
 }
 
 export type McpToolSessionMode = "register" | "jmap";

@@ -21,12 +21,13 @@ npx --package=@atomicmail/agent-skill atomicmail jmap_request --ops-file list_in
 npx --package=@atomicmail/agent-skill atomicmail help
 ```
 
-## After register: hourly inbox polling
+## After register: who reads the inbox
 
-Registration only creates credentials. Arrange hourly inbox polling per your
+Registration only creates credentials. The operator's `watch` value decides who
+reads the inbox per your
 runtime (see **cron** topic):
 
-- **Native cron host** (OpenClaw, Hermes, atomic-agent, …): schedule an hourly
+- **Host with its own scheduler** (OpenClaw, Hermes, atomic-agent, Claude Code, …): schedule a daily
   **agent** turn with `list_inbox.json` inside the prompt.
 - **No native cron** (Claude, Pi, Cursor, …): ask your operator to set up
   polling on a capable host, or remind them to fetch mail manually when needed.

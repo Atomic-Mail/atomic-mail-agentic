@@ -16,7 +16,9 @@ Deno.test("inboxIdToMailboxEmail respects ATOMIC_MAIL_INBOX_DOMAIN", () => {
     "bob@corp.example",
   );
   assertEquals(
-    inboxIdToMailboxEmail("bob", { ATOMIC_MAIL_INBOX_DOMAIN: "@other.example" }),
+    inboxIdToMailboxEmail("bob", {
+      ATOMIC_MAIL_INBOX_DOMAIN: "@other.example",
+    }),
     "bob@other.example",
   );
 });

@@ -2,8 +2,8 @@
 
 import {
   type CredentialArtifacts,
-  type CredentialStore,
   type Credentials,
+  type CredentialStore,
   parseCredentialsJson,
   serializeCredentials,
 } from "../agent/session/agent-credentials-store.ts";
@@ -85,7 +85,9 @@ export class KeyValueCredentialStore implements CredentialStore {
   }
 
   async clear(): Promise<void> {
-    for (const key of [this.credentialsKey, this.sessionKey, this.capabilityKey]) {
+    for (
+      const key of [this.credentialsKey, this.sessionKey, this.capabilityKey]
+    ) {
       try {
         if (await this.exists(key)) {
           await this.storage.delete(key);

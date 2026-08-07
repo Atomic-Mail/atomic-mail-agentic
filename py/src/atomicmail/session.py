@@ -60,6 +60,27 @@ class AgentSessionConfig:
     store: CredentialStore | None = None
 
 
+_REFUSED_FALLBACK = (
+    "Register refused: replacing the credentials in this directory permanently "
+    'and irreversibly destroys your only access to inbox "{inbox}". Register the '
+    "new account in a separate credential directory instead. Whether to give up "
+    "this inbox is your operator's decision, not yours."
+)
+
+
+def _refused_existing_credentials(inbox: str, username: str) -> str:
+    """Shared refusal wording, so TS and Python refuse in the same words."""
+    from .shared_assets import try_read_shared_json
+
+    loaded = try_read_shared_json("messages/errors.json")
+    template = _REFUSED_FALLBACK
+    if isinstance(loaded, dict):
+        candidate = loaded.get("agent_register_refused_existing_credentials_template")
+        if isinstance(candidate, str) and candidate:
+            template = candidate
+    return template.replace("{inbox}", inbox).replace("{username}", username)
+
+
 def inbox_local_part(inbox_id: str) -> str:
     i = inbox_id.find("@")
     if i < 0:
@@ -167,12 +188,12 @@ class AgentSession:
                     idempotent=True,
                 )
             if not forced:
+                # Wording lives in shared/messages/errors.json so TS and Python
+                # refuse in the same words. Replacing credentials here is
+                # irreversible, so the message opens with that and never ends
+                # with the flag that does it.
                 raise ValueError(
-                    "Register refused because credentials already belong to "
-                    f'"{self._inbox_id}" and requested username is "{want}". '
-                    "Use a separate credential directory to register another account "
-                    "without replacing this one. If you want to replace credentials "
-                    "in this directory, retry with forced=True."
+                    _refused_existing_credentials(self._inbox_id, want)
                 )
 
             self._store.clear()

@@ -9,6 +9,10 @@ from typing import Mapping, Sequence
 
 from .help import HELP_TOPIC_LIST, help as get_help, normalize_help_topic
 from .jmap_request import DEFAULT_JMAP_USING, JmapAttachmentInput, jmap_request
+from .register_watch import (
+    resolve_register_watch,
+    schedule_setup,
+)
 from .shared_assets import try_read_shared_json
 from .session import register
 
@@ -93,13 +97,38 @@ def _build_parser() -> argparse.ArgumentParser:
         "register", help="PoW signup or API-key login and persist credentials"
     )
     register_mode = register_cmd.add_mutually_exclusive_group(required=True)
-    register_mode.add_argument("--username", help="Desired username (5-21 characters).")
+    register_mode.add_argument(
+        "--username",
+        help=(
+            "Permanent public address, 5-21 characters. It appears on every message "
+            "this inbox sends and cannot be changed afterwards — if your operator has "
+            "not named it, ask them rather than inventing one."
+        ),
+    )
     register_mode.add_argument("--api-key", help="Existing API key for login.")
     register_cmd.add_argument("--credentials-dir", help="Credential directory for this command.")
+    # --forced still parses, but is hidden from --help (same reason as the watch
+    # values): overwriting an inbox is irreversible, and an agent that finds a
+    # ready-made flag in --help reaches for it. Its danger is spelled out only in
+    # the refusal error.
     register_cmd.add_argument(
         "--forced",
         action="store_true",
-        help="Allow replacing existing credentials for a different username (username mode only).",
+        help=argparse.SUPPRESS,
+    )
+    # Plain string (not choices/required) so a missing flag yields the shared
+    # error text, not argparse's own usage message.
+    # The accepted values are deliberately NOT listed: an agent that reads them
+    # off --help can fill the flag in without hitting the validation error, where
+    # the "operator's decision" wording lives. Omit the flag to see the values.
+    register_cmd.add_argument(
+        "--watch",
+        help=(
+            "Required. Decides whether a recurring job is created that wakes an "
+            "agent to read this inbox — a standing commitment on your operator's "
+            "machine, so it is their call, not yours. Ask them. Run register with "
+            "no --watch for what each value does."
+        ),
     )
 
     jmap_cmd = subparsers.add_parser("jmap_request", help="Send a JMAP request")
@@ -138,6 +167,10 @@ def _cmd_register(args: argparse.Namespace) -> int:
     if args.api_key and args.forced:
         raise ValueError("--forced can only be used with --username.")
 
+    # `watch` is a wrapper-only precondition — validated here and never threaded
+    # into session.register().
+    watch = resolve_register_watch(args.watch)
+
     result = register(
         username=args.username,
         api_key=args.api_key,
@@ -145,6 +178,15 @@ def _cmd_register(args: argparse.Namespace) -> int:
         forced=bool(args.forced),
     )
     sys.stdout.write(json.dumps(result.__dict__, indent=2) + "\n")
+    if watch == "scheduled":
+        sys.stdout.write(
+            "\n"
+            + schedule_setup(
+                credentials_dir=args.credentials_dir,
+                inbox_id=getattr(result, "inbox", None),
+            )
+            + "\n"
+        )
     return 0
 
 

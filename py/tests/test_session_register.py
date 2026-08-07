@@ -53,6 +53,10 @@ def test_register_rejects_username_switch_without_forced(tmp_path: Path) -> None
         )
     )
 
+    # NOTE: this text is hardcoded inside session.register() (session.py), which is
+    # out of bounds to edit, so it still reads the old wording. The rewritten copy
+    # lives in shared/messages/errors.json and is asserted by the shared-source
+    # test in test_register_refused_message.py.
     with pytest.raises(ValueError, match="Register refused"):
         session.register("new-user")
 
@@ -316,6 +320,17 @@ def test_register_requires_exactly_one_mode() -> None:
         register(username=None, api_key=None, env={})
     with pytest.raises(ValueError, match="exactly one"):
         register(username="alice", api_key="existing-api-key", env={})
+
+
+def test_session_register_has_no_watch_parameter() -> None:
+    # The `watch` precondition lives only in the MCP adapter and CLI; it must
+    # never reach the session. register accepts only username/forced-style args.
+    import inspect
+
+    session_params = inspect.signature(AgentSession.register).parameters
+    assert "watch" not in session_params
+    module_params = inspect.signature(register).parameters
+    assert "watch" not in module_params
 
 
 def test_register_rejects_forced_in_api_key_mode() -> None:

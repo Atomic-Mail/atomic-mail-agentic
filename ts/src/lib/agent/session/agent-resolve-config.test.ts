@@ -1,9 +1,6 @@
 import { assertEquals } from "@std/assert";
 
-import {
-  DEFAULT_API_URL,
-  DEFAULT_AUTH_URL,
-} from "../../core/consts.ts";
+import { DEFAULT_API_URL, DEFAULT_AUTH_URL } from "../../core/consts.ts";
 import { resolveAgentConfigFromEnv } from "./agent-resolve-config.ts";
 
 const ENV_KEYS = [

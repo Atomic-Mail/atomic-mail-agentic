@@ -75,7 +75,10 @@ export async function readCredentials(_path: string): Promise<never> {
   throw new Error("readCredentials is unavailable in n8n bundle.");
 }
 
-export async function writeCredentials(_path: string, _data: unknown): Promise<void> {
+export async function writeCredentials(
+  _path: string,
+  _data: unknown,
+): Promise<void> {
   throw new Error("writeCredentials is unavailable in n8n bundle.");
 }
 

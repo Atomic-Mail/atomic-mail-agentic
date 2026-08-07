@@ -17,9 +17,9 @@ import { Buffer } from "node:buffer";
 
 import {
   AgentSession,
-  DEFAULT_JMAP_USING,
   assertBlobUploadSizesNonZero,
   assertJmapSubmissionCreated,
+  DEFAULT_JMAP_USING,
   inboxIdToMailboxEmail,
   readOpsFile,
   resolveAgentConfigFromEnv,
@@ -62,7 +62,10 @@ async function sendOutOfBandViaAttachments(
   const tmp = await Deno.makeTempFile({ suffix: ".txt" });
   try {
     await Deno.writeFile(tmp, bytes);
-    const raw = await readOpsFile(credentialDir, "send_mail_blob_attachment.json");
+    const raw = await readOpsFile(
+      credentialDir,
+      "send_mail_blob_attachment.json",
+    );
     const { ok, status, bodyText } = await runJmapRequest({
       session,
       opsJson: raw,
@@ -109,7 +112,8 @@ async function sendPlain(
       INBOX: addr,
       TO: addr,
       SUBJECT: "send-big-attachment --plain smoke test",
-      BODY: "Plain send (no attachment). If you see this, JMAP submission works.",
+      BODY:
+        "Plain send (no attachment). If you see this, JMAP submission works.",
     },
   });
   if (!ok) {
@@ -142,7 +146,8 @@ async function sendInBand(
     vars: {
       INBOX: addr,
       TO: addr,
-      SUBJECT: `Large attachment (${payload.length} bytes, in-band Blob/upload)`,
+      SUBJECT:
+        `Large attachment (${payload.length} bytes, in-band Blob/upload)`,
       BODY: "See attached text file.",
       ATTACHMENT_BASE64: attachmentBase64,
       ATTACHMENT_TYPE: "text/plain",

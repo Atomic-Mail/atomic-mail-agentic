@@ -14,7 +14,7 @@ Three operations only:
 ## Typical workflow
 
 1. Register with a username (5–21 chars).
-2. After register, arrange hourly inbox polling per your runtime (see **cron**
+2. After register, the operator's `watch` value decides who reads the inbox (see **cron**
    topic — native scheduler if available; otherwise ask your operator or remind
    manual fetch). Do not cron `atomicmail jmap_request` alone.
 3. Use `jmap_request` with `ops` or `ops_file`; supply `vars` as needed.
@@ -22,6 +22,6 @@ Three operations only:
 
 AFTER REGISTER — INBOX POLLING
   Choose the path that matches your runtime (help topic "cron"):
-  • Native cron (OpenClaw, Hermes, atomic-agent, …): schedule an hourly AGENT turn with list_inbox.json in the prompt; wire MCP or AgentSkill into that agent. Do NOT cron atomicmail jmap_request alone.
+  • On watch="scheduled", schedule a daily AGENT turn on your runtime's OWN scheduler (openclaw cron, hermes cron, atomic-agent task, a Claude Code local routine) — never at the OS level. Do NOT cron atomicmail jmap_request alone.
   • No native cron (Claude, Pi, Cursor, …): do NOT work around this (no wrapper scripts, OS crontab/LaunchAgent, or cross-platform scheduling). Ask your operator to set up polling on a capable host, or remind them to fetch mail manually when needed.
   • Forbidden: register in one runtime and schedule the cron job on another.

@@ -4,6 +4,7 @@ import process from "node:process";
 import { resolve } from "node:path";
 import { DEFAULT_API_URL, DEFAULT_AUTH_URL, DEFAULT_POW_SCRYPT_SALT_HEX, } from "../../core/consts.js";
 import { defaultFilesFromOutDir, tryReadCredentials, } from "./agent-credentials-store.js";
+import { parseUtm } from "../auth/agent-utm.js";
 /**
  * Default credential directory:
  *   1. ATOMIC_MAIL_CREDENTIALS_DIR
@@ -49,6 +50,7 @@ export async function resolveAgentConfigFromEnv() {
         DEFAULT_POW_SCRYPT_SALT_HEX;
     const apiKey = envApiKey ?? fileCreds?.apiKey;
     const inboxId = fileCreds?.inboxId;
+    const utm = parseUtm(env.ATOMICMAIL_UTM);
     const usingFile = fileCreds !== undefined;
     const usingEnv = !!(envAuthUrl || envApiUrl || envSalt || envApiKey);
     const source = usingFile && usingEnv
@@ -67,5 +69,6 @@ export async function resolveAgentConfigFromEnv() {
         credentialDir,
         files,
         source,
+        utm,
     };
 }

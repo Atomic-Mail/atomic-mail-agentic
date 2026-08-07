@@ -24,6 +24,7 @@ async function makeDefaultContext(
     credentialDir,
     files,
     source: "defaults" as const,
+    utm: {},
   };
   const defaultSession = await AgentSession.create({
     authUrl: defaultConfig.authUrl,
@@ -66,8 +67,12 @@ Deno.test(
 Deno.test(
   "resolveMcpToolSession creates ephemeral session for different credentials_dir",
   async () => {
-    const defaultDir = await Deno.makeTempDir({ prefix: "atomicmail-mcp-def-" });
-    const otherDir = await Deno.makeTempDir({ prefix: "atomicmail-mcp-other-" });
+    const defaultDir = await Deno.makeTempDir({
+      prefix: "atomicmail-mcp-def-",
+    });
+    const otherDir = await Deno.makeTempDir({
+      prefix: "atomicmail-mcp-other-",
+    });
     try {
       const ctx = await makeDefaultContext(defaultDir);
       const session = await resolveMcpToolSession(

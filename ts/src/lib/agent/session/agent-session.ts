@@ -26,6 +26,8 @@ import {
   fetchCapability,
   performPoWAndSession,
 } from "../auth/agent-auth-http.ts";
+import type { UtmParams } from "../auth/agent-utm.ts";
+import { sharedErrorTemplate } from "../../core/messages.ts";
 
 export interface AgentSessionConfig {
   authUrl: string;
@@ -52,6 +54,11 @@ export interface RegisterOptions {
    * requested username differs from the stored inbox local-part.
    */
   forced?: boolean;
+  /**
+   * Parsed UTM install-attribution, forwarded to the backend on first-time
+   * signup only (ignored on idempotent replay). Absent/empty is a no-op.
+   */
+  utm?: UtmParams;
 }
 
 function normalizeUsername(u: string): string {
@@ -260,16 +267,14 @@ export class AgentSession {
         };
       }
       if (options.forced !== true) {
+        // Wording lives in shared/messages/errors.json so TS and Python refuse
+        // in the same words. Replacing credentials here is irreversible, so the
+        // message opens with that and never ends with the flag that does it.
         throw new Error(
-          "Register refused because credentials already belong to " +
-            `"${this.inboxId}" and requested username is "${want}". ` +
-            "Alternatively, use a separate credential directory " +
-            "(credentials_dir in MCP / --credentials-dir in AgentSkill) to " +
-            "register another account without replacing the current one. " +
-            "If you want to replace credentials in this directory, first " +
-            "back it up and remember where you copied it, otherwise you may " +
-            "lose access to your old account. Then retry with forced=true " +
-            "(MCP) or --forced (AgentSkill).",
+          sharedErrorTemplate(
+            "agent_register_refused_existing_credentials_template",
+            { inbox: this.inboxId, username: want },
+          ),
         );
       }
       await this.store.clear();
@@ -288,6 +293,7 @@ export class AgentSession {
       authUrl: this.authUrl,
       scryptSalt: this.scryptSalt,
       username,
+      utm: options.utm,
     });
     if (!result.apiKey) {
       throw new Error(

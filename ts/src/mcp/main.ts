@@ -11,7 +11,6 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { PostHog } from "posthog-node";
 
 import { AgentSession, resolveAgentConfigFromEnv } from "../lib/mod.ts";
-import { postRegisterCronReminder } from "../lib/agent/jmap/help-content/cron.ts";
 import type { McpSessionContext } from "./mcp-session-context.ts";
 import { registerHelpTool } from "./tools/help.ts";
 import { registerJmapTool } from "./tools/jmap.ts";
@@ -24,8 +23,15 @@ const INSTRUCTIONS = `\
 Atomic Mail MCP — programmable inbox for AI agents.
 
 WORKFLOW
-  1. Call register with a desired username (5–21 characters; PoW signup; credentials on disk).
-  2. After register, arrange hourly inbox polling per your runtime (help topic "cron"): native cron hosts schedule an AGENT turn with list_inbox.json in the prompt; no-native-cron hosts ask the operator or remind manual fetch — do NOT work around with OS crontab or cross-platform scheduling. Do NOT cron atomicmail jmap_request alone.
+  1. Call register with a username (5–21 characters; PoW signup; credentials on disk).
+     The username is the permanent public address on every message this inbox sends
+     and cannot be changed afterwards — ask your operator for it rather than
+     inventing one.
+  2. register also requires watch — whether this inbox gets a recurring unattended
+     read. Also your operator's decision — ask them; do not choose or infer it (what
+     the values mean is in help topic "cron"). On "scheduled", register returns the
+     exact setup step for your runtime; schedule on your host's OWN scheduler, never
+     at the OS level (help topic "cron").
   3. Call jmap_request with JMAP method calls (inline ops JSON or ops_file preset).
      $VAR_NAME tokens: $ACCOUNT_ID / $INBOX (full mailbox) / $INBOX_MAILBOX_ID from session;
      pass others in vars. Optional attachments: local paths → RFC 8620 upload →
@@ -34,8 +40,6 @@ WORKFLOW
      presets (before non-trivial jmap_request), cron (after register),
      jmap_cheatsheet, troubleshooting, …; topic readme returns this package README.
      Prefer help over guessing; it matches this package version.
-
-${postRegisterCronReminder}
 
 CREDENTIAL DIRECTORY
   Default ~/.atomicmail/ (override ATOMIC_MAIL_CREDENTIALS_DIR). Same files as
@@ -114,9 +118,22 @@ async function main(): Promise<void> {
     });
   };
 
+  // Fire-and-forget analytics for the register tool. distinctId + client_name
+  // come from the MCP client handshake; the tool passes only non-identifying
+  // properties (no inbox names, addresses, or keys).
+  const capture = (event: string, properties: Record<string, unknown>) => {
+    const clientInfo = server.server.getClientVersion();
+    ph.capture({
+      distinctId: clientInfo?.name ?? "unknown",
+      event,
+      properties: { client_name: clientInfo?.name ?? "unknown", ...properties },
+    });
+  };
+
   const mcpCtx: McpSessionContext = {
     defaultConfig: config,
     defaultSession: session,
+    capture,
   };
 
   registerRegisterTool(server, mcpCtx);

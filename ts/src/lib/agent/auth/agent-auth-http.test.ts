@@ -23,10 +23,12 @@ Deno.test("fetchChallenge reads challenge JWT from Authorization header", async 
   const challengeJWT = makeJwt({ jti: "abc", difficulty: 6 });
   try {
     globalThis.fetch = () =>
-      Promise.resolve(new Response("", {
-        status: 200,
-        headers: { Authorization: `Bearer ${challengeJWT}` },
-      }));
+      Promise.resolve(
+        new Response("", {
+          status: 200,
+          headers: { Authorization: `Bearer ${challengeJWT}` },
+        }),
+      );
 
     const challenge = await fetchChallenge("https://auth.example");
     assertEquals(challenge.challengeJWT, challengeJWT);
@@ -64,10 +66,12 @@ Deno.test("exchangeSession sends challenge JWT and reads session JWT from Author
           ? (JSON.parse(String(reqInit.body)) as Record<string, unknown>)
           : undefined,
       });
-      return Promise.resolve(new Response(JSON.stringify({ apiKey: "api-key" }), {
-        status: 200,
-        headers: { Authorization: "Bearer session-token" },
-      }));
+      return Promise.resolve(
+        new Response(JSON.stringify({ apiKey: "api-key" }), {
+          status: 200,
+          headers: { Authorization: "Bearer session-token" },
+        }),
+      );
     };
 
     const result = await exchangeSession("https://auth.example", {
@@ -90,6 +94,47 @@ Deno.test("exchangeSession sends challenge JWT and reads session JWT from Author
   }
 });
 
+Deno.test("exchangeSession includes only the present utm_* fields in the body", async () => {
+  const originalFetch = globalThis.fetch;
+  const calls: Array<{ body?: Record<string, unknown> }> = [];
+  try {
+    globalThis.fetch = (_input, init) => {
+      const reqInit = init as RequestInit | undefined;
+      calls.push({
+        body: reqInit?.body
+          ? (JSON.parse(String(reqInit.body)) as Record<string, unknown>)
+          : undefined,
+      });
+      return Promise.resolve(
+        new Response(JSON.stringify({ apiKey: "api-key" }), {
+          status: 200,
+          headers: { Authorization: "Bearer session-token" },
+        }),
+      );
+    };
+
+    await exchangeSession("https://auth.example", {
+      challengeJWT: "challenge-token",
+      powHex: "deadbeef",
+      nonce: "42",
+      username: "agent",
+      utm_source: "blog",
+      utm_campaign: "launch",
+    });
+
+    assertEquals(calls.length, 1);
+    assertEquals(calls[0].body, {
+      powHex: "deadbeef",
+      nonce: "42",
+      username: "agent",
+      utm_source: "blog",
+      utm_campaign: "launch",
+    });
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
 Deno.test("fetchCapability sends session JWT and reads capability JWT from Authorization header", async () => {
   const originalFetch = globalThis.fetch;
   const calls: Array<{ auth?: string }> = [];
@@ -100,10 +145,12 @@ Deno.test("fetchCapability sends session JWT and reads capability JWT from Autho
       calls.push({
         auth: headers.get("Authorization") ?? undefined,
       });
-      return Promise.resolve(new Response("", {
-        status: 200,
-        headers: { Authorization: "Bearer capability-token" },
-      }));
+      return Promise.resolve(
+        new Response("", {
+          status: 200,
+          headers: { Authorization: "Bearer capability-token" },
+        }),
+      );
     };
 
     const capability = await fetchCapability(

@@ -1,5 +1,6 @@
 import { type CredentialStore, type SkillFiles } from "./agent-credentials-store.js";
 import type { JmapBlobUploadLimits } from "../jmap/agent-jmap-blob-limits.js";
+import type { UtmParams } from "../auth/agent-utm.js";
 export interface AgentSessionConfig {
     authUrl: string;
     apiUrl: string;
@@ -23,6 +24,11 @@ export interface RegisterOptions {
      * requested username differs from the stored inbox local-part.
      */
     forced?: boolean;
+    /**
+     * Parsed UTM install-attribution, forwarded to the backend on first-time
+     * signup only (ignored on idempotent replay). Absent/empty is a no-op.
+     */
+    utm?: UtmParams;
 }
 /** Local-part of an inbox email, or the whole string if no @. */
 export declare function inboxLocalPart(inboxId: string): string;

@@ -19,8 +19,9 @@ replacing the current one, pass a **separate** \`credentials_dir\` (MCP) or
 credentials in the **same** directory, pass **\`forced: true\`** (MCP) or
 **\`--forced\`** (skill) explicitly after backing up.
 
-**After a successful register,** arrange hourly inbox polling per your runtime
-(see **cron** topic — native cron hosts schedule an agent turn with
+**After a successful register,** the operator's \`watch\` value decides who reads
+the inbox (see **cron** topic — schedule a daily agent turn on your runtime's own
+scheduler, with
 \`list_inbox.json\`; no-native-cron hosts ask the operator or remind manual
 fetch).
 

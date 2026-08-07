@@ -1,4 +1,4 @@
-/** Subset of `process.env` read for `$INBOX` normalization (tests may pass a stub). */
+/** Optional inbox domain override for `$INBOX` normalization. */
 export type InboxEmailEnv = {
     ATOMIC_MAIL_INBOX_DOMAIN?: string;
 };

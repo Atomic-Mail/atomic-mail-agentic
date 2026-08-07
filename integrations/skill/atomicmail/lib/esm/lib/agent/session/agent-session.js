@@ -1,7 +1,7 @@
 // Stateful PoW + capability JWT + optional cached JMAP session (accountId).
 import { FilesystemCredentialStore, writeCredentials, writeJwtFile, } from "./agent-credentials-store.js";
 import { CAPABILITY_SAFETY_MARGIN_MS, decodeJwtPayload, isJwtExpired, SESSION_SAFETY_MARGIN_MS, } from "../auth/agent-jwt.js";
-import { extractBlobEndpoints, extractBlobUploadLimits, extractJmapApiUrl, extractPrimaryMailAccountId, fetchJmapWellKnown, } from "../jmap/agent-jmap.js";
+import { extractBlobEndpoints, extractBlobUploadLimits, extractJmapApiUrl, extractPrimaryMailAccountId, fetchJmapWellKnown, } from "../jmap/agent-jmap-run.js";
 import { fetchCapability, performPoWAndSession, } from "../auth/agent-auth-http.js";
 function normalizeUsername(u) {
     return u.trim().toLowerCase();
@@ -204,6 +204,7 @@ export class AgentSession {
             authUrl: this.authUrl,
             scryptSalt: this.scryptSalt,
             username,
+            utm: options.utm,
         });
         if (!result.apiKey) {
             throw new Error("Signup did not return an apiKey — this indicates a server bug.");

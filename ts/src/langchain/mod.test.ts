@@ -15,6 +15,7 @@ function makeContext(session: AgentSession) {
       capabilityFile: "/tmp/atomicmail/capability.jwt",
     },
     source: "defaults",
+    utm: {},
   };
   return { defaultConfig, defaultSession: session };
 }
@@ -100,7 +101,10 @@ Deno.test("langchain register forwards forced semantics", async () => {
 
   const out = await tool.invoke({ username: "alice1", forced: true });
   assertEquals(forcedSeen, true);
-  assertStringIncludes(out as string, "hourly");
+  // LangChain has no `watch` precondition, so the reminder is all it gets: it
+  // must still say who decides and which scheduler to use.
+  assertStringIncludes(out as string, "operator's decision");
+  assertStringIncludes(out as string, "OWN scheduler");
 });
 
 Deno.test("langchain help returns bundled topic content", async () => {
@@ -110,7 +114,11 @@ Deno.test("langchain help returns bundled topic content", async () => {
   const tool = getTool("help", fakeSession);
 
   const out = await tool.invoke({ topic: "cron" });
-  assertStringIncludes(out as string, "hourly");
+  assertStringIncludes(out as string, "own scheduler");
+  // The topic once carried OS-level recipes and a plist template; it now only
+  // names those schedulers to forbid them.
+  assertStringIncludes(out as string, "Do not schedule at the OS level");
+  assertEquals((out as string).includes("LaunchAgents"), false);
 });
 
 Deno.test("langchain exports register/jmap/help tools", () => {

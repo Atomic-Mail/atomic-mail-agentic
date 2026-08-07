@@ -69,7 +69,7 @@ function buildRegisterTool(
     name: "register",
     description: "PoW signup; writes credentials. Usernames are 5-21 chars. " +
       "Idempotent for same username and stored inbox; different username is " +
-      "rejected unless forced=true is provided. After success, arrange hourly " +
+      "rejected unless forced=true is provided. After success, arrange a daily " +
       "inbox polling per runtime (help topic cron).",
     schema: z.object({
       username: z.string().min(5).max(21),

@@ -71,6 +71,8 @@ export async function performPoWAndSession(input) {
         nonce,
         apiKey: input.apiKey,
         username: input.username,
+        // Only present utm_* fields are spread in, so absent ones stay off the body.
+        ...(input.utm ?? {}),
     });
 }
 function readBearerToken(headerValue, missingError) {

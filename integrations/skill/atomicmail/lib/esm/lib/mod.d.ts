@@ -10,6 +10,7 @@ export * from "./agent/session/inbox-id-to-mailbox-email.js";
 export * from "./agent/auth/agent-jwt.js";
 export * from "./agent/auth/agent-pow.js";
 export * from "./agent/auth/agent-auth-http.js";
+export * from "./agent/auth/agent-utm.js";
 export * from "./agent/jmap/agent-jmap.js";
 export * from "./agent/jmap/agent-jmap-verify.js";
 export * from "./agent/session/agent-session.js";
@@ -17,4 +18,7 @@ export * from "./agent/session/agent-resolve-config.js";
 export * from "./agent/session/agent-session-for-dir.js";
 export * from "./agent/jmap/agent-help-content.js";
 export * from "./agent/jmap/agent-vars.js";
+export * from "./integrations/key-value-credential-store.js";
+export * from "./integrations/create-agent-session.js";
+export * from "./integrations/n8n-credential-store.js";
 //# sourceMappingURL=mod.d.ts.map

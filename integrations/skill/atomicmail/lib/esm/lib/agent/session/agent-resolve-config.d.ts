@@ -1,4 +1,5 @@
 import { type SkillFiles } from "./agent-credentials-store.js";
+import { type UtmParams } from "../auth/agent-utm.js";
 export type ConfigSource = "credentials-file" | "env" | "mixed" | "defaults";
 export interface ResolvedAgentConfig {
     authUrl: string;
@@ -9,6 +10,11 @@ export interface ResolvedAgentConfig {
     credentialDir: string;
     files: SkillFiles;
     source: ConfigSource;
+    /**
+     * Parsed UTM install-attribution from `ATOMICMAIL_UTM` (stdio-only MCP has no
+     * flag, so env is its only carrier). Empty object when unset/garbage.
+     */
+    utm: UtmParams;
 }
 /**
  * Default credential directory:

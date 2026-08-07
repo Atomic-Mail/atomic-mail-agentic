@@ -1,0 +1,95 @@
+{
+  "interval": {
+    "cron": "0 9 * * *",
+    "human": "once a day",
+    "preset": "Daily",
+    "time": "09:00 local time"
+  },
+  "job_name_prefix": "atomicmail-inbox",
+  "runtimes": [
+    {
+      "id": "claude-code",
+      "scheduler": "claude-code",
+      "env": ["CLAUDECODE", "CLAUDE_CODE_ENTRYPOINT"]
+    },
+    {
+      "id": "openclaw",
+      "scheduler": "openclaw",
+      "env": ["OPENCLAW_HOME", "OPENCLAW_STATE_DIR", "OPENCLAW_CONFIG_PATH"]
+    },
+    {
+      "id": "hermes",
+      "scheduler": "hermes",
+      "env": ["HERMES_SESSION", "HERMES_AGENT", "HERMES_HOME"]
+    },
+    {
+      "id": "atomic-agent",
+      "scheduler": "atomic-agent",
+      "env": ["ATOMIC_AGENT", "ATOMIC_AGENT_SESSION"]
+    },
+    {
+      "id": "cursor",
+      "scheduler": "none",
+      "label": "Cursor",
+      "env": ["CURSOR_AGENT", "CURSOR_TRACE_ID"]
+    }
+  ],
+  "schedulers": {
+    "openclaw": {
+      "kind": "command",
+      "label": "OpenClaw's own scheduler",
+      "command": [
+        "openclaw cron add --name \"{JOB_NAME}\" --cron \"{CRON}\" --session isolated --tools exec --message \"{PROMPT}\" --announce"
+      ],
+      "verify": "openclaw cron list  — {JOB_NAME} must be listed, and its delivery must resolve to a real route. A delivery shown as `announce -> last` with `no route, will fail-closed` means the job will run every day and deliver nowhere: re-create it with an explicit `--channel <id>` (and `--to` where the channel needs one) so the operator actually receives the report.",
+      "remove": "openclaw cron list  (find the id for {JOB_NAME}, then: openclaw cron remove <jobId>)",
+      "least_privilege": "The --tools exec above is not optional padding: without it OpenClaw stores an unrestricted tool policy, and the job would wake each day able to write files, edit code, create further scheduled jobs and spawn sessions — while reading mail written by strangers. Keep the list to what one shell command needs. If your build rejects --tools, create the job without it and then restrict it with `openclaw cron edit`; do not leave it unrestricted. (Newer builds name this command group `openclaw automations`; `cron` is the alias that works on both.)"
+    },
+    "hermes": {
+      "kind": "command",
+      "label": "Hermes' own scheduler",
+      "command": [
+        "hermes cron create \"{CRON}\" \"{PROMPT}\" --name \"{JOB_NAME}\" --deliver origin --skill atomicmail"
+      ],
+      "verify": "hermes cron list  — {JOB_NAME} must be listed with the atomicmail skill attached; a job that shows no skill will wake each day unable to read anything.",
+      "remove": "hermes cron remove {JOB_NAME}",
+      "least_privilege": "Restrict what the job may do before you leave it unattended: it reads mail written by strangers, so it needs no terminal, browser or delegation toolsets. Set them per job with enabled_toolsets on the cronjob tool (for example enabled_toolsets=[\"file\"]), or configure the `cron` platform once in `hermes tools`. Do not use --no-agent: that runs a script with no model, so nobody reads the mail. The command above pins --skill atomicmail so the scheduled run loads the Atomic Mail tool directly rather than hoping the binary resolves on PATH — a scheduled session inherits none of the environment that ran register. If this Hermes build has no atomicmail skill installed, drop that flag and make sure the atomicmail command is on the job's PATH instead; otherwise the job fires daily and reads nothing."
+    },
+    "atomic-agent": {
+      "kind": "command",
+      "label": "atomic-agent's own scheduler",
+      "command": [
+        "atomic-agent task create --name \"{JOB_NAME}\" --cron \"{CRON}\" --message \"{PROMPT}\""
+      ],
+      "verify": "atomic-agent task list",
+      "remove": "atomic-agent task delete {JOB_NAME}"
+    },
+    "claude-code": {
+      "kind": "instruction",
+      "label": "Claude Code's own scheduler",
+      "instruction": [
+        "Schedule this on Claude Code's own durable scheduler — the **scheduled-tasks** MCP — not a session loop. It runs locally on this machine, so it can read the credentials stored below; a scheduler running off-machine could not reach them, which is also why the choice is made for you.",
+        "",
+        "Create it with the create_scheduled_task tool, or just ask in-session: create a scheduled task named {JOB_NAME} that runs {HUMAN} at {TIME} and does the following. It is written under ~/.claude/scheduled-tasks/{JOB_NAME}/ and must come out enabled. Run it once by hand and approve the tools it asks for, so later unattended runs do not stall on a permission prompt with nobody watching.",
+        "",
+        "The prompt to schedule is:",
+        "",
+        "{PROMPT}",
+        "",
+        "Do not use /loop or any session-only timer for this: both are scoped to the current session and expire (in Claude Code /loop lasts at most seven days), so the inbox would quietly stop being checked.",
+        "",
+        "Footnote — if you are running in the Claude Desktop app instead, it has no scheduled-tasks MCP, only the Routines UI: create it there with Routines -> New routine -> Local, schedule preset {PRESET}. Use Local, not Cloud — a cloud routine runs on Anthropic infrastructure and cannot read local credentials, so it works only with Atomic Mail connected as a remote MCP connector, and a local routine only fires while the Desktop app is open and the machine is awake."
+      ],
+      "verify": "Ask: what scheduled tasks do I have? (or list_scheduled_tasks) — {JOB_NAME} must be listed and enabled.",
+      "remove": "Delete the {JOB_NAME} scheduled task (delete_scheduled_task, or ask: delete the {JOB_NAME} scheduled task); in the Desktop app, remove the {JOB_NAME} routine from the Routines list instead.",
+      "least_privilege": "A scheduled task runs unattended, so pin its tools down: it only needs to read this inbox and report back — no file writes, no editing, no spawning further tasks. Approve just those on the first manual run and decline the rest. (Desktop cloud routines are worse here: they include every connector on your account by default, each usable for writes without asking — remove all but Atomic Mail.)"
+    }
+  },
+  "block": {
+    "command": "Your operator chose watch=\"scheduled\" — set up the {HUMAN} inbox check now, using {LABEL}. Run:\n\n{COMMAND}\n\n{LEAST_PRIVILEGE}\n\nConfirm it registered:\n\n{VERIFY}\n\nIf a job named {JOB_NAME} already exists, do not overwrite it — it belongs to another inbox. Tell your operator instead.\n\nRemove it later with:\n\n{REMOVE}",
+    "instruction": "Your operator chose watch=\"scheduled\" — set up the {HUMAN} inbox check now, using {LABEL}.\n\n{INSTRUCTION}\n\n{LEAST_PRIVILEGE}\n\nConfirm it registered:\n\n{VERIFY}\n\nIf a job named {JOB_NAME} already exists, do not overwrite it — it belongs to another inbox. Tell your operator instead.\n\nRemove it later with:\n\n{REMOVE}",
+    "least_privilege": "Give the job the least it needs. It runs one command and reports back, and what it reads is mail written by strangers — so it needs no file writing, no editing, no creating further scheduled jobs, no spawning sessions. If this host supports a per-job tool allowlist, set it explicitly rather than accepting the default, which is usually every tool the host has. The read-only wording in the prompt is a line of text; the allowlist is the part that holds.",
+    "no_scheduler": "Your operator chose watch=\"scheduled\", but {LABEL} has no scheduler that outlives a session, so there is nothing here I can install — a session-scoped loop would die with the session and leave the inbox unread. Ask your operator to schedule this {HUMAN} on something durable they own, under the name {JOB_NAME}, running this prompt verbatim:\n\n{PROMPT}\n\nWherever it ends up scheduled: {LEAST_PRIVILEGE}",
+    "unknown": "Your operator chose watch=\"scheduled\", but I could not identify which agent runtime invoked me, so I will not guess a command. Tell me which agent host you run and I will give you its exact setup step, or schedule it yourself on this host's own scheduler — never at the OS level (no crontab, launchd, systemd or wrapper scripts), and never by rewording the prompt below, which is what keeps an unattended run read-only. Name the job {JOB_NAME}, schedule it {HUMAN}, and use this prompt verbatim:\n\n{PROMPT}\n\nWhen you create the job: {LEAST_PRIVILEGE}"
+  }
+}

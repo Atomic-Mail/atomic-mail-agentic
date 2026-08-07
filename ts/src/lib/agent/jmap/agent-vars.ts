@@ -87,9 +87,80 @@ function formatMissingError(missing: string[]): Error {
   return new Error(msg);
 }
 
+const VAR_START_RE = /[A-Z]/;
+const VAR_CHAR_RE = /[A-Z0-9_]/;
+
 /**
- * Replaces every `$VAR_NAME` in `raw` with the corresponding string.
- * Single pass — values are not scanned for further `$` tokens.
+ * Replaces every `$VAR_NAME` in `raw` with its resolved value, JSON-context
+ * aware: when a token sits inside a JSON string literal the value is escaped
+ * for string context (so newlines, quotes, backslashes, tabs, and other control
+ * characters round-trip and never break `JSON.parse`); bare tokens (outside a
+ * string) are substituted verbatim, preserving numeric/structural placeholders.
+ *
+ * Single pass over the original text — resolved values are not rescanned for
+ * further `$` tokens.
+ */
+export function substituteResolvedVars(
+  raw: string,
+  resolved: Map<string, string>,
+): string {
+  let out = "";
+  let inString = false;
+  let i = 0;
+  const n = raw.length;
+
+  while (i < n) {
+    const ch = raw[i]!;
+
+    if (inString) {
+      // Copy escape pairs verbatim so an escaped quote doesn't close the string
+      // and a `$` after a backslash stays correctly positioned.
+      if (ch === "\\") {
+        out += ch;
+        if (i + 1 < n) {
+          out += raw[i + 1];
+          i += 2;
+          continue;
+        }
+        i += 1;
+        continue;
+      }
+      if (ch === '"') {
+        inString = false;
+        out += ch;
+        i += 1;
+        continue;
+      }
+    } else if (ch === '"') {
+      inString = true;
+      out += ch;
+      i += 1;
+      continue;
+    }
+
+    if (ch === "$" && i + 1 < n && VAR_START_RE.test(raw[i + 1]!)) {
+      let j = i + 1;
+      while (j < n && VAR_CHAR_RE.test(raw[j]!)) j += 1;
+      const name = raw.slice(i + 1, j);
+      if (resolved.has(name)) {
+        const value = resolved.get(name)!;
+        // In string context, escape for a JSON string interior (strip the outer
+        // quotes JSON.stringify adds); bare context keeps the raw value.
+        out += inString ? JSON.stringify(value).slice(1, -1) : value;
+        i = j;
+        continue;
+      }
+    }
+
+    out += ch;
+    i += 1;
+  }
+
+  return out;
+}
+
+/**
+ * Resolves every `$VAR_NAME` referenced in `raw` and substitutes it JSON-safely.
  * Throws if any referenced variable has no value (after vars + autoResolvers).
  */
 export async function substituteVars(
@@ -120,9 +191,5 @@ export async function substituteVars(
     throw formatMissingError(missing);
   }
 
-  const text = input.raw.replace(varPattern(), (_full, name: string) => {
-    return resolved.get(name)!;
-  });
-
-  return { text };
+  return { text: substituteResolvedVars(input.raw, resolved) };
 }

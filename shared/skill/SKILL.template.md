@@ -39,17 +39,22 @@ Run **`atomicmail --help`** or **`atomicmail <command> --help`** for flags.
 
 ```bash
 {{ATOMICMAIL_CLI}} register \
-  --username "alice"
+  --username "alice" \
+  --watch on-demand
 ```
+
+`--watch` is **required** — it is your operator's decision, not yours; ask them.
+Run `register` with no `--watch` to see the accepted values (each is a real
+choice about how the operator works, so neither is a safe default to guess). On
+the scheduling value, register prints the per-host schedule setup command.
 
 Writes `credentials.json`, `session.jwt`, `capability.jwt`. Prints JSON
 including `inbox` and `accountId`.
 
-**Required next step:** after register, arrange hourly inbox polling per your
-runtime (see [Hourly inbox polling](#hourly-inbox-polling-after-register)).
-Native cron hosts schedule an **agent** job with `list_inbox.json`; hosts
-without native cron should ask the operator or remind manual fetch. Do not cron
-`atomicmail jmap_request` alone.
+**Required next step:** the `watch` value decides who reads the inbox (see
+[Inbox checks](#inbox-checks-after-register)). On `scheduled`, schedule a daily
+**agent** turn with `list_inbox.json` on your runtime's own scheduler — never at
+the OS level, and never cron `atomicmail jmap_request` alone.
 
 Usernames must be 5–21 characters (local-part of your `@atomicmail.ai`
 address).
@@ -102,72 +107,55 @@ Bundled presets (no local file creation required):
 - `send_mail_blob_attachment.json` (`$TO`, `$SUBJECT`, `$BODY`; pair with
   repeatable **`--attachment PATH`** for RFC 8620 upload →
   `$ATTACHMENT_0_BLOB_ID`, …)
-- `list_inbox.json` (latest 50; uses `$INBOX_MAILBOX_ID`) — **used for hourly inbox polling**
+- `list_inbox.json` (latest 50; uses `$INBOX_MAILBOX_ID`) — **used for the scheduled inbox check**
 - `reply.json` (`$MAIL_ID`, `$BODY`)
 
-## Hourly inbox polling (after register)
+## Inbox checks (after register)
 
-Registration only creates credentials. Inbound mail should be fetched and
-triaged about once per hour between interactive sessions.
+Registration only creates credentials. Nothing reads the inbox until something
+wakes an agent to do it — that is what the required `watch` value decides, and it
+is your operator's call, not yours:
 
-**Choose the path that matches your runtime — do not mix platforms.**
+- **`scheduled`** — a recurring job wakes an agent once a day to read the inbox
+  and report what arrived.
+- **`on-demand`** — no such job; mail is read only when a human asks, and
+  anything arriving in between sits unread with nobody told.
 
-### If your host supports scheduled jobs
+### On `scheduled`, use your host's own scheduler
 
-OpenClaw, Hermes, atomic-agent, and similar hosts with native cron: set up an
-hourly **agent** job after the first successful `register`. Wire Atomic Mail MCP
-or AgentSkill into that agent. The scheduled turn should call `list_inbox.json`
-inside the agent prompt.
-
-### If your host does **not** support scheduled jobs
-
-Claude, Pi, Cursor, and other chat agents without a cron API: **do not spend
-tokens trying to work around this** — no wrapper scripts, OS crontab/LaunchAgent
-setup, or scheduling on a different platform.
-
-After register, either **ask your operator** to set up hourly polling on a
-capable host (share the examples below), or **remind your operator** to fetch
-mail manually when needed.
-
-### Forbidden: cross-platform scheduling
-
-Do not register in one runtime and schedule the cron job on another (e.g. Pi
-runs `register`, then creates an OpenClaw cron job).
-
-**Do not** cron `atomicmail jmap_request` alone (no agent). **Do not** use
-headless one-shot CLIs (`claude -p`, `pi -p`, `codex exec`) if you want to
-continue the thread.
-
-### Scheduling examples (capable hosts or operators)
+`register` prints the exact setup step for the runtime that called it, with the
+credentials directory already filled in, plus the prompt to schedule. Use that
+text verbatim — it is generated for your host.
 
 | Your setup | Approach |
 | --- | --- |
 | OpenClaw | `openclaw cron add` with `--announce` |
-| Hermes | `hermes cron create` or `/cron` with `--deliver` |
+| Hermes | `hermes cron create` or `/cron` with `--deliver origin`; not `--no-agent` |
 | Atomic Bot | Same as OpenClaw or Hermes |
 | atomic-agent | `atomic-agent task create --cron` |
-| No native cron (Claude, Pi, Cursor, …) | Ask operator to schedule on a capable host, or remind manual fetch |
+| Claude Code Desktop | A local routine (Routines → New routine → Local); not `/loop`, which expires |
+| Cursor, Pi, other session-only runtimes | No durable scheduler — ask your operator to schedule it on something they own |
 
-Full options, agent prompt, and operator OS-scheduling notes: `atomicmail help
---topic cron` or MCP `help` topic `cron`.
+**Never schedule at the OS level** — no crontab, launchd, systemd or wrapper
+scripts. They run outside the host's permission model, so your operator cannot
+see or pause the job where they manage their others, and the host cannot apply
+its tool restrictions to it. They also break in practice: a scheduler has no
+terminal, and an agent started from one hangs or exits at once.
 
-### Agent prompt (all workflows)
+**Never register in one runtime and schedule in another.** Nobody owns the
+result.
 
-```text
-Use Atomic Mail to fetch my inbox (MCP jmap_request with ops_file list_inbox.json, or atomicmail jmap_request --ops-file list_inbox.json). Summarize new messages, highlight what needs a reply, and stay available — I may ask you to reply, forward, search, or dig into something important.
-```
+**Never cron `atomicmail jmap_request` alone** — that only writes JSON somewhere;
+no agent runs and nobody is told.
 
-### Built-in cron examples
+### Give the scheduled job the least it needs
 
-**OpenClaw** — [cron docs](https://docs.openclaw.ai/automation/cron-jobs): isolated
-session, `--announce` for delivery.
+It runs one command and reports back, and what it reads is mail written by
+strangers. No file writing, no editing, no creating further scheduled jobs, no
+spawning sessions. If your host supports a per-job tool allowlist, set it
+explicitly instead of accepting the default.
 
-**Hermes** — [cron docs](https://hermes-agent.nousresearch.com/docs/user-guide/features/cron):
-`--deliver origin` (or `telegram`, `discord`, `email`, …); not `--no-agent`.
-
-**atomic-agent** — `atomic-agent task create --cron "0 * * * *" --message "<prompt>"`
-
-For operator OS-scheduling patterns on terminal hosts, see `help --topic cron`.
+Full details: `atomicmail help --topic cron` or MCP `help` topic `cron`.
 
 ### 4. Help
 

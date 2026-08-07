@@ -45,13 +45,14 @@ const fallbackTopics: Record<string, string> = {
 const DEFAULT_README_STUB =
   'Topic "readme" returns a built-in stub in AgentSkill runtimes. From MCP, topic "readme" returns the package README.md.';
 const DEFAULT_UNKNOWN_TOPIC =
-  "Unknown topic \"{topic}\". Available topics: {topics}, readme";
+  'Unknown topic "{topic}". Available topics: {topics}, readme';
 
 export const HELP_TOPICS: Record<string, string> = manifest
   ? Object.fromEntries(
     manifest.help.topic_order.map((topic) => {
-      const text = tryReadSharedText(`${manifest.help.topics_dir}/${topic}.md`) ??
-        fallbackTopics[topic];
+      const text =
+        tryReadSharedText(`${manifest.help.topics_dir}/${topic}.md`) ??
+          fallbackTopics[topic];
       return [topic, text];
     }),
   )

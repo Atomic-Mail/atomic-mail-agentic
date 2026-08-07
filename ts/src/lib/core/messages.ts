@@ -13,6 +13,14 @@ const SHARED_ERRORS =
       cli_ops_required: "Provide --ops or --ops-file.",
       cli_dry_run_with_attachment:
         "--dry-run cannot be combined with --attachment.",
+      // Safety-critical: the refused-credentials refusal must survive a failed
+      // shared-JSON read with real words, mirroring Python's _REFUSED_FALLBACK.
+      agent_register_refused_existing_credentials_template:
+        "Register refused: replacing the credentials in this directory " +
+        "permanently and irreversibly destroys your only access to inbox " +
+        '"{inbox}". Register the new account in a separate credential directory ' +
+        "instead. Whether to give up this inbox is your operator's decision, " +
+        "not yours.",
     };
 
 export function sharedError(key: keyof typeof SHARED_ERRORS): string {

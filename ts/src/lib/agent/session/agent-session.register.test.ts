@@ -29,16 +29,18 @@ Deno.test(
       () => session.register("new-user"),
       Error,
     );
-    // NOTE: this text is hardcoded inside session.register() (agent-session.ts),
-    // which is out of bounds to edit, so it still reads the old wording. The
-    // rewritten copy lives in shared/messages/errors.json
-    // (agent_register_refused_existing_credentials_template) but is not yet wired
-    // to the session — see the shared-source test below and the handoff note.
+    // The live refused path sources its wording from shared/messages/errors.json
+    // (agent_register_refused_existing_credentials_template) via sharedErrorTemplate,
+    // so TS and Python refuse in the same words. It opens with the irreversible
+    // risk and points at the safe alternative — a separate credential directory —
+    // rather than handing over the replace flag as a copy-paste recipe.
     assertStringIncludes(err.message, "Register refused");
+    assertStringIncludes(err.message, "irreversibly destroys your only access");
     assertStringIncludes(err.message, "credentials_dir in MCP");
     assertStringIncludes(err.message, "--credentials-dir in AgentSkill");
-    assertStringIncludes(err.message, "forced=true (MCP)");
-    assertStringIncludes(err.message, "--forced (AgentSkill)");
+    assertStringIncludes(err.message, "your operator's decision");
+    // The rewrite deliberately does not spell the flag as a flag=value recipe.
+    assert(!err.message.includes("forced=true"));
   },
 );
 

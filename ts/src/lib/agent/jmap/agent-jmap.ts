@@ -2,12 +2,12 @@
 
 import { readFile } from "node:fs/promises";
 import { dirname, isAbsolute, resolve as resolvePath } from "node:path";
-import { cwd } from "node:process";
+import { cwd, env } from "node:process";
 import { fileURLToPath } from "node:url";
 
 import { tryReadSharedJson } from "../../core/shared-assets.ts";
 import { readCredentials } from "../session/agent-credentials-store.ts";
-import { inboxIdToMailboxEmail } from "../session/inbox-id-to-mailbox-email.ts";
+import { resolveInboxMailboxEmail } from "../session/inbox-id-to-mailbox-email.ts";
 import {
   assertBlobUploadEnvelopeWithinLimits,
   type JmapBlobUploadLimits,
@@ -311,6 +311,12 @@ export interface RunJmapRequestInput {
   attachmentPathBase?: string;
   /** Values for `$VAR` tokens (keys without `$`). Overrides injected attachment vars. */
   vars?: Record<string, string>;
+  /**
+   * `ATOMIC_MAIL_INBOX_DOMAIN` fallback for `$INBOX` when the inbox is stored
+   * as a bare local-part and the JMAP account id is not a real address.
+   * Defaults to `process.env.ATOMIC_MAIL_INBOX_DOMAIN` when omitted.
+   */
+  inboxDomain?: string;
 }
 
 /**
@@ -342,15 +348,28 @@ export async function runJmapRequest(
     autoResolvers: {
       ACCOUNT_ID: () => input.session.getPrimaryMailAccountId(),
       INBOX: async () => {
-        const raw = input.session.currentInboxId ??
+        const inboxId = input.session.currentInboxId ??
           (input.session.files
             ? (await readCredentials(input.session.files.credentialsFile))
               .inboxId
             : undefined);
-        if (!raw) {
+        // The JMAP primary mail accountId resolves to the inbox's REAL address
+        // (including custom domains), so prefer it over appending a domain.
+        let accountId: string | undefined;
+        try {
+          accountId = await input.session.getPrimaryMailAccountId();
+        } catch {
+          accountId = undefined;
+        }
+        const email = resolveInboxMailboxEmail({
+          inboxId,
+          accountId,
+          inboxDomain: input.inboxDomain ?? env.ATOMIC_MAIL_INBOX_DOMAIN,
+        });
+        if (!email) {
           throw new Error("No inbox in session; run register first.");
         }
-        return inboxIdToMailboxEmail(raw);
+        return email;
       },
       INBOX_MAILBOX_ID: () => fetchInboxMailboxId(input.session),
       UPLOAD_URL: async () => {

@@ -148,7 +148,7 @@ If repo docs and installed behavior ever drift, trust `help` from the same insta
 git clone https://github.com/Atomic-Mail/atomic-mail-agentic.git
 cd atomic-mail-agentic/ts
 
-deno test --allow-read --allow-env --allow-write
+deno test --allow-read --allow-env --allow-write --allow-sys
 ```
 
 Docs preview:

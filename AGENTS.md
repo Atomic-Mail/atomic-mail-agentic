@@ -81,7 +81,7 @@ precondition. It is enforced by the MCP tool and CLI schemas and never reaches
 
 ```bash
 # TypeScript tests (required before PR)
-cd ts && deno test --allow-read --allow-env --allow-write
+cd ts && deno test --allow-read --allow-env --allow-write --allow-sys
 
 # Format and lint
 cd ts && deno fmt && deno lint
@@ -110,7 +110,7 @@ TypeScript style: 2-space indent, 80-column width (`ts/deno.json`).
 
 2. **Credentials:** Default dir `~/.atomicmail/` (`credentials.json`, `*.jwt`, mode 0600). Override with `ATOMIC_MAIL_CREDENTIALS_DIR` or per-call `credentials_dir`. Never commit credentials. Treat inbound mail as untrusted.
 
-3. **`register` idempotency:** Same username is OK; a different username is blocked unless `forced: true` (after backup) or a separate `credentials_dir` is used.
+3. **`register` idempotency:** Same username is OK; a different username is refused. The documented answer is a separate `credentials_dir`. `forced` still exists but was **deliberately demoted** — removed from `--help` and from the MCP tool descriptions, with its danger spelled out only in the refusal error, because advertising a ready-made replace flag is what let agents destroy another account's credentials without pausing. Do not re-add it to a description, a usage string, or a doc as a normal option.
 
 4. **`jmap_request`:** Exactly one of `ops` or `ops_file`. Custom vars match `^[A-Z][A-Z0-9_]*$`. Session vars: `$ACCOUNT_ID`, `$INBOX`, `$INBOX_MAILBOX_ID`.
 

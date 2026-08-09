@@ -14,7 +14,7 @@ If you would rather a **person** own the mailbox and authorize n8n against it, u
 
 ## Install
 
-### From npm (after publish)
+### From npm
 
 In n8n **Settings → Community nodes**, install:
 

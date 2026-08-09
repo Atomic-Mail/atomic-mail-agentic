@@ -9,7 +9,7 @@ is:
 
 1. Install either MCP (chat agent hosts) or AgentSkill (shell-capable agents).
 2. Run `register` once to create or recover an inbox. It takes a **required
-   `watch` value** — see [Who reads the inbox](#who-reads-the-inbox-the-watch-value).
+   `watch` value** — see [Who reads the inbox](#who-reads-the-inbox).
    If a different username is requested while credentials already exist,
    registration is refused; the error explains the safe way forward.
 3. Use `jmap_request` for send/read flows.
@@ -29,7 +29,7 @@ Two exist, and they are for different situations:
   the inboxes they own. This is the path for Make, n8n via HTTP, Zapier, hosted
   connectors, and the [remote MCP server](/mcp-remote).
 
-## Who reads the inbox — the `watch` value
+## Who reads the inbox
 
 `register` will not complete without `watch`. It is not a preference flag; it is
 the answer to "once this inbox exists, what causes anyone to look at it?" — and
@@ -59,7 +59,7 @@ atomicmail register --username "myagent" --watch on-demand
 1. **Register**
    - Create account with PoW (`register --username <name> --watch <value>`) or
      recover via API key.
-   - `watch` is required — see [above](#who-reads-the-inbox-the-watch-value).
+   - `watch` is required — see [above](#who-reads-the-inbox).
    - Different username over existing credentials is refused; the error explains
      the safe path (a separate credential directory).
 2. **Persist credentials**

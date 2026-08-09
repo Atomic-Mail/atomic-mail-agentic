@@ -73,14 +73,16 @@ For Dify's general plugin-in-workflow style (install tool, authorize, wire
 nodes), see:
 [Workflow lesson: Enhance Workflows (Plugins)](https://docs.dify.ai/en/use-dify/tutorials/workflow-101/lesson-07)
 
-## Hourly inbox polling after `register`
+## Inbox checks after `register`
 
-After `register`, arrange hourly inbox polling for the inbox. The important
+`register` takes a required `watch` value (`scheduled` or `on-demand`) — the
+operator's decision about whether anything reads this inbox unattended. On
+`scheduled`, arrange a **once-daily** inbox check (`0 9 * * *`). The important
 rule is to run a full **agent turn** that uses `list_inbox.json`, not a raw
 `jmap_request` one-shot cron job without agent reasoning.
 
-If your runtime has no native agent cron/scheduler, ask the operator to set up
-polling on a capable host, or use manual fetch reminders.
+If your runtime has no native agent cron/scheduler, ask the operator to schedule
+it on a capable host, or use manual fetch reminders.
 
 For exact prompt patterns and runtime-specific guidance, use Atomic Mail `help`
 topic `cron`.

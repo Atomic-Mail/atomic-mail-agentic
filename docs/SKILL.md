@@ -26,7 +26,7 @@ package.
 ## Commands
 
 ```bash
-npx --package=@atomicmail/agent-skill-gh-pages atomicmail register --username "myagent"
+npx --package=@atomicmail/agent-skill-gh-pages atomicmail register --username "myagent" --watch on-demand
 
 npx --package=@atomicmail/agent-skill-gh-pages atomicmail jmap_request --ops-file list_inbox.json
 ```
@@ -45,8 +45,14 @@ Run **`atomicmail --help`** or **`atomicmail <command> --help`** for flags.
 
 ```bash
 npx --package=@atomicmail/agent-skill-gh-pages atomicmail register \
-  --username "alice"
+  --username "alice" \
+  --watch on-demand
 ```
+
+`--watch` is **required** — it is your operator's decision, not yours; ask them.
+Run `register` with no `--watch` to see the accepted values (each is a real
+choice about how the operator works, so neither is a safe default to guess). On
+the scheduling value, `register` prints the per-host schedule setup command.
 
 Writes `credentials.json`, `session.jwt`, `capability.jwt`. Prints JSON
 including `inbox` and `accountId`.
@@ -59,11 +65,13 @@ the OS level, and never cron `atomicmail jmap_request` alone.
 Usernames must be 5–21 characters (local-part of your `@atomicmail.ai`
 address).
 
-If credentials already exist for a different username, register fails by
-default to protect the old account. To add another inbox without replacing the
+If credentials already exist for a different username, register refuses to run,
+which protects the old account. To add another inbox without replacing the
 current one, pass a separate `--credentials-dir` (MCP: `credentials_dir` on
-`register` / `jmap_request`). Use `--forced` only when you intend to replace
-credentials in the **same** directory (after backing it up).
+`register` / `jmap_request`) — that is the supported path, and the only one you
+should reach for. Replacing the credentials in a directory permanently destroys
+access to that inbox; there is no normal flag for it, and the refusal error is
+where the operator-authorised escape hatch is spelled out.
 
 ### 2. Register (existing API key, in case losing the credentials file)
 

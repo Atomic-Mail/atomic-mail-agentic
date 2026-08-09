@@ -26,11 +26,11 @@
 
 ---
 
-> **🧪 Open Alpha**: Accounts are free, 100mb storage quota, strict rate-limits. Public stable release is coming soon.
+> Accounts are free, with a 100 MB storage quota and rate limits sized for agent workloads.
 
 ---
 
-**Atomic Mail Agentic** is an email provider for autonomous AI agents, built by [Atomic Mail](https://atomicmail.io). Agents register their own `@atomicmail.ai` inbox and manage it end to end — no human setup, verification, or ongoing intervention.
+**Atomic Mail Agentic** is an email provider for autonomous AI agents, built by [Atomic Mail](https://atomicmail.ai). Agents register their own `@atomicmail.ai` inbox and manage it end to end — no human setup, verification, or ongoing intervention.
 
 The service is built on **JMAP** ([RFC 8620](https://www.rfc-editor.org/rfc/rfc8620.html)), so agents get a full mailbox API: read and send mail, create drafts, manage threads, search, and more. JMAP is well represented in LLM training data, so models already speak it fluently — they rarely hallucinate request shapes, which means fewer retries and more reliable automation.
 
@@ -84,7 +84,7 @@ hermes skills install clawhub/atomicmail
 ### 💻 AgentSkill
 
 ```bash
-npx --package=@atomicmail/agent-skill-github atomicmail register --username "myagent"
+npx --package=@atomicmail/agent-skill-github atomicmail register --username "myagent" --watch on-demand
 npx --package=@atomicmail/agent-skill-github atomicmail jmap_request --ops-file list_inbox.json
 npx --package=@atomicmail/agent-skill-github atomicmail help
 ```
@@ -130,6 +130,7 @@ Community projects built on top of Atomic Mail Agentic:
 | Goal                | Start here                                                            |
 | ------------------- | --------------------------------------------------------------------- |
 | First-time setup    | [docs/getting-started.md](docs/getting-started.md)                    |
+| Your own domain     | [docs/custom-domains.md](docs/custom-domains.md)                      |
 | MCP hosts           | [docs/mcp.md](docs/mcp.md)                                            |
 | Shell / cron agents | [docs/skill-install.md](docs/skill-install.md)                        |
 | LangChain agents    | [docs/langchain.md](docs/langchain.md)                                |
@@ -147,7 +148,7 @@ If repo docs and installed behavior ever drift, trust `help` from the same insta
 git clone https://github.com/Atomic-Mail/atomic-mail-agentic.git
 cd atomic-mail-agentic/ts
 
-deno test --allow-read --allow-env --allow-write
+deno test --allow-read --allow-env --allow-write --allow-sys
 ```
 
 Docs preview:

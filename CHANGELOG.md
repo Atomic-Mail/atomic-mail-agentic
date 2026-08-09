@@ -5,6 +5,8 @@ Notable changes to Atomic Mail Agentic. Format loosely follows
 
 ## [Unreleased]
 
+## [0.3.26] - 2026-08-07
+
 ### Added
 
 - **Required `watch` parameter on `register`** (`"scheduled"` | `"on-demand"`),

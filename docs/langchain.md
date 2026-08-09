@@ -1,14 +1,20 @@
 ---
-description: Use @atomicmail/langchain to run Atomic Mail register, jmap_request, and help as LangChain tools.
+description: Use the Atomic Mail LangChain packages—@atomicmail/langchain for JS and langchain-atomicmail for Python—to run register, jmap_request, and help as LangChain tools.
 ---
 
-# @atomicmail/langchain
+# LangChain
 
-`@atomicmail/langchain` exposes Atomic Mail as LangChain tools while reusing the
-same shared runtime used by MCP and AgentSkill. It provides both:
+Atomic Mail ships LangChain integrations for **both** runtimes, built from the
+same release and published at the same version:
 
-- a ready-to-use tools array (`createAtomicMailTools`)
-- a toolkit class (`AtomicMailToolkit`)
+| Language | Package | Install |
+| --- | --- | --- |
+| JavaScript / TypeScript | `@atomicmail/langchain` (npm) | `npm install @atomicmail/langchain` |
+| Python | `langchain-atomicmail` (PyPI) | `pip install langchain-atomicmail` |
+
+Both expose the same three tools — `register`, `jmap_request`, `help` — over the
+same shared runtime that backs MCP and AgentSkill, so behavior does not drift
+between them.
 
 ## Auth model
 
@@ -18,13 +24,16 @@ for you; the underlying HTTP chain is [REST authentication](/rest-auth). If a
 **person** should own the mailbox and authorize your app instead, use
 [OAuth 2.0](/oauth) with a plain HTTP client.
 
-## Install
+## JavaScript: `@atomicmail/langchain`
 
 ```bash
 npm install @atomicmail/langchain
 ```
 
-## Tool surfaces
+It provides both a ready-to-use tools array (`createAtomicMailTools`) and a
+toolkit class (`AtomicMailToolkit`).
+
+### Tool surfaces
 
 ```ts
 import { createAtomicMailTools, AtomicMailToolkit } from "@atomicmail/langchain";
@@ -67,7 +76,7 @@ Defaults match the rest of the stack:
 
 `credentials_dir` can be passed per tool call for multi-account use.
 
-## Example
+## Example (JavaScript)
 
 ```ts
 import { createAtomicMailTools } from "@atomicmail/langchain";
@@ -83,6 +92,19 @@ const inbox = await jmapRequest.invoke({
 const docs = await help.invoke({ topic: "presets" });
 console.log(inbox, docs);
 ```
+
+## Python: `langchain-atomicmail`
+
+```bash
+pip install langchain-atomicmail
+```
+
+Published on PyPI as **`langchain-atomicmail`**, released alongside the npm
+package at the same version. It bundles the Python Atomic Mail runtime, so it is
+the only install you need — there is no separate `atomicmail` package to add.
+
+The same three tools, the same credential directory, and the same
+`ATOMIC_MAIL_*` environment variables listed above apply.
 
 ## See also
 

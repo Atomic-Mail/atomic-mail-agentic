@@ -59,7 +59,7 @@ under `ts/src/`).
 
 ```bash
 cd ts
-deno test --allow-read --allow-env --allow-write
+deno test --allow-read --allow-env --allow-write --allow-sys
 ```
 
 **New features and bug fixes should include tests.** Prefer unit tests with
@@ -69,7 +69,7 @@ calls to `atomicmail.ai` unless the change is integration-only.
 Run the full suite before opening a PR:
 
 ```bash
-cd ts && deno test --allow-read --allow-env --allow-write
+cd ts && deno test --allow-read --allow-env --allow-write --allow-sys
 ```
 
 ## Code conventions
@@ -192,7 +192,7 @@ releases live in `test/checklists/`.
 
 ## Pull request checklist
 
-- [ ] Tests pass (`deno test --allow-read --allow-env --allow-write` from `ts/`)
+- [ ] Tests pass (`deno test --allow-read --allow-env --allow-write --allow-sys` from `ts/`)
 - [ ] New or changed behavior has test coverage
 - [ ] `deno fmt` and `deno lint` are clean for touched files
 - [ ] Docs and/or `help` content updated if user-visible behavior changed

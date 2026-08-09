@@ -216,8 +216,12 @@ jobs:
     if: ${{ github.event_name == 'release' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    # `contents: write` pushes the branch, `pull-requests: write` opens the PR.
+    # A direct push to main is rejected by the branch-protection ruleset (GH013),
+    # so the tap ships as a PR instead.
     permissions:
       contents: write
+      pull-requests: write
 
     steps:
       - name: Checkout repository
@@ -237,9 +241,10 @@ jobs:
           mkdir -p integrations/skill
           cp -a skill/. integrations/skill/atomicmail/
 
-      - name: Commit and push in-repo skill tap
+      - name: Open PR for in-repo skill tap
         env:
           VERSION: ${{ needs.build.outputs.version }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
           git config user.name "github-actions[bot]"
@@ -249,5 +254,23 @@ jobs:
             echo "No changes to commit for integrations/skill/atomicmail"
             exit 0
           fi
+
+          BRANCH="chore/skill-tap-${VERSION}"
+          git switch -c "$BRANCH"
           git commit -m "chore(skill): publish atomicmail skill v${VERSION}"
-          git push
+          git push --force-with-lease origin "$BRANCH"
+
+          # Re-running a release for the same version reuses the branch name;
+          # the push above updates it and any open PR picks the new commit up.
+          if gh pr view "$BRANCH" --json number >/dev/null 2>&1; then
+            echo "PR for $BRANCH already exists; updated it with the new commit."
+            exit 0
+          fi
+
+          gh pr create \
+            --base main \
+            --head "$BRANCH" \
+            --title "chore(skill): publish atomicmail skill v${VERSION}" \
+            --body "Syncs \`integrations/skill/atomicmail\` (the in-repo Hermes tap) to the artifact built for release v${VERSION}.
+
+          Opened automatically by \`.github/workflows/publish-skills.yml\`, which cannot push to \`main\` directly under the branch-protection ruleset. Merging this is what makes \`hermes skills install Atomic-Mail/atomic-mail-agentic/integrations/skill/atomicmail\` serve v${VERSION}."

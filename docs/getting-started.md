@@ -117,6 +117,7 @@ Continue with full docs: [`AgentSkill in-depth`](/skill-install) and
 
 ## Next sections
 
+- [`Using your own domain`](/custom-domains)
 - [`OAuth 2.0 for third-party apps`](/oauth)
 - [`REST authentication (PoW)`](/rest-auth)
 - [`Local MCP in-depth`](/mcp) · [`Remote MCP server`](/mcp-remote)

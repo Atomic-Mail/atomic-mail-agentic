@@ -34,6 +34,7 @@ export default defineConfig({
         text: "Getting Started",
         items: [
           { text: "Overview and ideal flow", link: "/getting-started" },
+          { text: "Using your own domain", link: "/custom-domains" },
         ],
       },
       {
@@ -57,6 +58,7 @@ export default defineConfig({
           { text: "n8n", link: "/n8n" },
           { text: "LangChain", link: "/langchain" },
           { text: "Dify", link: "/dify" },
+          { text: "@atomicmail/agentic-core", link: "/core" },
         ],
       },
       {

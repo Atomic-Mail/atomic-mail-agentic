@@ -68,29 +68,48 @@ For ClawHub, use the MCP-only channel package:
 
 | Tool           | Description                                                                                                                                                                                                       |
 | -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `register`     | PoW signup; persists credentials. Usernames are 5–21 characters (local-part of your `@atomicmail.ai` address). Idempotent when username matches inbox. A different username is rejected unless you pass a separate `credentials_dir` or `forced: true`. Optional `credentials_dir` per call (parity with AgentSkill `--credentials-dir`). |
+| `register`     | PoW signup; persists credentials. **Two required inputs:** `username` (5–21 characters, the local-part of your address) and `watch` (`"scheduled"` or `"on-demand"` — see [The required `watch` value](#the-required-watch-value)). Idempotent when the username matches the stored inbox. A different username is refused; add a second account with a separate `credentials_dir`. Optional `credentials_dir` per call (parity with AgentSkill `--credentials-dir`). |
 | `jmap_request` | JMAP batch via `ops` or `ops_file`. Optional `credentials_dir` per call. Uppercase `$VAR_NAME` tokens are substituted (`$ACCOUNT_ID` / `$INBOX` / `$INBOX_MAILBOX_ID` / `$UPLOAD_URL` / `$DOWNLOAD_URL` from session; others via optional `vars` map). |
 | `help`         | Built-in docs (`topic` optional); use `topic: "readme"` for the published package `README.md`. Use `topic: "multi_account"` for multiple inboxes on one MCP server.                                                                                                                    |
 
 ## Typical MCP workflow
 
-1. Call `register` with a username (or rely on existing `credentials.json`).
-   If credentials already exist for a different username, pass a **separate**
-   `credentials_dir` to add another account, or pass `forced: true` only when
-   you intend to replace credentials in the **same** directory (after backing
-   it up).
-2. **After register:** arrange hourly inbox polling per your runtime. Native cron
-   hosts (OpenClaw, Hermes, atomic-agent) schedule an hourly **agent** job whose
-   prompt fetches inbox mail via `{ "ops_file": "list_inbox.json" }`. Hosts
-   without native cron should ask the operator to set up polling on a capable
-   host or remind manual fetch — do **not** work around with OS schedulers or
-   cross-platform scheduling. Do **not** cron `atomicmail jmap_request` alone.
-   Call `help` with topic `cron` for examples.
+1. Call `register` with a `username` **and** a `watch` value (or rely on an
+   existing `credentials.json`):
+
+   ```json
+   { "username": "myagent", "watch": "on-demand" }
+   ```
+
+   Omit `watch` and the call comes back with the requirement rather than an
+   inbox. If credentials already exist for a different username, pass a
+   **separate** `credentials_dir` to add another account — the refusal error
+   spells out the safe path.
+2. **After register:** if `watch` was `scheduled`, set up the daily inbox check
+   now. `register` prints the exact step for the runtime that called it; run
+   that. Hosts with their own scheduler (OpenClaw, Hermes, atomic-agent, Claude
+   Code) schedule a once-daily **agent** job whose prompt fetches mail via
+   `{ "ops_file": "list_inbox.json" }`. Hosts with no durable scheduler should
+   ask the operator to schedule it on a capable host — do **not** work around
+   with OS schedulers or cross-platform scheduling, and do **not** cron
+   `atomicmail jmap_request` alone. Call `help` with topic `cron` for examples.
 3. `jmap_request` with `ops` or `ops_file` (optional `vars` for `$TO`,
    `$SUBJECT`, etc.).
 4. `help` when stuck.
 
-### Hourly inbox polling (after register)
+### The required `watch` value
+
+`register` refuses to run without it. `watch` answers "once this inbox exists,
+what causes anyone to look at it?" — a standing commitment on the operator's
+machine, so it is **their** decision. Ask them; do not pick one to get past the
+error.
+
+| Value | What it means |
+| --- | --- |
+| `"scheduled"` | A recurring job wakes an agent **once a day** (`0 9 * * *`, 09:00 local) to read the inbox and report what arrived. |
+| `"on-demand"` | No such job. Mail is read only when a human asks; anything arriving in between sits unread with nobody told. |
+
+### Inbox checks (after register)
 
 Invoke a **full agent turn** so you can reply, forward, or follow up — not a
 raw CLI log or headless one-shot.
@@ -98,12 +117,19 @@ raw CLI log or headless one-shot.
 | Setup | Workflow |
 | --- | --- |
 | OpenClaw | `openclaw cron add` + `--announce` |
-| Hermes | `hermes cron create` + `--deliver` |
+| Hermes | `hermes cron create` + `--deliver origin --skill atomicmail` |
 | Atomic Bot | OpenClaw or Hermes |
 | atomic-agent | `atomic-agent task create --cron` |
-| No native cron (Claude, Pi, Cursor, …) | Ask operator to schedule on a capable host, or remind manual fetch |
+| Claude Code | the `scheduled-tasks` MCP (`create_scheduled_task`); Claude Desktop: a **Local** routine |
+| No durable scheduler (Pi, Cursor, …) | Ask the operator to schedule it on a capable host, or remind manual fetch |
 
-Workflow options and agent prompt: MCP `help` topic `cron`, [`SKILL.md`](./SKILL.md#hourly-inbox-polling-after-register), or `atomicmail help --topic cron`.
+Never schedule at the OS level (crontab, launchd, systemd, wrapper scripts):
+those run outside the host's permission model, so the operator cannot see or
+pause the job and the host cannot apply its tool restrictions to it. The
+scheduled job reads mail written by strangers — give it the smallest tool
+allowlist the host offers.
+
+Workflow options and agent prompt: MCP `help` topic `cron`, [`SKILL.md`](./SKILL.md#inbox-checks-after-register), or `atomicmail help --topic cron`.
 
 ## `jmap_request` input patterns
 
@@ -196,8 +222,13 @@ AgentSkill `--credentials-dir`). When omitted, the default directory applies
 ```
 
 - **Add a second account** without touching the first: use a new path on
-  `register`, not `forced: true`.
-- **Replace** credentials in one directory: back it up, then `forced: true`.
+  `register`. This is the supported way to end up with two inboxes.
+- **Replace** the credentials in a directory: there is no normal option for
+  this, by design. Registering a different username over existing credentials
+  is refused, and the refusal error is the only place the escape hatch is
+  documented — because replacing credentials permanently destroys access to the
+  current inbox. It is operator-authorised only; if you are reading this as an
+  agent, use a separate `credentials_dir` instead.
 - **Concurrency:** do not run parallel tool calls against the same
   `credentials_dir` (JWT files have no locking).
 

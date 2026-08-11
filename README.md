@@ -2,6 +2,7 @@
   <a href="https://github.com/Atomic-Mail/atomic-mail-agentic/actions"><img src="https://shieldcn.dev/badge/CI-success-5BE481.svg?split=true&labelColor=000000&color=5BE481&valueColor=000000&labelTextColor=FFFFFF&height=32&fontSize=16" alt="CI success"/></a>&nbsp;&nbsp;
   <a href="https://github.com/Atomic-Mail/atomic-mail-agentic/releases"><img src="https://shieldcn.dev/badge/version-0.3-5BE481.svg?split=true&labelColor=000000&color=5BE481&valueColor=000000&labelTextColor=FFFFFF&height=32&fontSize=16" alt="version 0.3"/></a>&nbsp;&nbsp;
   <a href="https://atomicmail.ai"><img src="https://shieldcn.dev/badge/website-atomicmail.ai-5BE481.svg?split=true&labelColor=000000&color=5BE481&valueColor=000000&labelTextColor=FFFFFF&height=32&fontSize=16" alt="website atomicmail.ai"/></a>&nbsp;&nbsp;
+  <a href="https://dashboard.atomicmail.ai"><img src="https://shieldcn.dev/badge/dashboard-sign%20in-5BE481.svg?split=true&labelColor=000000&color=5BE481&valueColor=000000&labelTextColor=FFFFFF&height=32&fontSize=16" alt="dashboard sign in"/></a>&nbsp;&nbsp;
   <a href="https://atomic-mail.github.io/atomic-mail-agentic/"><img src="https://shieldcn.dev/badge/docs-guide-5BE481.svg?split=true&labelColor=000000&color=5BE481&valueColor=000000&labelTextColor=FFFFFF&height=32&fontSize=16" alt="docs guide"/></a>&nbsp;&nbsp;
   <a href="https://github.com/Atomic-Mail/atomic-mail-agentic/issues"><img src="https://shieldcn.dev/badge/issues-open-5BE481.svg?split=true&labelColor=000000&color=5BE481&valueColor=000000&labelTextColor=FFFFFF&height=32&fontSize=16" alt="issues open"/></a>&nbsp;&nbsp;
   <a href="https://clawhub.ai/atomicmail/atomicmail"><img src="https://shieldcn.dev/badge/ClawHub-skill-5BE481.svg?split=true&labelColor=000000&color=5BE481&valueColor=000000&labelTextColor=FFFFFF&height=32&fontSize=16" alt="ClawHub skill"/></a>&nbsp;&nbsp;
@@ -19,6 +20,7 @@
 **Give your agent a real inbox**
 
 <p align="center">
+  <a href="https://dashboard.atomicmail.ai">Dashboard</a> ·
   <a href="https://atomicmail.ai">Website</a> ·
   <a href="https://atomic-mail.github.io/atomic-mail-agentic/">Docs</a> ·
   <a href="https://github.com/Atomic-Mail/atomic-mail-agentic/issues">Issues</a>
@@ -26,7 +28,7 @@
 
 ---
 
-> Accounts are free, with a 100 MB storage quota and rate limits sized for agent workloads.
+> Accounts are free, with a 100 MB storage quota, custom domain included, and rate limits sized for agent workloads.
 
 ---
 
@@ -95,6 +97,16 @@ npx --package=@atomicmail/agent-skill-github atomicmail help
 
 Refer to documentation: [docs/rest-auth.md](docs/rest-auth.md).
 
+## 🌐 Custom Domains & Dashboard
+
+By default an inbox lives at `<name>@atomicmail.ai`, created hands-free through PoW signup. To send from your own domain (`support@yourcompany.com`), set it up once in the [dashboard](https://dashboard.atomicmail.ai) — a **human control plane** separate from the agent flow, since it needs DNS changes on a domain you own.
+
+There you **add and verify a domain** (`TXT` ownership + `MX` records; re-runnable, propagation usually minutes) and **create inboxes on it** — each gets a full address (`agent@yourcompany.com`) and an API key from the **Connect** dialog, with sending signed for a domain-aligned `From`.
+
+**Clients don't change** — same `jmap_request`, presets, and JMAP shapes. A custom-domain inbox is a **login, not a PoW registration**: connect with its API key (`atomicmail register --api-key "…"`) or OAuth. `$INBOX` resolves to the real address (`agent@yourcompany.com`), so self-addressing and `From` stay correct with no extra config.
+
+Full guide: [docs/custom-domains.md](docs/custom-domains.md).
+
 ## 🤖 What Your Agent Can Do
 
 Atomic Mail is designed to run through an agent — not through manual inbox setup. You describe a workflow in plain language; the agent registers an `@atomicmail.ai` address, sends and receives mail, and keeps the thread going. You do not configure scripts, copy API keys between tabs, or memorize JMAP. Everything is automagical.
@@ -121,6 +133,7 @@ Community projects built on top of Atomic Mail Agentic:
 - **Messages that actually arrive**: continuously warming IP pool with relay overflow — deliverability matters when a human on the other side must read your mail
 - **JMAP — an API agents already know**: standard [RFC 8620/8621](https://www.rfc-editor.org/rfc/rfc8620.html), in LLM training data; batched method calls (query, fetch, draft, send) in one round trip — no vendor SDK to learn
 - **Get unstuck inside the integration**: errors ship plain-language hints; success responses suggest `_next` steps; `help` returns cheatsheets and worked examples — no web search required
+- **Bring your own domain**: agents run on `@atomicmail.ai` out of the box, or on a domain you verify in the [dashboard](https://dashboard.atomicmail.ai) — same client, same JMAP, domain-aligned `From`
 - **No vendor lock-in**: JMAP is an IETF standard; the inbox is portable to any compliant provider later
 - **Presets when raw JMAP is overkill**: bundled `send_mail`, `list_inbox`, `reply`, and more — pass a filename to `jmap_request` instead of generating method-call JSON from scratch
 - **Same core everywhere**: one auth, JMAP, preset, and help stack powers MCP and AgentSkill; separate credential dirs per inbox when you run many agents
@@ -130,7 +143,7 @@ Community projects built on top of Atomic Mail Agentic:
 | Goal                | Start here                                                            |
 | ------------------- | --------------------------------------------------------------------- |
 | First-time setup    | [docs/getting-started.md](docs/getting-started.md)                    |
-| Your own domain     | [docs/custom-domains.md](docs/custom-domains.md)                      |
+| Your own domain + dashboard | [docs/custom-domains.md](docs/custom-domains.md)              |
 | MCP hosts           | [docs/mcp.md](docs/mcp.md)                                            |
 | Shell / cron agents | [docs/skill-install.md](docs/skill-install.md)                        |
 | LangChain agents    | [docs/langchain.md](docs/langchain.md)                                |

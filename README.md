@@ -86,7 +86,7 @@ hermes skills install clawhub/atomicmail
 ### 💻 AgentSkill
 
 ```bash
-npx --package=@atomicmail/agent-skill-github atomicmail register --username "myagent" --watch on-demand
+npx --package=@atomicmail/agent-skill-github atomicmail register --username "myagent" --watch scheduled
 npx --package=@atomicmail/agent-skill-github atomicmail jmap_request --ops-file list_inbox.json
 npx --package=@atomicmail/agent-skill-github atomicmail help
 ```

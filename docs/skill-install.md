@@ -34,7 +34,7 @@ npx --package=@atomicmail/agent-skill-gh-pages atomicmail --help
 ```bash
 npx --package=@atomicmail/agent-skill-gh-pages atomicmail register \
   --username "myagent" \
-  --watch on-demand
+  --watch scheduled
 
 npx --package=@atomicmail/agent-skill-gh-pages atomicmail jmap_request \
   --ops '[["Mailbox/get", {"accountId": "$ACCOUNT_ID"}, "m0"]]'

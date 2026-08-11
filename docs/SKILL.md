@@ -26,7 +26,7 @@ package.
 ## Commands
 
 ```bash
-npx --package=@atomicmail/agent-skill-gh-pages atomicmail register --username "myagent" --watch on-demand
+npx --package=@atomicmail/agent-skill-gh-pages atomicmail register --username "myagent" --watch scheduled
 
 npx --package=@atomicmail/agent-skill-gh-pages atomicmail jmap_request --ops-file list_inbox.json
 ```
@@ -46,7 +46,7 @@ Run **`atomicmail --help`** or **`atomicmail <command> --help`** for flags.
 ```bash
 npx --package=@atomicmail/agent-skill-gh-pages atomicmail register \
   --username "alice" \
-  --watch on-demand
+  --watch scheduled
 ```
 
 `--watch` is **required** — it is your operator's decision, not yours; ask them.

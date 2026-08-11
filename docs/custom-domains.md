@@ -42,7 +42,7 @@ registration step and no username to choose.
 **Local MCP / AgentSkill** — log in with the inbox's API key:
 
 ```bash
-atomicmail register --api-key "..." --watch on-demand
+atomicmail register --api-key "..." --watch scheduled
 ```
 
 Or set it in the environment and let the client pick it up:

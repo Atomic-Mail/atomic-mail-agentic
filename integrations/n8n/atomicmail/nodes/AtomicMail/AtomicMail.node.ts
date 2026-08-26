@@ -1,7 +1,9 @@
 import type {
 	IExecuteFunctions,
 	IDataObject,
+	ILoadOptionsFunctions,
 	INodeExecutionData,
+	INodePropertyOptions,
 	INodeType,
 	INodeTypeDescription,
 } from 'n8n-workflow';
@@ -11,6 +13,7 @@ import {
 	getHelp,
 	HELP_TOPIC_LIST,
 	postRegisterCronReminder,
+	readOpsFile,
 	sharedError,
 } from '../../vendor/agentic-core/index.js';
 import { attachmentVarsFromBinaryProperty } from '../../lib/attachments';
@@ -20,6 +23,20 @@ import {
 	parseVarsJson,
 	type JmapExecutionResult,
 } from '../../lib/jmap';
+import {
+	ensureOAuthInboxContext,
+	hasOAuthCredential,
+	jmapSetErrorMessage,
+	jmapViaOAuth,
+	listInboxBody,
+	listOAuthInboxes,
+	opsJsonToBody,
+	replyBody,
+	resolveOAuthAccountId,
+	sendMailBody,
+	substituteOpsVars,
+	type OAuthInboxContext,
+} from '../../lib/oauth';
 import {
 	authPassthrough,
 	credentialsFromData,
@@ -61,11 +78,43 @@ export class AtomicMail implements INodeType {
 		usableAsTool: true,
 		credentials: [
 			{
+				name: 'atomicMailOAuth2Api',
+				required: false,
+				displayOptions: {
+					show: { authentication: ['oAuth2'] },
+				},
+			},
+			{
 				name: 'atomicMailApi',
 				required: false,
+				displayOptions: {
+					show: { authentication: ['apiKey'] },
+				},
 			},
 		],
 		properties: [
+			{
+				displayName: 'Authentication',
+				name: 'authentication',
+				type: 'options',
+				noDataExpression: true,
+				options: [
+					{
+						name: 'API Key (Legacy)',
+						value: 'apiKey',
+						description: 'Agent-owned inbox via the proof-of-work path',
+					},
+					{
+						name: 'OAuth2 (Recommended)',
+						value: 'oAuth2',
+						description: 'A person signs in once and authorizes n8n — no proof of work',
+					},
+				],
+				default: 'oAuth2',
+				displayOptions: {
+					hide: { resource: ['help'] },
+				},
+			},
 			{
 				displayName: 'Resource',
 				name: 'resource',
@@ -142,12 +191,28 @@ export class AtomicMail implements INodeType {
 				default: 'get',
 			},
 			{
+				displayName: 'Inbox Name or ID',
+				name: 'inbox',
+				type: 'options',
+				typeOptions: {
+					loadOptionsMethod: 'getInboxes',
+				},
+				default: '',
+				description:
+					'Which inbox to act as. Leave empty to auto-select when the connection has exactly one inbox. Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>.',
+				displayOptions: {
+					show: { authentication: ['oAuth2'] },
+					hide: { resource: ['account', 'help'] },
+				},
+			},
+			{
 				displayName: 'Account Namespace',
 				name: 'accountId',
 				type: 'string',
 				default: 'default',
 				description: 'Leave as `default` to match **Register**, or set a unique name for multiple inboxes in this workflow',
 				displayOptions: {
+					show: { authentication: ['apiKey'] },
 					hide: { resource: ['help'] },
 				},
 			},
@@ -160,6 +225,7 @@ export class AtomicMail implements INodeType {
 				description:
 					'Paste an existing key or an expression from **Register**. Leave empty to use saved credentials or the connected credential.',
 				displayOptions: {
+					show: { authentication: ['apiKey'] },
 					hide: { resource: ['account', 'help'] },
 				},
 			},
@@ -331,6 +397,18 @@ export class AtomicMail implements INodeType {
 		],
 	};
 
+	methods = {
+		loadOptions: {
+			async getInboxes(this: ILoadOptionsFunctions): Promise<INodePropertyOptions[]> {
+				const inboxes = await listOAuthInboxes(this);
+				return inboxes.map((inbox) => ({
+					name: inbox.inboxId ? `${inbox.inboxId} (${inbox.accountId})` : inbox.accountId,
+					value: inbox.accountId,
+				}));
+			},
+		},
+	};
+
 	async execute(this: IExecuteFunctions): Promise<INodeExecutionData[][]> {
 		const items = this.getInputData();
 		const returnData: INodeExecutionData[] = [];
@@ -352,8 +430,196 @@ export class AtomicMail implements INodeType {
 					continue;
 				}
 
-				const accountId = normalizeAccountId(this.getNodeParameter('accountId', itemIndex));
 				const itemJson = items[itemIndex]?.json;
+				const authentication = this.getNodeParameter(
+					'authentication',
+					itemIndex,
+					'oAuth2',
+				) as string;
+				// Workflows saved before the OAuth migration have no `authentication`
+				// parameter and resolve to the new default; fall back to the legacy
+				// PoW path when no OAuth credential is actually connected.
+				if (authentication === 'oAuth2' && (await hasOAuthCredential(this))) {
+					if (resource === 'account') {
+						throw new NodeOperationError(
+							this.getNode(),
+							'Register applies to the legacy API-key (proof-of-work) path. With OAuth the inbox is created when you connect the Atomic Mail OAuth2 credential — switch Authentication to "API Key (Legacy)" to use Register.',
+							{ itemIndex },
+						);
+					}
+
+					const oauthAccountId = await resolveOAuthAccountId(
+						this,
+						this.getNodeParameter('inbox', itemIndex, ''),
+					);
+					const inboxContext: OAuthInboxContext = await ensureOAuthInboxContext(
+						this,
+						staticData,
+						oauthAccountId,
+					);
+
+					if (resource === 'inbox' && operation === 'list') {
+						const result = unwrapJmapResult(
+							this,
+							itemIndex,
+							await jmapViaOAuth(this, oauthAccountId, listInboxBody(inboxContext.mailboxId)),
+						);
+						returnData.push({
+							json: {
+								...authPassthrough(itemJson),
+								ok: true,
+								status: result.status,
+								body: result.body as IDataObject,
+							},
+							pairedItem: { item: itemIndex },
+						});
+						continue;
+					}
+
+					if (resource === 'email' && operation === 'send') {
+						const to = requiredString(this.getNodeParameter('to', itemIndex), 'to');
+						const subject = requiredString(
+							this.getNodeParameter('subject', itemIndex),
+							'subject',
+						);
+						const body = requiredString(this.getNodeParameter('body', itemIndex), 'body');
+						const binaryProperty = optionalTrimmedString(
+							this.getNodeParameter('binaryProperty', itemIndex, ''),
+						);
+						if (binaryProperty) {
+							throw new NodeOperationError(
+								this.getNode(),
+								'Binary attachments are not yet supported on the OAuth path. Switch Authentication to "API Key (Legacy)" to send attachments.',
+								{ itemIndex },
+							);
+						}
+						const result = unwrapJmapResult(
+							this,
+							itemIndex,
+							await jmapViaOAuth(
+								this,
+								oauthAccountId,
+								sendMailBody({ context: inboxContext, to, subject, body }),
+							),
+						);
+						const setError = jmapSetErrorMessage(result.body);
+						if (setError) {
+							throw new NodeOperationError(this.getNode(), setError, { itemIndex });
+						}
+						returnData.push({
+							json: {
+								...authPassthrough(itemJson),
+								ok: true,
+								status: result.status,
+								body: result.body as IDataObject,
+							},
+							pairedItem: { item: itemIndex },
+						});
+						continue;
+					}
+
+					if (resource === 'email' && operation === 'reply') {
+						const mailId = requiredString(this.getNodeParameter('mailId', itemIndex), 'mailId');
+						const body = requiredString(this.getNodeParameter('body', itemIndex), 'body');
+						const result = unwrapJmapResult(
+							this,
+							itemIndex,
+							await jmapViaOAuth(
+								this,
+								oauthAccountId,
+								replyBody({ context: inboxContext, mailId, body }),
+							),
+						);
+						const setError = jmapSetErrorMessage(result.body);
+						if (setError) {
+							throw new NodeOperationError(this.getNode(), setError, { itemIndex });
+						}
+						returnData.push({
+							json: {
+								...authPassthrough(itemJson),
+								ok: true,
+								status: result.status,
+								body: result.body as IDataObject,
+							},
+							pairedItem: { item: itemIndex },
+						});
+						continue;
+					}
+
+					if (resource === 'jmap' && operation === 'request') {
+						const requestSource = this.getNodeParameter(
+							'requestSource',
+							itemIndex,
+							'preset',
+						) as string;
+						const dryRun = this.getNodeParameter('dryRun', itemIndex, false) as boolean;
+						if (dryRun) {
+							throw new NodeOperationError(
+								this.getNode(),
+								'Dry run is only supported with the API-key (legacy) credential.',
+								{ itemIndex },
+							);
+						}
+						const parsedVars = parseVarsJson(this.getNodeParameter('vars', itemIndex, ''));
+						if (!parsedVars.ok) {
+							throw new NodeOperationError(this.getNode(), parsedVars.message, { itemIndex });
+						}
+
+						let opsJson: string | undefined;
+						if (requestSource === 'inline') {
+							const opsParam = this.getNodeParameter('ops', itemIndex, '') as string | object;
+							opsJson =
+								typeof opsParam === 'string'
+									? optionalTrimmedString(opsParam)
+									: opsParam && typeof opsParam === 'object'
+										? JSON.stringify(opsParam)
+										: undefined;
+							if (!opsJson) {
+								throw new NodeOperationError(this.getNode(), sharedError('mcp_ops_required'), {
+									itemIndex,
+								});
+							}
+						} else {
+							const opsFile = requiredString(
+								this.getNodeParameter('opsFile', itemIndex, ''),
+								'opsFile',
+							);
+							opsJson = await readOpsFile('n8n://oauth', opsFile);
+						}
+
+						const substituted = substituteOpsVars(opsJson, {
+							ACCOUNT_ID: oauthAccountId,
+							INBOX: inboxContext.address,
+							INBOX_MAILBOX_ID: inboxContext.mailboxId,
+							...(parsedVars.vars ?? {}),
+						});
+						const result = unwrapJmapResult(
+							this,
+							itemIndex,
+							await jmapViaOAuth(this, oauthAccountId, opsJsonToBody(substituted)),
+						);
+						returnData.push({
+							json: {
+								...authPassthrough(itemJson),
+								ok: true,
+								status: result.status,
+								body: result.body as IDataObject,
+							},
+							pairedItem: { item: itemIndex },
+						});
+						continue;
+					}
+
+					throw new NodeOperationError(
+						this.getNode(),
+						`Unsupported operation ${resource}/${operation}.`,
+						{ itemIndex },
+					);
+				}
+
+				const accountId = normalizeAccountId(
+					this.getNodeParameter('accountId', itemIndex, 'default'),
+				);
 				const credentials = credentialsFromData(
 					await this.getCredentials('atomicMailApi').catch(() => undefined),
 				);

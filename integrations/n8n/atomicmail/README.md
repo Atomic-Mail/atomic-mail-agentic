@@ -30,6 +30,19 @@ Or install the built package into n8n's custom nodes directory.
 
 ## Credentials
 
+### Atomic Mail OAuth2 API (recommended)
+
+OAuth 2.0 authorization code + PKCE `S256` against `https://auth.atomicmail.ai`
+— a public client, no secret. A person signs in once and authorizes n8n; n8n
+refreshes the access token (rotating refresh token) itself and the node uses it
+directly as the JMAP bearer with the mandatory `X-Atomic-Account-Id` header.
+No proof of work runs on the n8n worker. Register a `client_id` via RFC 7591
+dynamic client registration (`POST https://auth.atomicmail.ai/oauth/register`)
+with the credential's OAuth callback URL in `redirect_uris` — see the
+[monorepo n8n guide](../../../docs/n8n.md) for the exact steps.
+
+### Atomic Mail API (legacy, proof-of-work path)
+
 Create an **Atomic Mail API** credential (optional):
 
 | Field | Required | Notes |
@@ -61,10 +74,10 @@ Polling trigger for new inbox messages. Default poll interval is **5 minutes** (
 
 ## Auth paths
 
-Both paths are supported (Activepieces parity):
+Select with the **Authentication** parameter on each node:
 
-1. **Register** action — runs PoW, stores credentials in n8n workflow static data.
-2. **Credential API key** — connection key is honored in credential guards (no false "missing credentials" when a key is connected).
+1. **OAuth2 (default, recommended)** — human-owned inbox, access token as JMAP bearer, no PoW. Workflows saved before 0.4.0 (no OAuth credential connected) automatically stay on the legacy path.
+2. **API Key (legacy)** — the PoW path: **Register** action (stores credentials in n8n workflow static data) or a **Credential API key** (honored in credential guards — no false "missing credentials" when a key is connected).
 
 Optional per-step **API Key override** accepts expressions such as `{{ $json.apiKey }}` from a prior Register node.
 

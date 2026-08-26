@@ -8,9 +8,68 @@ Install the community node `@atomicmail/n8n-nodes-atomicmail` to give n8n workfl
 
 ## Auth model
 
-The n8n node uses the **proof-of-work** path — the workflow owns its inbox, no human sign-in, no OAuth. Either run the **Register** action once (PoW signup, credentials stored in workflow-global static data) or paste an existing API key into an **Atomic Mail API** credential. Details in [Credentials](#credentials) below; the underlying HTTP chain is [REST authentication](/rest-auth).
+Since **0.4.0** the node supports two authentication paths, selected by the
+**Authentication** parameter on each node:
 
-If you would rather a **person** own the mailbox and authorize n8n against it, use n8n's generic HTTP Request node with an OAuth 2.0 credential pointed at [our authorization server](/oauth) — the settings are the same ones listed on the [Make.com page](/make#connection-settings), including the mandatory `resource` parameter and the `X-Atomic-Account-Id` header.
+- **OAuth2 (recommended, the default)** — a person signs in once at
+  [our authorization server](/oauth) and authorizes n8n against the inboxes
+  they own. No proof of work runs on the n8n worker: the node sends the OAuth
+  access token directly as the JMAP bearer and n8n refreshes it (rotating
+  refresh token) itself. This is the right choice on **n8n Cloud**, where the
+  PoW handshake cannot reliably finish inside the challenge TTL on shared CPU.
+  Setup in [Connect with OAuth](#connect-with-oauth) below.
+- **API Key (legacy)** — the original **proof-of-work** path: the workflow owns
+  its inbox, no human sign-in. Either run the **Register** action once (PoW
+  signup, credentials stored in workflow-global static data) or paste an
+  existing API key into an **Atomic Mail API** credential. Details in
+  [Credentials](#credentials) below; the underlying HTTP chain is
+  [REST authentication](/rest-auth). Prefer this only for agent-owned inboxes
+  on self-hosted n8n with real CPU.
+
+Workflows saved before 0.4.0 keep working unchanged: when no OAuth credential
+is connected, the node automatically stays on the legacy path.
+
+## Connect with OAuth {#connect-with-oauth}
+
+1. Create an **Atomic Mail OAuth2 API** credential in n8n.
+2. Enter your **Client ID**. Until a shared public client is published, register
+   your own — the client is **public** (no secret), via
+   [dynamic client registration](/oauth#getting-a-client-id):
+
+   ```bash
+   curl -X POST https://auth.atomicmail.ai/oauth/register \
+     -H "Content-Type: application/json" \
+     -d '{
+       "client_name": "n8n",
+       "redirect_uris": ["<the OAuth callback URL n8n shows on the credential>"],
+       "token_endpoint_auth_method": "none",
+       "grant_types": ["authorization_code", "refresh_token"],
+       "response_types": ["code"]
+     }'
+   ```
+
+   The callback URL is `https://oauth.n8n.cloud/oauth2/callback` on n8n Cloud
+   and `<your n8n host>/rest/oauth2-credential/callback` self-hosted — copy it
+   verbatim from the credential dialog; it is matched by exact string equality.
+3. Pick the **Scope** — *Read Only* (`mail.read`, default) or *Read and Send*
+   (`mail.read mail.send`). Sending on a read-only connection returns a clear
+   `insufficient_scope` error. The consent screen may narrow the grant to
+   read-only even when send was requested.
+4. Click **Connect my account** and sign in (Google/GitHub); pick or create the
+   inbox at the consent screen.
+5. On the node, choose **Authentication → OAuth2** (the default), then pick the
+   **Inbox** from the dropdown (populated from `GET /api/v1/agents`). With
+   exactly one inbox on the connection you can leave it empty — it is
+   auto-selected at runtime.
+
+Under the hood the flow is authorization code + **PKCE `S256`** with the
+mandatory `resource=https://api.atomicmail.ai/jmap` parameter, and every JMAP
+call carries the required `X-Atomic-Account-Id` header — the same contract as
+the [Make.com connector](/make#connection-settings).
+
+**OAuth-path limitations** (use the legacy path for these, for now): the
+**Register** operation (with OAuth the inbox is created at the consent screen
+instead), binary attachments on **Send**, and JMAP **Dry Run**.
 
 ## Install
 
@@ -55,9 +114,11 @@ To make Register faster on macOS:
 
 Monitor during Register: `docker stats n8n-demo` — one CPU near 100% confirms CPU-bound PoW.
 
-## Credentials {#credentials}
+## Credentials (legacy API-key path) {#credentials}
 
-The **Atomic Mail API** credential is optional:
+The **Atomic Mail API** credential is optional and applies to the legacy
+**API Key** authentication path only (for OAuth see
+[Connect with OAuth](#connect-with-oauth) above):
 
 - **API Key** — paste an existing Atomic Mail API key, or leave empty and use **Register**.
 - **Auth URL** — default `https://auth.atomicmail.ai`
@@ -93,7 +154,7 @@ After **Register**, read the `_next` hint in the output and arrange inbox pollin
 
 On first activation, the trigger seeds a watermark so existing mail is not replayed. Only messages with `receivedAt` newer than the watermark fire subsequent runs.
 
-Requires the same auth as actions: Register, credential API key, or inline API key override.
+Requires the same auth as actions: the OAuth2 credential (recommended), or on the legacy path Register, credential API key, or inline API key override. On the OAuth path a poll is a single JMAP `POST` with the access token as bearer — zero `/api/v1/challenge` calls and no scrypt on the worker.
 
 ## Presets and JMAP
 

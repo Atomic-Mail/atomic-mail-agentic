@@ -34,9 +34,9 @@ class AtomicMailOAuth2Api {
                 displayName: 'Client ID',
                 name: 'clientId',
                 type: 'string',
-                default: '',
+                default: 'urn:atomicmail:client:dyn:81e0d57f-59f6-42f6-9074-9efc7c9f82fa',
                 required: true,
-                description: 'Public OAuth client ID. Register one with POST https://auth.atomicmail.ai/oauth/register (RFC 7591), listing this credential\'s OAuth callback URL in redirect_uris.',
+                description: 'Public OAuth client ID. n8n Cloud works with the shipped default. Self-hosted: register your own with POST https://auth.atomicmail.ai/oauth/register (RFC 7591), listing this credential\'s OAuth callback URL in redirect_uris.',
             },
             {
                 displayName: 'Client Secret',

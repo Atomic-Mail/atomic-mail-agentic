@@ -36,9 +36,12 @@ OAuth 2.0 authorization code + PKCE `S256` against `https://auth.atomicmail.ai`
 — a public client, no secret. A person signs in once and authorizes n8n; n8n
 refreshes the access token (rotating refresh token) itself and the node uses it
 directly as the JMAP bearer with the mandatory `X-Atomic-Account-Id` header.
-No proof of work runs on the n8n worker. Register a `client_id` via RFC 7591
-dynamic client registration (`POST https://auth.atomicmail.ai/oauth/register`)
-with the credential's OAuth callback URL in `redirect_uris` — see the
+No proof of work runs on the n8n worker. On **n8n Cloud** the credential ships
+with a public `client_id` and works out of the box (the shared callback
+`https://oauth.n8n.cloud/oauth2/callback` is registered on it). **Self-hosted**
+users register their own `client_id` via RFC 7591 dynamic client registration
+(`POST https://auth.atomicmail.ai/oauth/register`) with their instance's OAuth
+callback URL in `redirect_uris` — see the
 [monorepo n8n guide](../../../docs/n8n.md) for the exact steps.
 
 ### Atomic Mail API (legacy, proof-of-work path)

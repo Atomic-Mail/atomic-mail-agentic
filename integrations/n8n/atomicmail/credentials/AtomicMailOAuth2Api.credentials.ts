@@ -46,16 +46,18 @@ export class AtomicMailOAuth2Api implements ICredentialType {
 			default: 'https://auth.atomicmail.ai/oauth/token',
 		},
 		{
-			// TODO: replace the empty default with the published public client_id
-			// once one is registered for n8n (see PR description). Until then users
-			// register their own via RFC 7591 dynamic client registration.
+			// Public client for n8n Cloud (redirect https://oauth.n8n.cloud/oauth2/callback),
+			// registered via RFC 7591 dynamic client registration and validated live
+			// end-to-end on n8n Cloud. Self-hosted users override this with their own
+			// client registered for their instance's callback URL (see docs/n8n.md) —
+			// each host has a distinct redirect_uri that must be registered on the client.
 			displayName: 'Client ID',
 			name: 'clientId',
 			type: 'string',
-			default: '',
+			default: 'urn:atomicmail:client:dyn:81e0d57f-59f6-42f6-9074-9efc7c9f82fa',
 			required: true,
 			description:
-				'Public OAuth client ID. Register one with POST https://auth.atomicmail.ai/oauth/register (RFC 7591), listing this credential\'s OAuth callback URL in redirect_uris.',
+				'Public OAuth client ID. n8n Cloud works with the shipped default. Self-hosted: register your own with POST https://auth.atomicmail.ai/oauth/register (RFC 7591), listing this credential\'s OAuth callback URL in redirect_uris.',
 		},
 		{
 			// Public client — the auth server accepts token_endpoint_auth_method

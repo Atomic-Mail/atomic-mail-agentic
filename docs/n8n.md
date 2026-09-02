@@ -32,8 +32,13 @@ is connected, the node automatically stays on the legacy path.
 ## Connect with OAuth {#connect-with-oauth}
 
 1. Create an **Atomic Mail OAuth2 API** credential in n8n.
-2. Enter your **Client ID**. Until a shared public client is published, register
-   your own — the client is **public** (no secret), via
+2. **Client ID** — on **n8n Cloud** the credential works out of the box: it ships
+   with a public client whose redirect is n8n Cloud's shared callback
+   `https://oauth.n8n.cloud/oauth2/callback` (leave the field as-is). **Self-hosted**
+   users replace it with their own public client, because each self-hosted instance
+   has a distinct callback URL (`<your n8n host>/rest/oauth2-credential/callback`,
+   matched by exact string equality) that must be registered on the client. Copy
+   that callback verbatim from the credential dialog and register via
    [dynamic client registration](/oauth#getting-a-client-id):
 
    ```bash
@@ -41,16 +46,14 @@ is connected, the node automatically stays on the legacy path.
      -H "Content-Type: application/json" \
      -d '{
        "client_name": "n8n",
-       "redirect_uris": ["<the OAuth callback URL n8n shows on the credential>"],
+       "redirect_uris": ["<your n8n host>/rest/oauth2-credential/callback"],
        "token_endpoint_auth_method": "none",
        "grant_types": ["authorization_code", "refresh_token"],
        "response_types": ["code"]
      }'
    ```
 
-   The callback URL is `https://oauth.n8n.cloud/oauth2/callback` on n8n Cloud
-   and `<your n8n host>/rest/oauth2-credential/callback` self-hosted — copy it
-   verbatim from the credential dialog; it is matched by exact string equality.
+   Then paste the returned `client_id` into the credential's **Client ID** field.
 3. Pick the **Scope** — *Read Only* (`mail.read`, default) or *Read and Send*
    (`mail.read mail.send`). Sending on a read-only connection returns a clear
    `insufficient_scope` error. The consent screen may narrow the grant to

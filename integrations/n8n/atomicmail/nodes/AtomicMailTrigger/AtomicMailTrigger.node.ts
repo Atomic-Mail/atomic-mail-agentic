@@ -1,6 +1,8 @@
 import type {
 	IDataObject,
+	ILoadOptionsFunctions,
 	INodeExecutionData,
+	INodePropertyOptions,
 	INodeType,
 	INodeTypeDescription,
 	IPollFunctions,
@@ -8,6 +10,14 @@ import type {
 import { NodeConnectionTypes, NodeOperationError } from 'n8n-workflow';
 
 import { executePreset } from '../../lib/jmap';
+import {
+	ensureOAuthInboxContext,
+	hasOAuthCredential,
+	jmapViaOAuth,
+	listInboxBody,
+	listOAuthInboxes,
+	resolveOAuthAccountId,
+} from '../../lib/oauth';
 import {
 	credentialsFromData,
 	resolveSessionForExecute,
@@ -68,11 +78,53 @@ export class AtomicMailTrigger implements INodeType {
 		polling: true,
 		credentials: [
 			{
+				name: 'atomicMailOAuth2Api',
+				required: false,
+				displayOptions: {
+					show: { authentication: ['oAuth2'] },
+				},
+			},
+			{
 				name: 'atomicMailApi',
 				required: false,
+				displayOptions: {
+					show: { authentication: ['apiKey'] },
+				},
 			},
 		],
 		properties: [
+			{
+				displayName: 'Authentication',
+				name: 'authentication',
+				type: 'options',
+				options: [
+					{
+						name: 'API Key (Legacy)',
+						value: 'apiKey',
+						description: 'Agent-owned inbox via the proof-of-work path',
+					},
+					{
+						name: 'OAuth2 (Recommended)',
+						value: 'oAuth2',
+						description: 'A person signs in once and authorizes n8n — no proof of work',
+					},
+				],
+				default: 'oAuth2',
+			},
+			{
+				displayName: 'Inbox Name or ID',
+				name: 'inbox',
+				type: 'options',
+				typeOptions: {
+					loadOptionsMethod: 'getInboxes',
+				},
+				default: '',
+				description:
+					'Which inbox to poll. Leave empty to auto-select when the connection has exactly one inbox. Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>.',
+				displayOptions: {
+					show: { authentication: ['oAuth2'] },
+				},
+			},
 			{
 				displayName: 'Poll Interval (Minutes)',
 				name: 'pollIntervalMinutes',
@@ -90,6 +142,9 @@ export class AtomicMailTrigger implements INodeType {
 				type: 'string',
 				default: 'default',
 				description: 'Leave as `default` to match **Register**, or set a unique name for multiple inboxes',
+				displayOptions: {
+					show: { authentication: ['apiKey'] },
+				},
 			},
 			{
 				displayName: 'API Key (Optional Override)',
@@ -99,9 +154,24 @@ export class AtomicMailTrigger implements INodeType {
 				default: '',
 				description:
 					'Paste an existing key or an expression from **Register**. Leave empty to use saved credentials or the connected credential.',
+				displayOptions: {
+					show: { authentication: ['apiKey'] },
+				},
 			},
 		],
 		usableAsTool: true,
+	};
+
+	methods = {
+		loadOptions: {
+			async getInboxes(this: ILoadOptionsFunctions): Promise<INodePropertyOptions[]> {
+				const inboxes = await listOAuthInboxes(this);
+				return inboxes.map((inbox) => ({
+					name: inbox.inboxId ? `${inbox.inboxId} (${inbox.accountId})` : inbox.accountId,
+					value: inbox.accountId,
+				}));
+			},
+		},
 	};
 
 	async poll(this: IPollFunctions): Promise<INodeExecutionData[][] | null> {
@@ -113,60 +183,86 @@ export class AtomicMailTrigger implements INodeType {
 			nodeStaticData.lastPollMs = lastPollMs;
 		}
 
-		const accountId = normalizeAccountId(this.getNodeParameter('accountId'));
-		const inlineApiKey = this.getNodeParameter('apiKey', '') as string;
-		const credentials = credentialsFromData(
-			await this.getCredentials('atomicMailApi').catch(() => undefined),
-		);
+		const authentication = this.getNodeParameter('authentication', 'oAuth2') as string;
+		// Workflows saved before the OAuth migration have no `authentication`
+		// parameter and resolve to the new default; fall back to the legacy PoW
+		// path when no OAuth credential is actually connected.
+		const useOAuth = authentication === 'oAuth2' && (await hasOAuthCredential(this));
 
-		try {
-			const session = await resolveSessionForExecute(
+		let emails: InboxEmailRow[];
+		if (useOAuth) {
+			const accountId = await resolveOAuthAccountId(
+				this,
+				this.getNodeParameter('inbox', ''),
+			).catch((error: Error) => {
+				throw new NodeOperationError(this.getNode(), error.message);
+			});
+			const inboxContext = await ensureOAuthInboxContext(
+				this,
 				credentialStaticData,
 				accountId,
-				credentials,
-				inlineApiKey,
-				true,
 			);
-			const result = await executePreset(session, 'list_inbox.json');
+			const result = await jmapViaOAuth(this, accountId, listInboxBody(inboxContext.mailboxId));
 			if (!result.ok) {
 				throw new NodeOperationError(this.getNode(), result.message);
 			}
-			const emails = extractEmails(result.body);
-
-			const newLast = emails.reduce(
-				(acc, row) => Math.max(acc, receivedMs(row.receivedAt)),
-				lastPollMs,
+			emails = extractEmails(result.body);
+		} else {
+			const accountId = normalizeAccountId(this.getNodeParameter('accountId', 'default'));
+			const inlineApiKey = this.getNodeParameter('apiKey', '') as string;
+			const credentials = credentialsFromData(
+				await this.getCredentials('atomicMailApi').catch(() => undefined),
 			);
-			nodeStaticData.lastPollMs = newLast;
 
-			const fresh = emails
-				.filter((row) => receivedMs(row.receivedAt) > lastPollMs)
-				.map((row) => ({
-					id: row.id,
-					subject: row.subject,
-					from: row.from,
-					preview: row.preview,
-					receivedAt: row.receivedAt,
-				}));
-
-			if (fresh.length === 0) {
-				return null;
+			try {
+				const session = await resolveSessionForExecute(
+					credentialStaticData,
+					accountId,
+					credentials,
+					inlineApiKey,
+					true,
+				);
+				const result = await executePreset(session, 'list_inbox.json');
+				if (!result.ok) {
+					throw new NodeOperationError(this.getNode(), result.message);
+				}
+				emails = extractEmails(result.body);
+			} catch (error) {
+				const message = error instanceof Error ? error.message : String(error);
+				if (optionalTrimmedString(inlineApiKey) || credentials?.apiKey) {
+					throw new NodeOperationError(this.getNode(), message);
+				}
+				throw new NodeOperationError(
+					this.getNode(),
+					`${message} Connect the Atomic Mail OAuth2 credential (recommended), connect an API key credential, paste an API key, or run **Register** first.`,
+				);
 			}
-
-			return [
-				fresh.map((row) => ({
-					json: row as IDataObject,
-				})),
-			];
-		} catch (error) {
-			const message = error instanceof Error ? error.message : String(error);
-			if (optionalTrimmedString(inlineApiKey) || credentials?.apiKey) {
-				throw new NodeOperationError(this.getNode(), message);
-			}
-			throw new NodeOperationError(
-				this.getNode(),
-				`${message} Connect an API key credential, paste an API key, or run **Register** first.`,
-			);
 		}
+
+		const newLast = emails.reduce(
+			(acc, row) => Math.max(acc, receivedMs(row.receivedAt)),
+			lastPollMs,
+		);
+		nodeStaticData.lastPollMs = newLast;
+
+		const fresh = emails
+			.filter((row) => receivedMs(row.receivedAt) > lastPollMs)
+			.map((row) => ({
+				id: row.id,
+				subject: row.subject,
+				from: row.from,
+				preview: row.preview,
+				receivedAt: row.receivedAt,
+			}));
+
+		if (fresh.length === 0) {
+			return null;
+		}
+
+		return [
+			fresh.map((row) => ({
+				json: row as IDataObject,
+			})),
+		];
 	}
 }

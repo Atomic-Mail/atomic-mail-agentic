@@ -5,6 +5,7 @@ const n8n_workflow_1 = require("n8n-workflow");
 const index_js_1 = require("../../vendor/agentic-core/index.js");
 const attachments_1 = require("../../lib/attachments");
 const jmap_1 = require("../../lib/jmap");
+const oauth_1 = require("../../lib/oauth");
 const session_1 = require("../../lib/session");
 const props_1 = require("../../lib/props");
 function unwrapJmapResult(context, itemIndex, result) {
@@ -34,11 +35,43 @@ class AtomicMail {
             usableAsTool: true,
             credentials: [
                 {
+                    name: 'atomicMailOAuth2Api',
+                    required: false,
+                    displayOptions: {
+                        show: { authentication: ['oAuth2'] },
+                    },
+                },
+                {
                     name: 'atomicMailApi',
                     required: false,
+                    displayOptions: {
+                        show: { authentication: ['apiKey'] },
+                    },
                 },
             ],
             properties: [
+                {
+                    displayName: 'Authentication',
+                    name: 'authentication',
+                    type: 'options',
+                    noDataExpression: true,
+                    options: [
+                        {
+                            name: 'API Key (Legacy)',
+                            value: 'apiKey',
+                            description: 'Agent-owned inbox via the proof-of-work path',
+                        },
+                        {
+                            name: 'OAuth2 (Recommended)',
+                            value: 'oAuth2',
+                            description: 'A person signs in once and authorizes n8n — no proof of work',
+                        },
+                    ],
+                    default: 'oAuth2',
+                    displayOptions: {
+                        hide: { resource: ['help'] },
+                    },
+                },
                 {
                     displayName: 'Resource',
                     name: 'resource',
@@ -115,12 +148,27 @@ class AtomicMail {
                     default: 'get',
                 },
                 {
+                    displayName: 'Inbox Name or ID',
+                    name: 'inbox',
+                    type: 'options',
+                    typeOptions: {
+                        loadOptionsMethod: 'getInboxes',
+                    },
+                    default: '',
+                    description: 'Which inbox to act as. Leave empty to auto-select when the connection has exactly one inbox. Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>.',
+                    displayOptions: {
+                        show: { authentication: ['oAuth2'] },
+                        hide: { resource: ['account', 'help'] },
+                    },
+                },
+                {
                     displayName: 'Account Namespace',
                     name: 'accountId',
                     type: 'string',
                     default: 'default',
                     description: 'Leave as `default` to match **Register**, or set a unique name for multiple inboxes in this workflow',
                     displayOptions: {
+                        show: { authentication: ['apiKey'] },
                         hide: { resource: ['help'] },
                     },
                 },
@@ -132,6 +180,7 @@ class AtomicMail {
                     default: '',
                     description: 'Paste an existing key or an expression from **Register**. Leave empty to use saved credentials or the connected credential.',
                     displayOptions: {
+                        show: { authentication: ['apiKey'] },
                         hide: { resource: ['account', 'help'] },
                     },
                 },
@@ -302,9 +351,20 @@ class AtomicMail {
                 },
             ],
         };
+        this.methods = {
+            loadOptions: {
+                async getInboxes() {
+                    const inboxes = await (0, oauth_1.listOAuthInboxes)(this);
+                    return inboxes.map((inbox) => ({
+                        name: inbox.inboxId ? `${inbox.inboxId} (${inbox.accountId})` : inbox.accountId,
+                        value: inbox.accountId,
+                    }));
+                },
+            },
+        };
     }
     async execute() {
-        var _a, _b, _c, _d;
+        var _a, _b, _c, _d, _e;
         const items = this.getInputData();
         const returnData = [];
         for (let itemIndex = 0; itemIndex < items.length; itemIndex++) {
@@ -321,8 +381,120 @@ class AtomicMail {
                     });
                     continue;
                 }
-                const accountId = (0, props_1.normalizeAccountId)(this.getNodeParameter('accountId', itemIndex));
                 const itemJson = (_a = items[itemIndex]) === null || _a === void 0 ? void 0 : _a.json;
+                const authentication = this.getNodeParameter('authentication', itemIndex, 'oAuth2');
+                if (authentication === 'oAuth2' && (await (0, oauth_1.hasOAuthCredential)(this))) {
+                    if (resource === 'account') {
+                        throw new n8n_workflow_1.NodeOperationError(this.getNode(), 'Register applies to the legacy API-key (proof-of-work) path. With OAuth the inbox is created when you connect the Atomic Mail OAuth2 credential — switch Authentication to "API Key (Legacy)" to use Register.', { itemIndex });
+                    }
+                    const oauthAccountId = await (0, oauth_1.resolveOAuthAccountId)(this, this.getNodeParameter('inbox', itemIndex, ''));
+                    const inboxContext = await (0, oauth_1.ensureOAuthInboxContext)(this, staticData, oauthAccountId);
+                    if (resource === 'inbox' && operation === 'list') {
+                        const result = unwrapJmapResult(this, itemIndex, await (0, oauth_1.jmapViaOAuth)(this, oauthAccountId, (0, oauth_1.listInboxBody)(inboxContext.mailboxId)));
+                        returnData.push({
+                            json: {
+                                ...(0, session_1.authPassthrough)(itemJson),
+                                ok: true,
+                                status: result.status,
+                                body: result.body,
+                            },
+                            pairedItem: { item: itemIndex },
+                        });
+                        continue;
+                    }
+                    if (resource === 'email' && operation === 'send') {
+                        const to = (0, props_1.requiredString)(this.getNodeParameter('to', itemIndex), 'to');
+                        const subject = (0, props_1.requiredString)(this.getNodeParameter('subject', itemIndex), 'subject');
+                        const body = (0, props_1.requiredString)(this.getNodeParameter('body', itemIndex), 'body');
+                        const binaryProperty = (0, props_1.optionalTrimmedString)(this.getNodeParameter('binaryProperty', itemIndex, ''));
+                        if (binaryProperty) {
+                            throw new n8n_workflow_1.NodeOperationError(this.getNode(), 'Binary attachments are not yet supported on the OAuth path. Switch Authentication to "API Key (Legacy)" to send attachments.', { itemIndex });
+                        }
+                        const result = unwrapJmapResult(this, itemIndex, await (0, oauth_1.jmapViaOAuth)(this, oauthAccountId, (0, oauth_1.sendMailBody)({ context: inboxContext, to, subject, body })));
+                        const setError = (0, oauth_1.jmapSetErrorMessage)(result.body);
+                        if (setError) {
+                            throw new n8n_workflow_1.NodeOperationError(this.getNode(), setError, { itemIndex });
+                        }
+                        returnData.push({
+                            json: {
+                                ...(0, session_1.authPassthrough)(itemJson),
+                                ok: true,
+                                status: result.status,
+                                body: result.body,
+                            },
+                            pairedItem: { item: itemIndex },
+                        });
+                        continue;
+                    }
+                    if (resource === 'email' && operation === 'reply') {
+                        const mailId = (0, props_1.requiredString)(this.getNodeParameter('mailId', itemIndex), 'mailId');
+                        const body = (0, props_1.requiredString)(this.getNodeParameter('body', itemIndex), 'body');
+                        const result = unwrapJmapResult(this, itemIndex, await (0, oauth_1.jmapViaOAuth)(this, oauthAccountId, (0, oauth_1.replyBody)({ context: inboxContext, mailId, body })));
+                        const setError = (0, oauth_1.jmapSetErrorMessage)(result.body);
+                        if (setError) {
+                            throw new n8n_workflow_1.NodeOperationError(this.getNode(), setError, { itemIndex });
+                        }
+                        returnData.push({
+                            json: {
+                                ...(0, session_1.authPassthrough)(itemJson),
+                                ok: true,
+                                status: result.status,
+                                body: result.body,
+                            },
+                            pairedItem: { item: itemIndex },
+                        });
+                        continue;
+                    }
+                    if (resource === 'jmap' && operation === 'request') {
+                        const requestSource = this.getNodeParameter('requestSource', itemIndex, 'preset');
+                        const dryRun = this.getNodeParameter('dryRun', itemIndex, false);
+                        if (dryRun) {
+                            throw new n8n_workflow_1.NodeOperationError(this.getNode(), 'Dry run is only supported with the API-key (legacy) credential.', { itemIndex });
+                        }
+                        const parsedVars = (0, jmap_1.parseVarsJson)(this.getNodeParameter('vars', itemIndex, ''));
+                        if (!parsedVars.ok) {
+                            throw new n8n_workflow_1.NodeOperationError(this.getNode(), parsedVars.message, { itemIndex });
+                        }
+                        let opsJson;
+                        if (requestSource === 'inline') {
+                            const opsParam = this.getNodeParameter('ops', itemIndex, '');
+                            opsJson =
+                                typeof opsParam === 'string'
+                                    ? (0, props_1.optionalTrimmedString)(opsParam)
+                                    : opsParam && typeof opsParam === 'object'
+                                        ? JSON.stringify(opsParam)
+                                        : undefined;
+                            if (!opsJson) {
+                                throw new n8n_workflow_1.NodeOperationError(this.getNode(), (0, index_js_1.sharedError)('mcp_ops_required'), {
+                                    itemIndex,
+                                });
+                            }
+                        }
+                        else {
+                            const opsFile = (0, props_1.requiredString)(this.getNodeParameter('opsFile', itemIndex, ''), 'opsFile');
+                            opsJson = await (0, index_js_1.readOpsFile)('n8n://oauth', opsFile);
+                        }
+                        const substituted = (0, oauth_1.substituteOpsVars)(opsJson, {
+                            ACCOUNT_ID: oauthAccountId,
+                            INBOX: inboxContext.address,
+                            INBOX_MAILBOX_ID: inboxContext.mailboxId,
+                            ...((_b = parsedVars.vars) !== null && _b !== void 0 ? _b : {}),
+                        });
+                        const result = unwrapJmapResult(this, itemIndex, await (0, oauth_1.jmapViaOAuth)(this, oauthAccountId, (0, oauth_1.opsJsonToBody)(substituted)));
+                        returnData.push({
+                            json: {
+                                ...(0, session_1.authPassthrough)(itemJson),
+                                ok: true,
+                                status: result.status,
+                                body: result.body,
+                            },
+                            pairedItem: { item: itemIndex },
+                        });
+                        continue;
+                    }
+                    throw new n8n_workflow_1.NodeOperationError(this.getNode(), `Unsupported operation ${resource}/${operation}.`, { itemIndex });
+                }
+                const accountId = (0, props_1.normalizeAccountId)(this.getNodeParameter('accountId', itemIndex, 'default'));
                 const credentials = (0, session_1.credentialsFromData)(await this.getCredentials('atomicMailApi').catch(() => undefined));
                 const inlineApiKey = this.getNodeParameter('apiKey', itemIndex, '');
                 if (resource === 'account' && operation === 'ensureRegistered') {
@@ -335,7 +507,7 @@ class AtomicMail {
                                 ...(0, session_1.authPassthrough)(itemJson),
                                 skipped: true,
                                 idempotent: true,
-                                inbox: (_c = (_b = stored === null || stored === void 0 ? void 0 : stored.inbox) !== null && _b !== void 0 ? _b : session.currentInboxId) !== null && _c !== void 0 ? _c : '',
+                                inbox: (_d = (_c = stored === null || stored === void 0 ? void 0 : stored.inbox) !== null && _c !== void 0 ? _c : session.currentInboxId) !== null && _d !== void 0 ? _d : '',
                                 accountId: accountIdResolved,
                                 ...((stored === null || stored === void 0 ? void 0 : stored.apiKey) ? { apiKey: stored.apiKey } : {}),
                             },
@@ -399,7 +571,7 @@ class AtomicMail {
                         TO: to,
                         SUBJECT: subject,
                         BODY: body,
-                        ...((_d = attachmentResult.vars) !== null && _d !== void 0 ? _d : {}),
+                        ...((_e = attachmentResult.vars) !== null && _e !== void 0 ? _e : {}),
                     };
                     const result = unwrapJmapResult(this, itemIndex, await (0, jmap_1.executePreset)(session, attachmentResult.vars
                         ? 'send_mail_blob_attachment.json'

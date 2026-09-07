@@ -40,7 +40,7 @@ Run **`atomicmail --help`** or **`atomicmail <command> --help`** for flags.
 ```bash
 {{ATOMICMAIL_CLI}} register \
   --username "alice" \
-  --watch on-demand
+  --watch scheduled
 ```
 
 `--watch` is **required** — it is your operator's decision, not yours; ask them.

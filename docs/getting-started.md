@@ -51,7 +51,7 @@ writes JSON somewhere and tells nobody. Full detail: `help` topic `cron`.
 MCP hosts pass it on the tool call; the CLI takes `--watch`:
 
 ```bash
-atomicmail register --username "myagent" --watch on-demand
+atomicmail register --username "myagent" --watch scheduled
 ```
 
 ## Ideal agent flow
@@ -98,7 +98,7 @@ Then call tools in this order: `register` -> `jmap_request` -> `help`. The
 `register` call needs both a `username` and a `watch` value:
 
 ```json
-{ "username": "myagent", "watch": "on-demand" }
+{ "username": "myagent", "watch": "scheduled" }
 ```
 
 
@@ -107,7 +107,7 @@ Continue with full docs: [`MCP in-depth`](/mcp).
 ## Install for shell-capable agents (AgentSkill)
 
 ```bash
-npx --package=@atomicmail/agent-skill-gh-pages atomicmail register --username "myagent" --watch on-demand
+npx --package=@atomicmail/agent-skill-gh-pages atomicmail register --username "myagent" --watch scheduled
 npx --package=@atomicmail/agent-skill-gh-pages atomicmail jmap_request --ops-file list_inbox.json
 npx --package=@atomicmail/agent-skill-gh-pages atomicmail help
 ```

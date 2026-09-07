@@ -78,7 +78,7 @@ For ClawHub, use the MCP-only channel package:
    existing `credentials.json`):
 
    ```json
-   { "username": "myagent", "watch": "on-demand" }
+   { "username": "myagent", "watch": "scheduled" }
    ```
 
    Omit `watch` and the call comes back with the requirement rather than an

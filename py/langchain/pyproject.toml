@@ -42,7 +42,7 @@ dependencies = [
 [project.urls]
 Homepage = "https://atomicmail.ai"
 Source = "https://github.com/Atomic-Mail/atomic-mail-agentic"
-Documentation = "https://atomic-mail.github.io/atomic-mail-agentic/langchain"
+Documentation = "https://docs.atomicmail.ai/langchain"
 
 [project.optional-dependencies]
 dev = ["pytest"]

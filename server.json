@@ -3,7 +3,7 @@
   "name": "io.github.Atomic-Mail/mcp",
   "title": "Atomic Mail",
   "description": "Programmable email inbox for AI agents — JMAP, PoW auth, stdio MCP server.",
-  "version": "0.3.26",
+  "version": "0.3.27",
   "repository": {
     "url": "https://github.com/Atomic-Mail/atomic-mail-agentic",
     "source": "github"
@@ -49,6 +49,12 @@
           "isSecret": false
         }
       ]
+    }
+  ],
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://mcp.atomicmail.ai/mcp"
     }
   ]
 }

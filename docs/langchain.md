@@ -24,7 +24,10 @@ for you; the underlying HTTP chain is [REST authentication](/rest-auth). If a
 **person** should own the mailbox and authorize your app instead, use
 [OAuth 2.0](/oauth) with a plain HTTP client.
 
-## JavaScript: `@atomicmail/langchain`
+## Install and use
+
+<TabGroup group="lang" :tabs="[{ id: 'js', label: 'JavaScript' }, { id: 'py', label: 'Python' }]">
+<template #js>
 
 ```bash
 npm install @atomicmail/langchain
@@ -46,37 +49,7 @@ const jmapTool = toolkit.jmapRequestTool;
 const helpTool = toolkit.helpTool;
 ```
 
-## Available tools
-
-| Tool | Purpose |
-| --- | --- |
-| `register` | PoW signup / idempotent register with optional `forced` and `credentials_dir`. |
-| `jmap_request` | Run JMAP request from `ops` or `ops_file` with vars and optional attachments. |
-| `help` | Return built-in docs topics bundled with the package. |
-
-## Behavior parity guarantees
-
-The LangChain wrapper enforces the same core behavior as MCP and AgentSkill:
-
-- register idempotency and `forced` semantics are delegated to shared `AgentSession.register`
-- exactly one of `ops` or `ops_file` is required for `jmap_request`
-- `dry_run` with attachments is rejected
-- user vars are validated with `^[A-Z][A-Z0-9_]*$`
-- post-register flow includes cron guidance (`help` topic `cron`)
-
-## Credentials and environment
-
-Defaults match the rest of the stack:
-
-- credential directory: `ATOMIC_MAIL_CREDENTIALS_DIR` or `~/.atomicmail`
-- auth API: `ATOMIC_MAIL_AUTH_URL`
-- JMAP API: `ATOMIC_MAIL_API_URL`
-- PoW salt: `ATOMIC_MAIL_SCRYPT_SALT`
-- API key override: `ATOMIC_MAIL_API_KEY`
-
-`credentials_dir` can be passed per tool call for multi-account use.
-
-## Example (JavaScript)
+#### Example
 
 ```ts
 import { createAtomicMailTools } from "@atomicmail/langchain";
@@ -93,7 +66,8 @@ const docs = await help.invoke({ topic: "presets" });
 console.log(inbox, docs);
 ```
 
-## Python: `langchain-atomicmail`
+</template>
+<template #py>
 
 ```bash
 pip install langchain-atomicmail
@@ -106,8 +80,42 @@ the only install you need — there is no separate `atomicmail` package to add.
 The same three tools, the same credential directory, and the same
 `ATOMIC_MAIL_*` environment variables listed above apply.
 
-## See also
+</template>
+</TabGroup>
 
-- [Raw JMAP requests](/jmap) — the method shapes `jmap_request` sends
-- Other integrations: [Make.com](/make) · [n8n](/n8n) · [Dify](/dify) ·
-  [Remote MCP](/mcp-remote)
+## Available tools
+
+| Tool | Purpose |
+| --- | --- |
+| `register` | PoW signup / idempotent register with optional `forced` and `credentials_dir`. |
+| `jmap_request` | Run JMAP request from `ops` or `ops_file` with vars and optional attachments. |
+| `help` | Return built-in docs topics bundled with the package. |
+
+## Same behavior as MCP and AgentSkill
+
+The LangChain tools share the runtime with the other wrappers, so:
+
+- register idempotency and `forced` semantics are delegated to shared `AgentSession.register`
+- exactly one of `ops` or `ops_file` is required for `jmap_request`
+- `dry_run` with attachments is rejected
+- user vars are validated with `^[A-Z][A-Z0-9_]*$`
+- post-register flow includes cron guidance (`help` topic `cron`)
+
+## Credentials and environment
+
+The same environment as the other wrappers:
+
+- credential directory: `ATOMIC_MAIL_CREDENTIALS_DIR` or `~/.atomicmail`
+- API key override: `ATOMIC_MAIL_API_KEY`
+
+`credentials_dir` can be passed per tool call for multi-account use.
+
+## Related
+
+<LinkRows :items="[
+  { title: 'Raw JMAP requests', desc: 'The method shapes jmap_request sends', link: '/jmap' },
+  { title: 'Agentic core', desc: 'The shared runtime both packages build on', link: '/core' },
+  { title: 'n8n', desc: 'Community node, proof-of-work path', link: '/n8n' },
+  { title: 'Dify', desc: 'Marketplace plugin, proof-of-work path', link: '/dify' },
+  { title: 'Hosted MCP server', desc: 'One URL for chat hosts', link: '/mcp-remote' },
+]" />

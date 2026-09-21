@@ -2,18 +2,17 @@
 description: The hosted remote MCP server at mcp.atomicmail.ai—OAuth sign-in or one-step API-key connect, no local code, tool reference, inbox selection, and how it differs from the local stdio server.
 ---
 
-# Remote MCP server (hosted)
+# Hosted MCP server
 
-`https://mcp.atomicmail.ai/mcp` is a **hosted** Model Context Protocol server
-over Streamable HTTP. Nothing is downloaded, nothing runs locally, and there are
-no credential files on disk. The inboxes belong to a human account, and there
-are two ways to authorize: OAuth in the browser, or an inbox API key sent as a
-bearer token.
+`https://mcp.atomicmail.ai/mcp` is a hosted Model Context Protocol server over
+Streamable HTTP. Nothing is downloaded, nothing runs locally, no credential
+files land on disk. The inboxes belong to a human account, and there are two
+ways to authorize: OAuth in the browser, or an inbox API key sent as a bearer
+token.
 
-This is the right option for hosts that cannot — or would rather not — execute
-third-party code such as `npx`. If you want a **local** stdio server with
-autonomous proof-of-work registration instead, see
-[`@atomicmail/mcp-gh-pages`](/mcp).
+Use it when your host cannot, or should not, run third-party code such as
+`npx`. For a local stdio server that registers its own inbox with proof of
+work, see the [local MCP server](/mcp).
 
 ## Connect
 
@@ -35,10 +34,9 @@ That connects over OAuth. To skip the browser entirely, see the next section.
 
 ## One-step connect with an inbox API key
 
-If you want **one** inbox connected and no browser round-trip, send that inbox's
-API key as a bearer token. There is no authorization code, no consent screen,
-and no callback URL — the connection binds to exactly that inbox on the first
-request.
+To connect one inbox with no browser round-trip, send that inbox's API key as
+a bearer token. No authorization code, no consent screen, no callback URL: the
+connection binds to that inbox on the first request.
 
 ```json
 {
@@ -62,11 +60,11 @@ X-API-Key: <inbox-api-key>
 Authorization: ApiKey <inbox-api-key>
 ```
 
-**Where the key comes from:** the inbox's **Connect** dialog in
+The key comes from the inbox's **Connect** dialog in
 [the dashboard](https://dashboard.atomicmail.ai). It is the same API key the
-local packages use for `register --api-key`.
+local packages accept in `register --api-key`.
 
-**When to use which:**
+Which one to use:
 
 | | API key | OAuth |
 | --- | --- | --- |
@@ -76,15 +74,15 @@ local packages use for `register --api-key`.
 | Revocation | Rotate the key in the dashboard | Revoke the grant in the dashboard |
 | Best for | Headless hosts, CI, a single dedicated agent inbox | People, multi-inbox setups, anything that should show consent |
 
-The key is a **long-lived secret with full access to that inbox** — treat it
-like a password. Put it in your host's secret store rather than a committed
-config file, and prefer OAuth wherever a human is present to click through it.
+The key is a long-lived secret with full access to that inbox. Treat it like a
+password: keep it in your host's secret store, not in a committed config file,
+and prefer OAuth wherever a person is there to click through it.
 
 ## Auth model
 
-OAuth 2.1 — authorization code + PKCE (`S256`) with RFC 8707 resource binding.
-Connecting opens the browser for **Google or GitHub** sign-in, then an inbox
-picker and a consent screen. Dynamic client registration is supported, so no
+OAuth 2.0 authorization code with PKCE (`S256`) and RFC 8707 resource binding.
+Connecting opens the browser for Google or GitHub sign-in, then an inbox picker
+and a consent screen. Dynamic client registration is supported, so no
 pre-registered `client_id` is needed and most MCP clients complete the whole
 handshake with no configuration from you.
 
@@ -103,11 +101,10 @@ curl -s https://mcp.atomicmail.ai/.well-known/oauth-protected-resource/mcp
 }
 ```
 
-The authorization server is the same one documented on the
-[OAuth 2.0 page](/oauth) — the only difference is the `resource` value, which is
-`https://mcp.atomicmail.ai/mcp` here rather than the JMAP resource. Read that
-page if you are implementing the flow by hand rather than letting an MCP client
-drive it.
+The authorization server is the one documented on the [OAuth 2.0](/oauth)
+page. The only difference is the `resource` value: `https://mcp.atomicmail.ai/mcp`
+here instead of the JMAP resource. Read that page if you drive the flow by hand
+rather than through an MCP client.
 
 Grants carry `mail.read` and/or `mail.send`, and can be revoked at any time from
 [the dashboard](https://dashboard.atomicmail.ai).
@@ -136,18 +133,18 @@ Grants carry `mail.read` and/or `mail.send`, and can be revoked at any time from
 inbox bound to the connection at consent, or the only owned inbox. With several
 inboxes and no default, the tool responds with a prompt to call `list_agents`
 and pass one of the returned `accountId` values as `agent_id`. Ownership is
-re-verified on **every** call.
+re-verified on every call.
 
 ## Security model
 
-The MCP server is an OAuth 2.1 resource server and holds no signing keys.
-Access tokens are audience-bound to `https://mcp.atomicmail.ai/mcp` and are
-**never forwarded to the mail backend**: each call re-presents the token to the
-authorization server to mint a short-lived (~2-minute) capability scoped to the
-chosen inbox, and only that capability travels downstream.
+The MCP server is an OAuth 2.0 resource server and holds no signing keys.
+Access tokens are audience-bound to `https://mcp.atomicmail.ai/mcp` and never
+reach the mail backend: each call presents the token to the authorization
+server, which mints a capability that lives about two minutes and is scoped to
+the chosen inbox. Only that capability travels downstream.
 
 Message bodies returned by `read_message` and `fetch` are wrapped in an
-untrusted-content delimiter. Mail is data, not instructions — treat it that way
+untrusted-content delimiter. Mail is data, not instructions; treat it that way
 in your prompts too.
 
 ## Differences from the local server
@@ -156,7 +153,7 @@ in your prompts too.
 | --- | --- | --- |
 | Transport | Streamable HTTP, hosted | stdio, `npx` on your machine |
 | Auth | OAuth (Google / GitHub), or an inbox API key as a bearer token | Proof of work, fully autonomous |
-| `register` tool | **None** — inboxes are created in the dashboard | Yes |
+| `register` tool | None, inboxes are created in the dashboard | Yes |
 | Credentials on disk | None | `~/.atomicmail/` |
 | Revocation | Dashboard | Delete the credential files |
 
@@ -165,9 +162,11 @@ happen in [the dashboard](https://dashboard.atomicmail.ai) under the human
 account. For fully autonomous, no-human registration use the local package or
 the [REST/PoW path](/rest-auth).
 
-## See also
+## Related
 
-- [OAuth 2.0 for third-party apps](/oauth)
-- [Local MCP server](/mcp)
-- [Using your own domain](/custom-domains)
-- [Raw JMAP requests](/jmap)
+<LinkRows :items="[
+  { title: 'OAuth 2.0 for third-party apps', desc: 'The auth server behind browser connect', link: '/oauth' },
+  { title: 'Local MCP server', desc: 'Run the same tools on your machine via npx', link: '/mcp' },
+  { title: 'Using your own domain', desc: 'Custom domains and $INBOX resolution', link: '/custom-domains' },
+  { title: 'Raw JMAP requests', desc: 'The method shapes behind jmap_request', link: '/jmap' },
+]" />

@@ -1,29 +1,28 @@
 ---
-description: OAuth 2.0 authorization-code + PKCE flow for third-party apps (Make, n8n, Zapier, remote MCP)—discovery, endpoints, scopes, and using the access token directly as the JMAP bearer.
+description: OAuth 2.0 authorization-code + PKCE flow for third-party apps (Zapier, n8n via HTTP, hosted MCP)—discovery, endpoints, scopes, and using the access token directly as the JMAP bearer.
 ---
 
 # OAuth 2.0 for third-party apps
 
 Atomic Mail runs a standards-compliant OAuth 2.0 authorization server at
-`https://auth.atomicmail.ai`. Use it when a **human** authorizes an application
-to act on the inboxes they own — integration platforms (Make, n8n, Zapier),
-hosted connectors, and the remote MCP server.
+`https://auth.atomicmail.ai`. Use it when a person authorizes an application to
+act on the inboxes they own: integration platforms such as Zapier and n8n over
+HTTP, hosted connectors, and the hosted MCP server.
 
-This is a **different path** from the
-[REST authentication flow](/rest-auth), which is the anonymous, proof-of-work
-path an autonomous agent uses to register its own inbox with no human involved.
-Both paths exist; they are not alternatives to one another.
+This is a different path from the [REST authentication flow](/rest-auth),
+where an autonomous agent registers its own inbox with proof of work and no
+human involved. Both exist; they are not alternatives to one another.
 
-## Which path do I want?
+## Two paths
 
-| | **OAuth 2.0** (this page) | **Proof of work** ([`/rest-auth`](/rest-auth)) |
+| | **OAuth 2.0** (this page) | **Proof of work** ([REST authentication](/rest-auth)) |
 | --- | --- | --- |
 | Who owns the inbox | A human account (Google / GitHub sign-in) | The agent itself |
-| Who authorizes | A human, in the browser, at a consent screen | Nobody — the agent solves a PoW challenge |
+| Who authorizes | A person, in the browser, at a consent screen | Nobody, the agent solves a PoW challenge |
 | Credential you store | Refresh token (rotating) | `apiKey` |
-| JMAP bearer | The **OAuth access token**, used directly | A capability JWT you mint and rotate yourself |
-| Typical caller | Make, n8n, Zapier, remote MCP, any third-party app | An autonomous agent, the local MCP server, AgentSkill |
-| Inbox selection | Per request, via `X-Atomic-Account-Id` | Implicit — one inbox per credential |
+| JMAP bearer | The OAuth access token, used directly | A capability JWT you mint and rotate yourself |
+| Typical caller | Zapier, n8n via HTTP, hosted MCP, any third-party app | An autonomous agent, the local MCP server, AgentSkill |
+| Inbox selection | Per request, via `X-Atomic-Account-Id` | Implicit, one inbox per credential |
 
 ## Discovery (RFC 8414)
 
@@ -68,14 +67,14 @@ the same authorization server.
 | `/oauth/register` | `POST` | RFC 7591 dynamic client registration |
 | `/api/v1/agents` | `GET` | The inboxes this connection's owner has (public, bearer-authenticated) |
 
-`/oauth/authorize` is a browser endpoint — it renders sign-in and consent, so it
-answers to `GET` and nothing else. Sending `POST` to it is a `404`, not a `405`;
-if you are seeing that, your client is treating it as a token-style endpoint.
+`/oauth/authorize` is a browser endpoint: it renders sign-in and consent, so it
+answers to `GET` and nothing else. A `POST` gets a `404`, not a `405`. If you
+see that, your client is treating it as a token endpoint.
 
 ## Grant type and client authentication
 
-- **`authorization_code` + PKCE `S256`.** PKCE is **mandatory** and cannot be
-  downgraded — `code_challenge` is required, and `code_challenge_method` must be
+- **`authorization_code` + PKCE `S256`.** PKCE is mandatory and cannot be
+  downgraded: `code_challenge` is required, and `code_challenge_method` must be
   the literal string `S256`. `plain` is rejected.
 - **`refresh_token` with rotation.** Every refresh returns a new refresh token
   and invalidates the old one. Presenting a superseded refresh token revokes the
@@ -83,7 +82,7 @@ if you are seeing that, your client is treating it as a token-style endpoint.
 - **Public clients are supported.** `token_endpoint_auth_methods_supported`
   includes `"none"`, so a client with no secret is first-class. Integration
   platforms whose connectors run in a browser-reachable context should register
-  as public clients and send **no** `client_secret`.
+  as public clients and send no `client_secret`.
 - `state` is required, and responses carry `iss` so a client can verify which
   authorization server answered (`authorization_response_iss_parameter_supported`).
 
@@ -91,9 +90,9 @@ if you are seeing that, your client is treating it as a token-style endpoint.
 
 Three ways, in order of preference:
 
-1. **Dynamic client registration** (RFC 7591) — `POST /oauth/register` with your
+1. **Dynamic client registration** (RFC 7591): `POST /oauth/register` with your
    client metadata. Unauthenticated and open, but rate-limited per IP.
-2. **A client-id metadata document (CIMD)** — use an `https://` URL as the
+2. **A client-id metadata document (CIMD)**: use an `https://` URL as the
    `client_id`; the server fetches your metadata from it.
    `client_id_metadata_document_supported: true` advertises this.
 3. **Ask us to register one** for a published connector.
@@ -107,10 +106,10 @@ token is for. For direct JMAP access that value is exactly:
 https://api.atomicmail.ai/jmap
 ```
 
-It must match **byte for byte** — no trailing slash, no `http://`, no host
+It must match byte for byte: no trailing slash, no `http://`, no host
 variation. A mismatch fails the authorize request with `invalid_request`. The
 resulting access token is audience-bound (`aud`) to that value, and the JMAP API
-rejects a token minted for any other audience — including a token minted for the
+rejects a token minted for any other audience, including one minted for the
 MCP server.
 
 The other accepted values are the MCP resource
@@ -121,8 +120,8 @@ The other accepted values are the MCP resource
 
 | Scope | Grants |
 | --- | --- |
-| `mail.read` | Read access — every JMAP method that does not send mail |
-| `mail.send` | Sending — `EmailSubmission/set` |
+| `mail.read` | Read access: every JMAP method that does not send mail |
+| `mail.send` | Sending: `EmailSubmission/set` |
 
 At least one is required. `mail.send` is not forced: a read-only connection is a
 supported, first-class configuration. A read-only token that attempts a send is
@@ -134,7 +133,9 @@ the `scope` field of the token response.
 
 ## The flow
 
-### 1. Authorize
+<div class="steps">
+
+### Authorize
 
 Send the user's browser to:
 
@@ -154,10 +155,10 @@ The user signs in with Google or GitHub, picks (or creates) the inbox this
 connection defaults to, and approves the scopes. You get a redirect back with
 `code`, `state`, and `iss`.
 
-`redirect_uri` is matched by **exact string equality** against your registered
-values — not by prefix or origin.
+`redirect_uri` is matched by exact string equality against your registered
+values, not by prefix or origin.
 
-### 2. Exchange the code
+### Exchange the code
 
 ```bash
 curl -X POST https://auth.atomicmail.ai/oauth/token \
@@ -181,7 +182,7 @@ curl -X POST https://auth.atomicmail.ai/oauth/token \
 
 Authorization codes are single-use and short-lived.
 
-### 3. Refresh
+### Refresh
 
 ```bash
 curl -X POST https://auth.atomicmail.ai/oauth/token \
@@ -191,16 +192,16 @@ curl -X POST https://auth.atomicmail.ai/oauth/token \
   -d client_id=<your client_id>
 ```
 
-Store the **new** `refresh_token` from every response. The old one is dead the
+Store the new `refresh_token` from every response. The old one is dead the
 moment the new one is issued.
 
-**Lifetimes.** Access tokens live **900 seconds** (`expires_in` in the token
-response). Refresh tokens live **90 days**, and the window slides — each
-rotation issues one good for another 90 days from that moment. A connection used
+**Lifetimes.** Access tokens live 900 seconds (`expires_in` in the token
+response). Refresh tokens live 90 days, and the window slides: each rotation
+issues one good for another 90 days from that moment. A connection used
 regularly therefore never expires; one left idle for 90 days must be
 re-authorized.
 
-### 4. Revoke
+### Revoke
 
 ```bash
 curl -X POST https://auth.atomicmail.ai/oauth/revoke \
@@ -209,15 +210,16 @@ curl -X POST https://auth.atomicmail.ai/oauth/revoke \
   -d token=<access or refresh token>
 ```
 
-Per RFC 7009 this returns `200` even for a token it does not recognise. Humans
+Per RFC 7009 this returns `200` even for a token it does not recognize. Humans
 can also revoke any grant from the dashboard.
+
+</div>
 
 ## The access token *is* the JMAP bearer
 
-This is the part most integrations get wrong, so it is worth stating flatly:
-
-**Send the OAuth access token directly as the `Authorization: Bearer` header on
-JMAP requests.** There is no second token exchange on the client side.
+Most integrations get this part wrong, so plainly: send the OAuth access token
+as the `Authorization: Bearer` header on JMAP requests. There is no second
+token exchange on the client side.
 
 ```
 Authorization: Bearer <OAuth access token>
@@ -225,20 +227,19 @@ Authorization: Bearer <OAuth access token>
 
 Internally the API verifies the token's signature, issuer, and audience,
 re-verifies that the requested inbox is owned by the token's grant, and mints a
-short-lived (~2-minute) capability token **server-side** for the downstream mail
-store. Clients on this path never see, store, or rotate a capability JWT — that
-is deliberate, because a 2-minute credential cannot survive on a stored
+capability token server-side for the mail store, good for about two minutes.
+Clients on this path never see, store or rotate a capability JWT. That is
+deliberate: a two-minute credential cannot survive on a stored
 integration-platform connection.
 
-::: tip Contrast with the PoW path
-On the [proof-of-work path](/rest-auth) the capability JWT *is* the client's
-concern: you mint it from a session JWT and rotate it every two minutes. On the
-OAuth path that machinery is entirely server-side.
+::: tip Compared with proof of work
+On the [proof-of-work path](/rest-auth) the client mints the capability token
+itself and rotates it every two minutes. On the OAuth path the server does that.
 :::
 
 ## X-Atomic-Account-Id is required on every JMAP request
 
-An OAuth grant is **user-scoped**: it covers every inbox its owner has, not one
+An OAuth grant is user-scoped: it covers every inbox its owner has, not one
 pinned inbox. So each request must say which inbox it is for.
 
 ```
@@ -255,23 +256,23 @@ The contract, exactly as implemented:
 - **Must be a UUID.** The value is validated against the UUID format.
 - **There is no token-derived default.** The server will not fall back to "the
   connection's inbox" or "the only inbox". A missing header and a malformed
-  header are both a hard **400**.
-- **Source it from `GET /api/v1/agents`** — use the `accountId` field of an
+  header are both a hard 400.
+- **Source it from `GET /api/v1/agents`**: use the `accountId` field of an
   entry in the response.
 - **Ownership is re-verified on every request.** An `accountId` the grant's
-  owner does not own is **403**, not a silent empty result.
+  owner does not own is 403, not a silent empty result.
 
 This header does *not* apply to the proof-of-work path, where the inbox is
 already pinned by the capability JWT.
 
 ### `accountId` in JMAP method arguments
 
-Because the account is pinned server-side from this header, you may **omit**
-`accountId` from JMAP method arguments — the mail store defaults it to the
-account the request authenticated as. The published Make modules rely on this.
+Because the account is pinned server-side from this header, you may omit
+`accountId` from JMAP method arguments; the mail store defaults it to the
+account the request authenticated as.
 
-The security consequence is worth stating: an `accountId` placed in the request
-**body cannot redirect the request to another account**. The downstream
+The security consequence: an `accountId` in the request body cannot redirect
+the request to another account. The downstream
 credential is derived solely from the header-selected, ownership-checked inbox.
 The API proxy is deliberately JMAP-blind and never rewrites your body.
 
@@ -298,7 +299,7 @@ curl https://auth.atomicmail.ai/api/v1/agents \
 }
 ```
 
-This endpoint is **public** — reachable from the internet, authenticated by the
+This endpoint is public: reachable from the internet, authenticated by the
 bearer token alone. It accepts a token minted for either the MCP resource or the
 JMAP resource, and it only ever returns inboxes owned by the token's own user.
 
@@ -332,13 +333,13 @@ curl -s -X POST https://api.atomicmail.ai/jmap \
   }'
 ```
 
-Everything after authentication is ordinary JMAP — see
+Everything after authentication is ordinary JMAP; see
 [Raw JMAP requests](/jmap) and [JMAP `using` and inline ops](/jmap-using).
 
 ## Error responses
 
 The OAuth endpoints and the OAuth-authenticated JMAP path return the standard
-OAuth error shape, **not** the `{ error: { message, hint, docs_url } }` shape the
+OAuth error shape, not the `{ error: { message, hint, docs_url } }` shape the
 proof-of-work endpoints use:
 
 ```json
@@ -358,17 +359,12 @@ Read `error_description` for the human-readable reason. Common cases:
 | 403 | `insufficient_scope` | Send attempted on a `mail.read`-only grant |
 | 403 | `access_denied` | The requested inbox is not owned by this connection |
 
-## Not publicly reachable
+## Related
 
-For completeness, since integrators sometimes find these named in transcripts:
-the delegated capability mints (`/api/v1/capability/mcp-delegated` and
-`/api/v1/capability/make-delegated`) are **service-to-service only** and return
-`404` from the internet. They are an internal implementation detail of the
-server-side capability minting described above; no client calls them.
-
-## See also
-
-- [Make.com](/make) — the connection this flow was built for
-- [Remote MCP server](/mcp-remote) — same authorization server, MCP resource
-- [REST authentication flow](/rest-auth) — the anonymous proof-of-work path
-- [Raw JMAP requests](/jmap)
+<LinkRows :items="[
+  { title: 'Authentication', desc: 'Proof of work and OAuth 2.0 side by side', link: '/authentication' },
+  { title: 'Zapier', desc: 'This flow with PKCE and a refresh token', link: '/zapier' },
+  { title: 'Hosted MCP server', desc: 'Same authorization server, MCP resource', link: '/mcp-remote' },
+  { title: 'REST authentication flow', desc: 'The anonymous proof-of-work path', link: '/rest-auth' },
+  { title: 'Raw JMAP requests', desc: 'What to send once you hold the bearer', link: '/jmap' },
+]" />

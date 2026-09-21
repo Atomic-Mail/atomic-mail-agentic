@@ -1,127 +1,98 @@
 ---
-description: Recommended onboarding flow for Atomic Mail—MCP or AgentSkill install, register, jmap_request, and links to HTTP docs.
+title: Agent flow
+description: How an agent gets and keeps an Atomic Mail inbox — install a wrapper, register with the required watch value, set up the daily inbox check, then read and send over JMAP.
 ---
 
-# Getting Started
+# Agent flow
 
-Atomic Mail gives agents a programmable inbox over JMAP. The recommended flow
-is:
+Every wrapper on this site, AgentSkill, the MCP servers, the LangChain and
+n8n packages, walks the same path. This page is that path end to end, with the
+decisions each step asks of you.
 
-1. Install either MCP (chat agent hosts) or AgentSkill (shell-capable agents).
-2. Run `register` once to create or recover an inbox. It takes a **required
-   `watch` value** — see [Who reads the inbox](#who-reads-the-inbox).
-   If a different username is requested while credentials already exist,
-   registration is refused; the error explains the safe way forward.
-3. Use `jmap_request` for send/read flows.
-4. Use `help` for built-in docs.
+<div class="steps">
 
-If wrappers are not usable in your environment, use the direct HTTP docs:
-[`REST Auth`](/rest-auth) and [`Raw JMAP`](/jmap).
+### Install a wrapper
+
+Shell agents use [AgentSkill](/skill-install), chat hosts use the
+[local MCP server](/mcp). Both run from `npx` with nothing to install. If
+neither fits, the [REST](/rest-auth) and [JMAP](/jmap) pages document the
+same calls over plain HTTP.
+
+### Register once
+
+`register` creates the inbox, or logs back into it when credentials already
+exist. It needs a `username`, the permanent address, and a `watch` value, see
+[Who reads the inbox](#who-reads-the-inbox). If credentials for a different
+username are already on disk, the call is refused and the error names the safe
+way forward: a separate credentials directory.
+
+### Set up the daily check
+
+On `watch: scheduled`, `register` prints the setup step for the host that
+called it, with the credentials directory filled in. Run it as printed. It
+schedules an agent turn once a day that reads the inbox with `list_inbox.json`
+and reports what arrived.
+
+### Read and send
+
+`jmap_request` runs a JMAP batch, inline or from a preset file. Placeholders
+stand in for the values the session knows: `$ACCOUNT_ID`, `$INBOX`,
+`$INBOX_MAILBOX_ID`, `$UPLOAD_URL`, `$DOWNLOAD_URL`, plus anything you pass in
+`vars`.
+
+### Ask `help`
+
+The `help` topics ship inside the package and match the version you run. Call
+`help` before improvising a batch, and `help --topic cron` after `register`.
+
+</div>
 
 ## Which authentication path?
 
-Two exist, and they are for different situations:
+- [Proof of work](/rest-auth): the agent registers its own inbox. No human, no
+  browser, no API key up front. This is what `register` does in every wrapper.
+- [OAuth 2.0](/oauth): a person authorizes an app on inboxes they own. This is
+  the path for [Zapier](/zapier), the [hosted MCP server](/mcp-remote) and
+  your own app.
 
-- **[Proof of work](/rest-auth)** — an autonomous agent registers its **own**
-  inbox. No human, no browser, no OAuth. This is what `register` does in every
-  package on this site.
-- **[OAuth 2.0](/oauth)** — a **human** authorizes an **application** to act on
-  the inboxes they own. This is the path for Make, n8n via HTTP, Zapier, hosted
-  connectors, and the [remote MCP server](/mcp-remote).
+The [Authentication](/authentication) page compares them side by side.
 
 ## Who reads the inbox
 
-`register` will not complete without `watch`. It is not a preference flag; it is
-the answer to "once this inbox exists, what causes anyone to look at it?" — and
-that is a standing commitment on the operator's machine, so **the operator
-decides it, not the agent**. Ask; do not infer.
+`register` will not complete without `watch`. It answers one question: once
+the inbox exists, what makes anyone look at it? That is a standing commitment
+on the operator's machine, so the operator decides, not the agent.
 
 | Value | What it means |
 | --- | --- |
-| `scheduled` | A recurring job wakes an **agent** once a day (`0 9 * * *`, 09:00 local) to read the inbox and report what arrived. |
-| `on-demand` | No such job. Mail is read only when a human asks, and anything arriving in between sits unread with nobody told. |
+| `scheduled` | A job wakes an agent once a day (`0 9 * * *`, 09:00 local) to read the inbox and report what arrived. |
+| `on-demand` | No job. Mail is read only when a person asks; anything in between sits unread. |
 
-On `scheduled`, `register` prints the exact setup step for the runtime that
-called it — with the credentials directory already filled in — and you run that.
-Schedule on the **host's own scheduler** (`openclaw cron`, `hermes cron`,
-`atomic-agent task`, Claude Code's `scheduled-tasks`), never at the OS level
-(crontab, launchd, systemd), and never cron `jmap_request` on its own — that
-writes JSON somewhere and tells nobody. Full detail: `help` topic `cron`.
+Schedule on the host's own scheduler (`openclaw cron`, `hermes cron`,
+`atomic-agent task`, Claude Code's scheduled tasks), never in crontab, launchd
+or systemd, and never as a bare `jmap_request` cron: that writes JSON somewhere
+and tells nobody. `help --topic cron` has the exact prompt for each host.
 
-MCP hosts pass it on the tool call; the CLI takes `--watch`:
+MCP hosts pass `watch` on the tool call; the CLI takes `--watch`:
 
 ```bash
 atomicmail register --username "myagent" --watch scheduled
 ```
 
-## Ideal agent flow
+## Where credentials live
 
-1. **Register**
-   - Create account with PoW (`register --username <name> --watch <value>`) or
-     recover via API key.
-   - `watch` is required — see [above](#who-reads-the-inbox).
-   - Different username over existing credentials is refused; the error explains
-     the safe path (a separate credential directory).
-2. **Persist credentials**
-   - `credentials.json`, `session.jwt`, `capability.jwt` under `~/.atomicmail`.
-3. **Set up the daily inbox check (after register, on `watch: scheduled`)**
-   - Native scheduler hosts: wake your **AI agent** once a day to fetch mail via
-     `list_inbox.json` (OpenClaw, Hermes, atomic-agent, Claude Code).
-   - No native scheduler: ask the operator to schedule it on a capable host, or
-     remind manual fetch. Do not work around with OS schedulers or cross-platform
-     scheduling. Do not cron `atomicmail jmap_request` alone. See
-     [`SKILL.md`](/SKILL#inbox-checks-after-register),
-     [`MCP`](/mcp#inbox-checks-after-register), or `help` topic `cron`.
-4. **Execute JMAP**
-   - Call `jmap_request` with inline `ops` or `ops_file`.
-5. **Use placeholders**
-   - Built-in: `$ACCOUNT_ID`, `$INBOX`, `$INBOX_MAILBOX_ID`, `$UPLOAD_URL`,
-     `$DOWNLOAD_URL`
-   - Custom: `$VAR_NAME` via `vars`/`--vars`.
+`credentials.json`, `session.jwt` and `capability.jwt` sit in `~/.atomicmail`
+(`~/.hermes/atomicmail` on Hermes). One directory is one inbox; a second inbox
+gets a second directory through `--credentials-dir` or the `credentials_dir`
+input.
 
-## Install for chat-based agents (MCP)
+## Related
 
-Add to your MCP host configuration:
-
-```json
-{
-   "mcpServers": {
-      "atomicmail": {
-         "command": "npx",
-         "args": ["-y", "@atomicmail/mcp-gh-pages"]
-      }
-   }
-}
-```
-
-Then call tools in this order: `register` -> `jmap_request` -> `help`. The
-`register` call needs both a `username` and a `watch` value:
-
-```json
-{ "username": "myagent", "watch": "scheduled" }
-```
-
-
-Continue with full docs: [`MCP in-depth`](/mcp).
-
-## Install for shell-capable agents (AgentSkill)
-
-```bash
-npx --package=@atomicmail/agent-skill-gh-pages atomicmail register --username "myagent" --watch scheduled
-npx --package=@atomicmail/agent-skill-gh-pages atomicmail jmap_request --ops-file list_inbox.json
-npx --package=@atomicmail/agent-skill-gh-pages atomicmail help
-```
-
-Continue with full docs: [`AgentSkill in-depth`](/skill-install) and
-[`Skill spec`](/SKILL).
-
-## Next sections
-
-- [`Using your own domain`](/custom-domains)
-- [`OAuth 2.0 for third-party apps`](/oauth)
-- [`REST authentication (PoW)`](/rest-auth)
-- [`Local MCP in-depth`](/mcp) · [`Remote MCP server`](/mcp-remote)
-- [`AgentSkill in-depth`](/skill-install)
-- Integrations: [`Make.com`](/make) · [`n8n`](/n8n) ·
-  [`LangChain`](/langchain) · [`Dify`](/dify)
-- [`Raw JMAP requests`](/jmap)
+<LinkRows :items="[
+  { title: 'Install AgentSkill', desc: 'The shell CLI: register, presets, help', link: '/skill-install' },
+  { title: 'Local MCP server', desc: 'The same flow for chat hosts', link: '/mcp' },
+  { title: 'REST authentication flow', desc: 'Challenge, session, capability, every call', link: '/rest-auth' },
+  { title: 'OAuth 2.0 for third-party apps', desc: 'Endpoints, PKCE, scopes, account header', link: '/oauth' },
+  { title: 'Raw JMAP requests', desc: 'The method shapes behind every call', link: '/jmap' },
+  { title: 'Using your own domain', desc: 'DNS records and verification', link: '/custom-domains' },
+]" />

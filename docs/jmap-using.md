@@ -2,10 +2,10 @@
 description: How the JMAP envelope `using` array interacts with MCP/CLI defaults and bare methodCalls arrays (RFC 8620).
 ---
 
-# JMAP `using` and inline ops
+# JMAP using & inline ops
 
-RFC 8620 requires each JMAP request to include a **`using`** array: the set of
-capability URNs that apply to **all** method calls in that batch. If a method
+RFC 8620 requires each JMAP request to include a `using` array: the capability
+URNs that apply to every method call in the batch. If a method
 belongs to a URN you did not declare, the request is not valid for a
 standards-following server.
 
@@ -30,9 +30,8 @@ when to add more URNs, use **`help --topic jmap_cheatsheet`** (CLI) or the MCP
 
 ## Pitfall: submission, identity, and blob methods
 
-If you pass a **bare `methodCalls` array** (no envelope) and rely on the default
-`using`, you **must** extend `using` whenever the batch includes methods that
-need other URNs, for example:
+If you pass a bare `methodCalls` array and rely on the default `using`, extend
+it whenever the batch uses methods from other URNs, for example:
 
 | Methods (examples) | Add to `using` |
 | -------------------- | -------------- |
@@ -48,4 +47,12 @@ Ways to do that:
 - Use **bundled presets** (for example `send_mail.json`), which already embed the
   correct `using` for their method calls.
 
-For a narrative send/read example, see [`Raw JMAP requests`](/jmap).
+For a narrative send/read example, see [Raw JMAP requests](/jmap).
+
+## Related
+
+<LinkRows columns="1" :items="[
+  { title: 'Raw JMAP requests', desc: 'Narrative send and read examples', link: '/jmap' },
+  { title: 'Code examples', desc: 'End-to-end HTTP in Python, Node.js and curl', link: '/examples' },
+  { title: 'Local MCP server', desc: 'ops, ops_file and using in the MCP tool', link: '/mcp' },
+]" />

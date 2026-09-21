@@ -1,0 +1,186 @@
+[
+  {
+    "tag": "v0.3.27",
+    "version": "0.3.27",
+    "date": "2026-09-18",
+    "url": "https://github.com/Atomic-Mail/atomic-mail-agentic/releases/tag/v0.3.27",
+    "prerelease": false,
+    "body": "## What's Changed\n* Docs: sibling-repo wiring, required watch param, daily cadence, custom-domains + API-key connect pages by @dom-dalty in https://github.com/Atomic-Mail/atomic-mail-agentic/pull/42\n* Develop by @dom-dalty in https://github.com/Atomic-Mail/atomic-mail-agentic/pull/43\n* docs(readme): add custom domains & dashboard section by @7supersayin in https://github.com/Atomic-Mail/atomic-mail-agentic/pull/44\n* docs: use --watch scheduled in register examples by @7supersayin in https://github.com/Atomic-Mail/atomic-mail-agentic/pull/45\n* chore: add 7supersayin as glama.json maintainer by @supersayin07 in https://github.com/Atomic-Mail/atomic-mail-agentic/pull/50\n* chore: bring glama.json maintainer (7supersayin) into main by @supersayin07 in https://github.com/Atomic-Mail/atomic-mail-agentic/pull/51\n* docs: serve VitePress docs at docs.atomicmail.ai by @supersayin07 in https://github.com/Atomic-Mail/atomic-mail-agentic/pull/52\n* mcp(registry): add hosted remote to server.json by @supersayin07 in https://github.com/Atomic-Mail/atomic-mail-agentic/pull/53\n\n## New Contributors\n* @supersayin07 made their first contribution in https://github.com/Atomic-Mail/atomic-mail-agentic/pull/50\n\n**Full Changelog**: https://github.com/Atomic-Mail/atomic-mail-agentic/compare/0.3.26...v0.3.27"
+  },
+  {
+    "tag": "0.3.26",
+    "version": "0.3.26",
+    "date": "2026-08-07",
+    "url": "https://github.com/Atomic-Mail/atomic-mail-agentic/releases/tag/0.3.26",
+    "prerelease": false,
+    "body": "## What's Changed\r\n* Develop by @dom-dalty in https://github.com/Atomic-Mail/atomic-mail-agentic/pull/34\r\n* test(hermes): raise skill-bundle scanned-file guard 50 → 60 (unblocks develop→main) by @dom-dalty in https://github.com/Atomic-Mail/atomic-mail-agentic/pull/41\r\n* fix(jmap): custom-domain $INBOX sender + JSON-safe multiline $VAR substitution by @dom-dalty in https://github.com/Atomic-Mail/atomic-mail-agentic/pull/39\r\n* Develop by @7supersayin in https://github.com/Atomic-Mail/atomic-mail-agentic/pull/38\r\n\r\n\r\n**Full Changelog**: https://github.com/Atomic-Mail/atomic-mail-agentic/compare/0.3.24...0.3.26"
+  },
+  {
+    "tag": "0.3.25",
+    "version": "0.3.25",
+    "date": "2026-07-29",
+    "url": "https://github.com/Atomic-Mail/atomic-mail-agentic/releases/tag/0.3.25",
+    "prerelease": false,
+    "body": "## What's Changed\r\n* Enable GitHub Pages docs deployment and project base handling. by @dom-dalty in https://github.com/Atomic-Mail/atomic-mail-agentic/pull/16\r\n* chore(mcp): add mcp.so package by @dom-dalty in https://github.com/Atomic-Mail/atomic-mail-agentic/pull/17\r\n* Integration/langchain by @dom-dalty in https://github.com/Atomic-Mail/atomic-mail-agentic/pull/21\r\n* Add @atomicmail/agentic-core npm package for integration hosts. by @dom-dalty in https://github.com/Atomic-Mail/atomic-mail-agentic/pull/24\r\n* Add UTM install-attribution to agent-skill CLI and MCP register by @dom-dalty in https://github.com/Atomic-Mail/atomic-mail-agentic/pull/35\r\n\r\n\r\n**Full Changelog**: https://github.com/Atomic-Mail/atomic-mail-agentic/compare/0.3.14...0.3.25"
+  },
+  {
+    "tag": "0.3.24",
+    "version": "0.3.24",
+    "date": "2026-07-02",
+    "url": "https://github.com/Atomic-Mail/atomic-mail-agentic/releases/tag/0.3.24",
+    "prerelease": false,
+    "body": "## What's Changed\r\n* Add openclaw npm channel for agent-skill builds. by @dom-dalty in https://github.com/Atomic-Mail/atomic-mail-agentic/pull/33\r\n\r\n\r\n**Full Changelog**: https://github.com/Atomic-Mail/atomic-mail-agentic/compare/0.3.23...0.3.24"
+  },
+  {
+    "tag": "0.3.23",
+    "version": "0.3.23",
+    "date": "2026-06-24",
+    "url": "https://github.com/Atomic-Mail/atomic-mail-agentic/releases/tag/0.3.23",
+    "prerelease": false,
+    "body": "**Full Changelog**: https://github.com/Atomic-Mail/atomic-mail-agentic/compare/0.3.22...0.3.23"
+  },
+  {
+    "tag": "0.3.22",
+    "version": "0.3.22",
+    "date": "2026-06-23",
+    "url": "https://github.com/Atomic-Mail/atomic-mail-agentic/releases/tag/0.3.22",
+    "prerelease": false,
+    "body": "## What's Changed\r\n* Fix n8n Creator Portal credential test vetting. by @dom-dalty in https://github.com/Atomic-Mail/atomic-mail-agentic/pull/31\r\n* Develop by @dom-dalty in https://github.com/Atomic-Mail/atomic-mail-agentic/pull/32\r\n\r\n\r\n**Full Changelog**: https://github.com/Atomic-Mail/atomic-mail-agentic/compare/0.3.19...0.3.22"
+  },
+  {
+    "tag": "0.3.20-rc1",
+    "version": "0.3.20-rc1",
+    "date": "2026-06-19",
+    "url": "https://github.com/Atomic-Mail/atomic-mail-agentic/releases/tag/0.3.20-rc1",
+    "prerelease": true,
+    "body": "## What's Changed\r\n* Fix n8n Creator Portal credential test vetting. by @dom-dalty in https://github.com/Atomic-Mail/atomic-mail-agentic/pull/31\r\n\r\n\r\n**Full Changelog**: https://github.com/Atomic-Mail/atomic-mail-agentic/compare/0.3.19...0.3.20-rc1"
+  },
+  {
+    "tag": "0.3.19",
+    "version": "0.3.19",
+    "date": "2026-06-19",
+    "url": "https://github.com/Atomic-Mail/atomic-mail-agentic/releases/tag/0.3.19",
+    "prerelease": false,
+    "body": "## What's Changed\r\n* Develop by @dom-dalty in https://github.com/Atomic-Mail/atomic-mail-agentic/pull/30\r\n\r\n\r\n**Full Changelog**: https://github.com/Atomic-Mail/atomic-mail-agentic/compare/0.3.18...0.3.19"
+  },
+  {
+    "tag": "0.3.18",
+    "version": "0.3.18",
+    "date": "2026-06-19",
+    "url": "https://github.com/Atomic-Mail/atomic-mail-agentic/releases/tag/0.3.18",
+    "prerelease": false,
+    "body": "## What's Changed\r\n* Develop by @dom-dalty in https://github.com/Atomic-Mail/atomic-mail-agentic/pull/26\r\n* Develop by @dom-dalty in https://github.com/Atomic-Mail/atomic-mail-agentic/pull/27\r\n* fix n8n linting errors by @dom-dalty in https://github.com/Atomic-Mail/atomic-mail-agentic/pull/28\r\n* fix package.json for n8n by @dom-dalty in https://github.com/Atomic-Mail/atomic-mail-agentic/pull/29\r\n\r\n\r\n**Full Changelog**: https://github.com/Atomic-Mail/atomic-mail-agentic/compare/0.3.15...0.3.18"
+  },
+  {
+    "tag": "0.3.17-rc3",
+    "version": "0.3.17-rc3",
+    "date": "2026-06-19",
+    "url": "https://github.com/Atomic-Mail/atomic-mail-agentic/releases/tag/0.3.17-rc3",
+    "prerelease": true,
+    "body": "## What's Changed\r\n* fix n8n linting errors by @dom-dalty in https://github.com/Atomic-Mail/atomic-mail-agentic/pull/28\r\n\r\n\r\n**Full Changelog**: https://github.com/Atomic-Mail/atomic-mail-agentic/compare/0.3.17-rc2...0.3.17-rc3"
+  },
+  {
+    "tag": "0.3.17-rc2",
+    "version": "0.3.17-rc2",
+    "date": "2026-06-19",
+    "url": "https://github.com/Atomic-Mail/atomic-mail-agentic/releases/tag/0.3.17-rc2",
+    "prerelease": true,
+    "body": "## What's Changed\r\n* Develop by @dom-dalty in https://github.com/Atomic-Mail/atomic-mail-agentic/pull/27\r\n\r\n\r\n**Full Changelog**: https://github.com/Atomic-Mail/atomic-mail-agentic/compare/0.3.17-rc1...0.3.17-rc2"
+  },
+  {
+    "tag": "0.3.17-rc1",
+    "version": "0.3.17-rc1",
+    "date": "2026-06-19",
+    "url": "https://github.com/Atomic-Mail/atomic-mail-agentic/releases/tag/0.3.17-rc1",
+    "prerelease": true,
+    "body": "## What's Changed\r\n* Develop by @dom-dalty in https://github.com/Atomic-Mail/atomic-mail-agentic/pull/26\r\n\r\n\r\n**Full Changelog**: https://github.com/Atomic-Mail/atomic-mail-agentic/compare/0.3.15...0.3.16"
+  },
+  {
+    "tag": "0.3.15",
+    "version": "0.3.15",
+    "date": "2026-06-19",
+    "url": "https://github.com/Atomic-Mail/atomic-mail-agentic/releases/tag/0.3.15",
+    "prerelease": false,
+    "body": "## What's Changed\r\n* Enable GitHub Pages docs deployment and project base handling. by @dom-dalty in https://github.com/Atomic-Mail/atomic-mail-agentic/pull/16\r\n* chore(mcp): add mcp.so package by @dom-dalty in https://github.com/Atomic-Mail/atomic-mail-agentic/pull/17\r\n* Develop by @dom-dalty in https://github.com/Atomic-Mail/atomic-mail-agentic/pull/18\r\n* Add Dify plugin documentation and improve docs discoverability. by @dom-dalty in https://github.com/Atomic-Mail/atomic-mail-agentic/pull/19\r\n* Fix docs favicon path for GitHub Pages base URL. by @dom-dalty in https://github.com/Atomic-Mail/atomic-mail-agentic/pull/20\r\n* Integration/langchain by @dom-dalty in https://github.com/Atomic-Mail/atomic-mail-agentic/pull/21\r\n* Develop by @dom-dalty in https://github.com/Atomic-Mail/atomic-mail-agentic/pull/22\r\n* Develop by @dom-dalty in https://github.com/Atomic-Mail/atomic-mail-agentic/pull/23\r\n* Add @atomicmail/agentic-core npm package for integration hosts. by @dom-dalty in https://github.com/Atomic-Mail/atomic-mail-agentic/pull/24\r\n* Develop by @dom-dalty in https://github.com/Atomic-Mail/atomic-mail-agentic/pull/25\r\n\r\n\r\n**Full Changelog**: https://github.com/Atomic-Mail/atomic-mail-agentic/compare/0.3.14...0.3.15"
+  },
+  {
+    "tag": "0.3.14",
+    "version": "0.3.14",
+    "date": "2026-06-17",
+    "url": "https://github.com/Atomic-Mail/atomic-mail-agentic/releases/tag/0.3.14",
+    "prerelease": false,
+    "body": "## What's Changed\r\n* Align release skill publishing with unified tap artifacts. by @dom-dalty in https://github.com/Atomic-Mail/atomic-mail-agentic/pull/15\r\n\r\n\r\n**Full Changelog**: https://github.com/Atomic-Mail/atomic-mail-agentic/compare/0.3.13...0.3.14"
+  },
+  {
+    "tag": "0.3.13",
+    "version": "0.3.13",
+    "date": "2026-06-17",
+    "url": "https://github.com/Atomic-Mail/atomic-mail-agentic/releases/tag/0.3.13",
+    "prerelease": false,
+    "body": "## What's Changed\r\n* Feature/hermes skill by @dom-dalty in https://github.com/Atomic-Mail/atomic-mail-agentic/pull/10\r\n* Feature/hermes skill by @dom-dalty in https://github.com/Atomic-Mail/atomic-mail-agentic/pull/11\r\n* Develop by @dom-dalty in https://github.com/Atomic-Mail/atomic-mail-agentic/pull/12\r\n* Feature/hermes skill by @dom-dalty in https://github.com/Atomic-Mail/atomic-mail-agentic/pull/13\r\n* Develop by @dom-dalty in https://github.com/Atomic-Mail/atomic-mail-agentic/pull/14\r\n\r\n\r\n**Full Changelog**: https://github.com/Atomic-Mail/atomic-mail-agentic/compare/0.3.12...0.3.13"
+  },
+  {
+    "tag": "0.3.12",
+    "version": "0.3.12",
+    "date": "2026-06-16",
+    "url": "https://github.com/Atomic-Mail/atomic-mail-agentic/releases/tag/0.3.12",
+    "prerelease": false,
+    "body": "## What's Changed\r\n* Feature/pretty readme by @dom-dalty in https://github.com/Atomic-Mail/atomic-mail-agentic/pull/8\r\n* Develop by @dom-dalty in https://github.com/Atomic-Mail/atomic-mail-agentic/pull/9\r\n\r\n\r\n**Full Changelog**: https://github.com/Atomic-Mail/atomic-mail-agentic/compare/0.3.11...0.3.12"
+  },
+  {
+    "tag": "0.3.11",
+    "version": "0.3.11",
+    "date": "2026-06-15",
+    "url": "https://github.com/Atomic-Mail/atomic-mail-agentic/releases/tag/0.3.11",
+    "prerelease": false,
+    "body": "## What's Changed\r\n* Develop by @dom-dalty in https://github.com/Atomic-Mail/atomic-mail-agentic/pull/7\r\n\r\n\r\n**Full Changelog**: https://github.com/Atomic-Mail/atomic-mail-agentic/compare/0.3.9...0.3.11"
+  },
+  {
+    "tag": "0.3.10",
+    "version": "0.3.10",
+    "date": "2026-06-15",
+    "url": "https://github.com/Atomic-Mail/atomic-mail-agentic/releases/tag/0.3.10",
+    "prerelease": false,
+    "body": "**Full Changelog**: https://github.com/Atomic-Mail/atomic-mail-agentic/commits/0.3.10"
+  },
+  {
+    "tag": "0.3.9",
+    "version": "0.3.9",
+    "date": "2026-06-11",
+    "url": "https://github.com/Atomic-Mail/atomic-mail-agentic/releases/tag/0.3.9",
+    "prerelease": false,
+    "body": "## What's Changed\r\n* feat(clawhub): add MCP-only ClawHub publishing path by @dom-dalty in https://github.com/Atomic-Mail/atomic-mail-agentic/pull/6\r\n\r\n\r\n**Full Changelog**: https://github.com/Atomic-Mail/atomic-mail-agentic/compare/0.3.8...0.3.9"
+  },
+  {
+    "tag": "0.3.8",
+    "version": "0.3.8",
+    "date": "2026-06-11",
+    "url": "https://github.com/Atomic-Mail/atomic-mail-agentic/releases/tag/0.3.8",
+    "prerelease": false,
+    "body": "## What's Changed\r\n* Fix posthog ingestion by @dom-dalty in https://github.com/Atomic-Mail/atomic-mail-agentic/pull/5\r\n\r\n\r\n**Full Changelog**: https://github.com/Atomic-Mail/atomic-mail-agentic/compare/0.3.7...0.3.8"
+  },
+  {
+    "tag": "0.3.7",
+    "version": "0.3.7",
+    "date": "2026-06-11",
+    "url": "https://github.com/Atomic-Mail/atomic-mail-agentic/releases/tag/0.3.7",
+    "prerelease": false,
+    "body": "## What's Changed\r\n* Development by @dom-dalty in https://github.com/Atomic-Mail/atomic-mail-agentic/pull/4\r\n\r\n\r\n**Full Changelog**: https://github.com/Atomic-Mail/atomic-mail-agentic/compare/0.3.6...0.3.7"
+  },
+  {
+    "tag": "0.3.6",
+    "version": "0.3.6",
+    "date": "2026-06-11",
+    "url": "https://github.com/Atomic-Mail/atomic-mail-agentic/releases/tag/0.3.6",
+    "prerelease": false,
+    "body": "## What's Changed\r\n* fix readme by @dom-dalty in https://github.com/Atomic-Mail/agentic-clients/pull/2\r\n* feat(npm): publish @atomic-mail packages to GitHub Packages on release. by @dom-dalty in https://github.com/Atomic-Mail/agentic-clients/pull/3\r\n\r\n\r\n**Full Changelog**: https://github.com/Atomic-Mail/agentic-clients/compare/0.3.5...0.3.6"
+  },
+  {
+    "tag": "0.3.5",
+    "version": "0.3.5",
+    "date": "2026-06-10",
+    "url": "https://github.com/Atomic-Mail/atomic-mail-agentic/releases/tag/0.3.5",
+    "prerelease": false,
+    "body": ""
+  }
+]

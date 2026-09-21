@@ -2,6 +2,8 @@ import { defineConfig } from "vitepress";
 import llmstxt from "vitepress-plugin-llms";
 import { copyOrDownloadAsMarkdownButtons } from "vitepress-plugin-llms";
 import type { ShikiTransformer } from "shiki";
+import { copyFileSync, existsSync } from "node:fs";
+import { join } from "node:path";
 
 type HastNode = { type: string; value?: string; tagName?: string; properties?: Record<string, unknown>; children?: HastNode[] };
 
@@ -119,6 +121,14 @@ export default defineConfig({
       ["meta", { name: "twitter:description", content: ogDesc }],
       ["meta", { name: "twitter:image", content: OG_IMAGE }],
     );
+  },
+
+  // The llms plugin folds the homepage into llms.txt and does not emit an
+  // /index.md, so agents that GET docs.atomicmail.ai/index.md would 404 (every
+  // other page already serves its .md). Serve the clean docs index there too.
+  buildEnd(siteConfig) {
+    const idx = join(siteConfig.outDir, "llms.txt");
+    if (existsSync(idx)) copyFileSync(idx, join(siteConfig.outDir, "index.md"));
   },
 
   vite: {

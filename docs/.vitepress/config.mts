@@ -67,6 +67,9 @@ export default defineConfig({
   description: "Email API built for AI agents: quickstart, AgentSkill, MCP, REST + JMAP and integrations.",
   appearance: "dark",
   lastUpdated: true,
+  // Clean URLs: /changelog instead of /changelog.html (GitHub Pages resolves the
+  // .html on request). Canonical/OG URLs below are built without .html to match.
+  cleanUrls: true,
   // Emit sitemap.xml at build so search engines (and LLM crawlers) can find
   // every page. Served at https://docs.atomicmail.ai/sitemap.xml.
   sitemap: { hostname: "https://docs.atomicmail.ai" },
@@ -93,8 +96,8 @@ export default defineConfig({
     const OG_IMAGE = `${SITE}/og.png`;
     const path =
       v && pageData.relativePath.startsWith("changelog/")
-        ? `changelog/${v}.html`
-        : pageData.relativePath.replace(/(^|\/)index\.md$/, "$1").replace(/\.md$/, ".html");
+        ? `changelog/${v}`
+        : pageData.relativePath.replace(/(^|\/)index\.md$/, "$1").replace(/\.md$/, "");
     const url = `${SITE}/${path}`;
     const ogTitle = `${pageData.frontmatter.title ?? pageData.title ?? "Atomic Mail Docs"} | Atomic Mail Docs`;
     const ogDesc =

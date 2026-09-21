@@ -51,19 +51,6 @@ When anything else disagrees with help, trust help.
 
 Your host starts this process on demand.
 
-For ClawHub, use the MCP-only channel package:
-
-```json
-{
-  "mcpServers": {
-    "atomicmail": {
-      "command": "npx",
-      "args": ["-y", "@atomicmail/mcp-clawhub"]
-    }
-  }
-}
-```
-
 ## Tools exposed
 
 | Tool           | Description                                                                                                                                                                                                       |

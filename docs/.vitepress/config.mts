@@ -89,10 +89,40 @@ export default defineConfig({
       pageData.frontmatter.prev = false;
       pageData.frontmatter.next = false;
     }
+
+    // Per-page canonical + Open Graph / Twitter cards. Canonical matters with the
+    // .io/.ai entity collision; the OG image is reused from the marketing site.
+    const SITE = "https://docs.atomicmail.ai";
+    const OG_IMAGE = `${SITE}/og.png`;
+    const path =
+      v && pageData.relativePath.startsWith("changelog/")
+        ? `changelog/${v}.html`
+        : pageData.relativePath.replace(/(^|\/)index\.md$/, "$1").replace(/\.md$/, ".html");
+    const url = `${SITE}/${path}`;
+    const ogTitle = `${pageData.frontmatter.title ?? pageData.title ?? "Atomic Mail Docs"} | Atomic Mail Docs`;
+    const ogDesc =
+      pageData.frontmatter.description ??
+      pageData.description ??
+      "Email API built for AI agents: quickstart, AgentSkill, MCP, REST + JMAP and integrations.";
+    (pageData.frontmatter.head ??= []).push(
+      ["link", { rel: "canonical", href: url }],
+      ["meta", { property: "og:type", content: "website" }],
+      ["meta", { property: "og:site_name", content: "Atomic Mail Docs" }],
+      ["meta", { property: "og:title", content: ogTitle }],
+      ["meta", { property: "og:description", content: ogDesc }],
+      ["meta", { property: "og:url", content: url }],
+      ["meta", { property: "og:image", content: OG_IMAGE }],
+      ["meta", { property: "og:image:width", content: "1800" }],
+      ["meta", { property: "og:image:height", content: "945" }],
+      ["meta", { name: "twitter:card", content: "summary_large_image" }],
+      ["meta", { name: "twitter:title", content: ogTitle }],
+      ["meta", { name: "twitter:description", content: ogDesc }],
+      ["meta", { name: "twitter:image", content: OG_IMAGE }],
+    );
   },
 
   vite: {
-    plugins: [llmstxt({ ignoreFiles: ["make.md", "changelog/*.md"] })],
+    plugins: [llmstxt({ ignoreFiles: ["make.md", "changelog/*.md"], domain: "https://docs.atomicmail.ai" })],
   },
   markdown: {
     codeTransformers: [nowrapWords],

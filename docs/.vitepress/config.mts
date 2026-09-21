@@ -53,10 +53,7 @@ const nowrapWords: ShikiTransformer = {
   },
 };
 
-const repositoryName = process.env.GITHUB_REPOSITORY?.split("/")[1];
-const pagesBase = process.env.GITHUB_ACTIONS && repositoryName
-  ? `/${repositoryName}/`
-  : "/";
+const pagesBase = "/";
 
 // https://vitepress.dev/reference/site-config
 export default defineConfig({

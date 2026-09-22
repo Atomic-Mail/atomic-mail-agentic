@@ -57,6 +57,7 @@ export default defineConfig({
           { text: "Make.com", link: "/make" },
           { text: "n8n", link: "/n8n" },
           { text: "LangChain", link: "/langchain" },
+          { text: "Pydantic AI", link: "/pydantic-ai" },
           { text: "Dify", link: "/dify" },
           { text: "@atomicmail/agentic-core", link: "/core" },
         ],

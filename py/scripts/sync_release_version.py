@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Sync release version into langchain-atomicmail pyproject.toml."""
+"""Sync release version into the integration package pyproject.toml files."""
 
 from __future__ import annotations
 
@@ -13,9 +13,10 @@ SEMVER_RE = re.compile(
     r"(?:\+([\w.-]+))?$"
 )
 
-LANGCHAIN_PYPROJECT = (
-    Path(__file__).resolve().parents[1] / "langchain" / "pyproject.toml"
-)
+PY_ROOT = Path(__file__).resolve().parents[1]
+LANGCHAIN_PYPROJECT = PY_ROOT / "langchain" / "pyproject.toml"
+PYDANTIC_AI_PYPROJECT = PY_ROOT / "pydantic_ai" / "pyproject.toml"
+RELEASE_PYPROJECTS = (LANGCHAIN_PYPROJECT, PYDANTIC_AI_PYPROJECT)
 
 
 def parse_release_version(raw: str) -> str:
@@ -55,7 +56,8 @@ def main(argv: list[str]) -> int:
         return 1
 
     version = parse_release_version(argv[1])
-    set_project_version(LANGCHAIN_PYPROJECT, version)
+    for pyproject in RELEASE_PYPROJECTS:
+        set_project_version(pyproject, version)
     print(version)
     return 0
 

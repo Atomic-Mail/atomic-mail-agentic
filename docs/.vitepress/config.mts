@@ -222,6 +222,7 @@ export default defineConfig({
           { text: "n8n", link: "/n8n" },
           { text: "Dify", link: "/dify" },
           { text: "LangChain", link: "/langchain" },
+          { text: "Pydantic AI", link: "/pydantic-ai" },
           { text: "Agentic core (npm)", link: "/core" },
         ],
       },

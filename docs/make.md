@@ -164,4 +164,4 @@ full-text index, so search modules return matches instead of erroring:
 
 - [OAuth 2.0 for third-party apps](/oauth) — the authoritative auth reference
 - [Raw JMAP requests](/jmap)
-- [n8n](/n8n) · [Dify](/dify) · [LangChain](/langchain) · [Remote MCP](/mcp-remote)
+- [Zapier](/zapier) · [n8n](/n8n) · [Dify](/dify) · [LangChain](/langchain) · [Remote MCP](/mcp-remote)

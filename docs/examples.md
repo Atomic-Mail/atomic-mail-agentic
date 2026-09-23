@@ -2,31 +2,56 @@
 description: End-to-end HTTP examples (Python, curl, etc.) for PoW auth, tokens, and JMAP without MCP or AgentSkill wrappers.
 ---
 
-# REST API + JMAP Code Examples
+# Code examples
 
-This page provides direct HTTP examples for Atomic Mail without MCP/AgentSkill
-wrappers.
+Plain HTTP, no wrapper: the same calls AgentSkill and MCP make, written out in
+Python, Node.js and curl.
 
 - Auth base URL: `https://auth.atomicmail.ai`
 - API base URL: `https://api.atomicmail.ai`
 - Session discovery: `GET /.well-known/jmap`
 - JMAP requests: `POST` to **`apiUrl`** from that JSON (RFC 8620; often under the same API host as discovery)
 
-For full protocol details, see [`REST authentication flow`](/rest-auth) and
-[`Raw JMAP requests`](/jmap).
+For full protocol details, see [REST authentication flow](/rest-auth) and
+[Raw JMAP requests](/jmap).
 
 ## End-to-end flow
 
-1. Request PoW challenge from auth service.
-2. Solve PoW (`scrypt`, dynamic difficulty).
-3. Create session JWT at `POST /api/v1/session` (signup with `username` or login with `apiKey`).
-4. Exchange session JWT for short-lived capability JWT.
-5. Call JMAP session endpoint, extract `accountId`.
-6. Call JMAP `Email/*` methods.
+<div class="steps">
 
----
+### Request a challenge
 
-## Python: PoW + auth + inbox read
+`POST /api/v1/challenge` on the auth service returns a challenge JWT.
+
+### Solve the proof of work
+
+`scrypt`, dynamic difficulty, solved locally.
+
+### Create a session JWT
+
+`POST /api/v1/session`: sign up with `username` or log in with `apiKey`.
+
+### Mint a capability JWT
+
+Exchange the session JWT for a short-lived capability JWT.
+
+### Discover accountId
+
+Call the JMAP session endpoint and read `accountId`.
+
+### Call JMAP
+
+`Email/*` methods with the capability JWT as bearer.
+
+</div>
+
+
+## Examples by language
+
+<TabGroup group="lang" :tabs="[{ id: 'py', label: 'Python' }, { id: 'js', label: 'Node.js' }, { id: 'curl', label: 'cURL' }]">
+<template #py>
+
+**Proof of work, auth and an inbox read.**
 
 This script demonstrates challenge solving and token acquisition, then reads the
 latest messages from the inbox.
@@ -144,26 +169,38 @@ def discover_jmap_context(capability_jwt: str):
     return account_id, jmap_api_url
 
 
+def get_inbox_mailbox_id(capability_jwt: str, account_id: str, jmap_api_url: str) -> str:
+    payload = {
+        "using": ["urn:ietf:params:jmap:core", "urn:ietf:params:jmap:mail"],
+        "methodCalls": [
+            ["Mailbox/query", {"accountId": account_id, "filter": {"role": "inbox"}}, "mq0"],
+        ],
+    }
+    r = requests.post(
+        jmap_api_url,
+        headers={"Authorization": f"Bearer {capability_jwt}"},
+        json=payload,
+    )
+    r.raise_for_status()
+    ids = r.json()["methodResponses"][0][1].get("ids", [])
+    if not ids:
+        raise RuntimeError("Mailbox/query returned no inbox id")
+    return ids[0]
+
+
 def read_latest_emails(capability_jwt: str, account_id: str, jmap_api_url: str):
+    # inMailbox needs a literal mailbox id. A JMAP back-reference resolves only
+    # as a top-level "#argument" (RFC 8620 sec. 3.7), never nested inside a
+    # filter value, so fetch the inbox id first with its own Mailbox/query.
+    inbox_mailbox_id = get_inbox_mailbox_id(capability_jwt, account_id, jmap_api_url)
     payload = {
         "using": ["urn:ietf:params:jmap:core", "urn:ietf:params:jmap:mail"],
         "methodCalls": [
             [
-                "Mailbox/query",
-                {"accountId": account_id, "filter": {"role": "inbox"}},
-                "mq0",
-            ],
-            [
                 "Email/query",
                 {
                     "accountId": account_id,
-                    "filter": {
-                        "inMailbox": {
-                            "resultOf": "mq0",
-                            "name": "Mailbox/query",
-                            "path": "/ids/0",
-                        }
-                    },
+                    "filter": {"inMailbox": inbox_mailbox_id},
                     "sort": [{"property": "receivedAt", "isAscending": False}],
                     "limit": 20,
                 },
@@ -211,19 +248,20 @@ if __name__ == "__main__":
     # 4) discover accountId + JMAP POST URL, then read inbox
     account_id, jmap_api_url = discover_jmap_context(capability_jwt)
     data = read_latest_emails(capability_jwt, account_id, jmap_api_url)
-    emails = data["methodResponses"][2][1].get("list", [])
+    emails = data["methodResponses"][1][1].get("list", [])
     for e in emails:
         print("-", e.get("subject"), e.get("from"))
 ```
 
----
+</template>
+<template #js>
 
-## Node.js: send email with JMAP
+**Send an email with a JMAP batch.**
 
 This example assumes you already have `capabilityJwt` (from the auth flow). It
 discovers **`apiUrl`** and **`accountId`** from `GET /.well-known/jmap` (RFC
 8620), then resolves the inbox **mailbox id** with `Mailbox/query` (same pattern
-as [`Raw JMAP requests`](/jmap)).
+as [Raw JMAP requests](/jmap)).
 
 ```js
 const API_BASE = "https://api.atomicmail.ai";
@@ -345,9 +383,10 @@ sendEmail(TOKEN, "user@example.com", "Hello from Atomic Mail", "This was sent vi
   .catch((err) => console.error(err));
 ```
 
----
+</template>
+<template #curl>
 
-## cURL: quick auth sequence
+**The auth sequence, request by request.**
 
 ```bash
 # 1) challenge
@@ -377,3 +416,14 @@ curl -X POST https://auth.atomicmail.ai/api/v1/capability \
 ```
 
 Use the returned `capabilityJWT` as bearer token for JMAP requests.
+
+</template>
+</TabGroup>
+
+## Related
+
+<LinkRows columns="1" :items="[
+  { title: 'REST authentication flow', desc: 'Every call in the token chain', link: '/rest-auth' },
+  { title: 'Raw JMAP requests', desc: 'Send, read and attachments as JMAP batches', link: '/jmap' },
+  { title: 'Install AgentSkill', desc: 'The same flow as one npx command', link: '/skill-install' },
+]" />

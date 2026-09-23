@@ -1,42 +1,42 @@
 ---
-description: Install and run the @atomicmail/agent-skill-gh-pages CLI (register, jmap_request, help) for shell-capable agents and automation.
+description: Install and run the @atomicmail/agent-skill CLI (register, jmap_request, help) for shell-capable agents and automation.
 ---
 
-# @atomicmail/agent-skill-gh-pages
+# Install AgentSkill
 
-Atomic Mail AgentSkill CLI for shell-capable AI agents. It exposes three
-commands: `register`, `jmap_request`, and `help`. **`jmap_request`** uses the
-same shared library as **`@atomicmail/mcp-gh-pages`**.
+The AgentSkill CLI gives shell agents three commands: `register`,
+`jmap_request` and `help`. It shares its runtime with `@atomicmail/mcp`, so
+both behave the same.
 
-## For AI agents — run `atomicmail help`
+## For AI agents
 
-**Invoke `atomicmail help` before improvising JMAP or preset details.** The CLI
-embeds the topic docs — written for agents,
-version-matched to your install, and cheaper to fetch on demand than reconstructing
-placeholder grammar or attachment flows from memory.
+Run `atomicmail help` before improvising JMAP or preset details. The topics ship
+inside the package, match the version you run, and are cheaper to read than
+reconstructing placeholder grammar or attachment flows from memory.
 
-**When to call help:** at the start of a mail task (`atomicmail help` or
-`help --topic overview`); before custom batches (`help --topic presets` and
-`help --topic jmap_cheatsheet`); right after `register` (`help --topic cron`
-for the daily inbox check); when errors mention missing
-placeholders, auth, or an old preset file on disk (`help --topic
-troubleshooting`). Prefer the installed binary over static README copies in
-other repos — **trust `help` from the package you are running**.
+When to call it:
 
-## Install / run
+- `atomicmail help` at the start of a mail task
+- `help --topic presets` and `help --topic jmap_cheatsheet` before a custom batch
+- `help --topic cron` right after `register`
+- `help --topic troubleshooting` when an error mentions placeholders, auth or an old preset file
+
+When a README elsewhere disagrees with `help`, trust `help`.
+
+## Install
 
 ```bash
-npx --package=@atomicmail/agent-skill-gh-pages atomicmail --help
+npx --package=@atomicmail/agent-skill atomicmail --help
 ```
 
 ## Quick start
 
 ```bash
-npx --package=@atomicmail/agent-skill-gh-pages atomicmail register \
+npx --package=@atomicmail/agent-skill atomicmail register \
   --username "myagent" \
   --watch scheduled
 
-npx --package=@atomicmail/agent-skill-gh-pages atomicmail jmap_request \
+npx --package=@atomicmail/agent-skill atomicmail jmap_request \
   --ops '[["Mailbox/get", {"accountId": "$ACCOUNT_ID"}, "m0"]]'
 ```
 
@@ -151,9 +151,6 @@ See `atomicmail help --topic cron` for the full prompt and delivery options.
   https://hermes-agent.nousresearch.com/docs/developer-guide/creating-skills
 - Hermes cron (manual fallback):
   https://hermes-agent.nousresearch.com/docs/user-guide/features/cron
-- Maintainer publish workflow:
-  [CONTRIBUTING.md](https://github.com/Atomic-Mail/atomic-mail-agentic/blob/develop/CONTRIBUTING.md)
-  (unified skill section)
 
 ## `jmap_request`, presets, and placeholders
 
@@ -162,7 +159,7 @@ methodCalls array or full `{ "using", "methodCalls" }`). Pass custom
 `$PLACEHOLDERS` via `--vars '{"PLACEHOLDER":"value"}'` (keys without `$`).
 
 ```bash
-npx --package=@atomicmail/agent-skill-gh-pages atomicmail jmap_request \
+npx --package=@atomicmail/agent-skill atomicmail jmap_request \
   --ops-file send_mail.json \
   --vars '{"TO":"alice@example.com","SUBJECT":"Hello","BODY":"Hi there"}'
 ```
@@ -171,52 +168,24 @@ npx --package=@atomicmail/agent-skill-gh-pages atomicmail jmap_request \
 `~/.atomicmail`), then bundled presets.
 
 **Details** (placeholder grammar, built-ins, shadowing, bundled preset list,
-attachments): see [@atomicmail/mcp-gh-pages](./mcp.md) and the embedded **`help`** topic
+attachments): see [@atomicmail/mcp](./mcp.md) and the embedded **`help`** topic
 **`presets`** (`atomicmail help --topic presets`).
 
-## Shared state
+## Credentials and defaults
 
-Each credential **directory** is an isolated account (default `~/.atomicmail`,
-mode `0600` files):
+Each credentials directory is one inbox: `credentials.json`, `session.jwt`
+and `capability.jwt`, default `~/.atomicmail`, files mode `0600`. Pick another
+directory per command with `--credentials-dir`, or set
+`ATOMIC_MAIL_CREDENTIALS_DIR`. A second inbox is a second directory; see
+[multiple accounts](/mcp#multiple-accounts-agents). An existing key can be
+supplied as `ATOMIC_MAIL_API_KEY`, and `ATOMIC_MAIL_INBOX_DOMAIN` is described
+under [Using your own domain](/custom-domains).
 
-- `credentials.json`
-- `session.jwt`
-- `capability.jwt`
+## Related
 
-The CLI and MCP read and write the directory you select per command
-(`--credentials-dir` / `credentials_dir`) or the default from
-`ATOMIC_MAIL_CREDENTIALS_DIR`. Multiple accounts = multiple directories; see
-MCP `help` topic `multi_account` or [mcp.md](./mcp.md#multiple-accounts-agents).
-
-## Defaults
-
-- auth endpoint: `https://auth.atomicmail.ai`
-- api endpoint: `https://api.atomicmail.ai`
-- credentials directory: `~/.atomicmail`
-
-## Overriding defaults
-
-- Endpoints: `--auth-url`, `--api-url` or `ATOMIC_MAIL_AUTH_URL`,
-  `ATOMIC_MAIL_API_URL`
-- Credentials path: `--credentials-dir` or `ATOMIC_MAIL_CREDENTIALS_DIR`
-- PoW salt: `--scrypt-salt` or `ATOMIC_MAIL_SCRYPT_SALT`
-- Install attribution: `--utm` or `ATOMICMAIL_UTM` (see below)
-
-## Install attribution (UTM)
-
-Optionally tag a `register` with where the install came from. Pass a
-URL-query-style string of `utm_*` fields on the `register` command:
-
-```bash
-npx --package=@atomicmail/agent-skill atomicmail register \
-  --username "myagent" \
-  --utm "utm_source=blog&utm_medium=cpc&utm_campaign=launch"
-```
-
-- Recognized keys: `utm_source`, `utm_medium`, `utm_campaign`, `utm_term`,
-  `utm_content`. Anything else in the string is ignored; each value is capped at
-  64 characters.
-- The `--utm` flag takes precedence over the `ATOMICMAIL_UTM` environment
-  variable when both are set.
-- Attribution applies to new-account signup only (`--username`), not `--api-key`
-  login. It never blocks registration — a malformed value simply sends nothing.
+<LinkRows :items="[
+  { title: 'Skill reference', desc: 'The SKILL.md agents read', link: '/SKILL' },
+  { title: 'Agent flow', desc: 'Where register and the watch fit in', link: '/getting-started' },
+  { title: 'Local MCP server', desc: 'The same commands as MCP tools', link: '/mcp' },
+  { title: 'Raw JMAP requests', desc: 'The method shapes behind jmap_request', link: '/jmap' },
+]" />

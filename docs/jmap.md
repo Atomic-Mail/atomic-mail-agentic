@@ -2,27 +2,31 @@
 description: Call Atomic Mail JMAP after auth—session discovery, POST to session apiUrl batches, and agent-oriented error hints on auth failures.
 ---
 
-# Raw JMAP Requests
+# Raw JMAP requests
 
-> **Using MCP or the AgentSkill CLI?** Start with [Getting started](/getting-started), then use the built-in **`help`** command (or MCP **`help`** tool) for presets and copy-paste JMAP recipes. This page is aimed at **direct HTTP JMAP** once you hold a capability bearer token.
+::: tip Using MCP or the AgentSkill CLI?
+Start with the [agent flow](/getting-started) and the built-in `help` for
+presets and copy-paste recipes. This page is for direct HTTP once you hold a
+capability bearer token.
+:::
 
 After obtaining `capabilityJwt`, run JMAP directly:
 
 - Session discovery: `GET /.well-known/jmap` (on your API host, e.g.
   `https://api.atomicmail.ai/.well-known/jmap`)
-- Method calls: `POST` to the **`apiUrl`** string from that session JSON (RFC
-  8620); do not assume a fixed path such as `/jmap` unless your session says so.
-- Envelope **`using`** vs a bare `methodCalls` array (MCP/CLI defaults): see
+- Method calls: `POST` to the `apiUrl` from that session JSON (RFC 8620). Do
+  not assume a fixed path such as `/jmap` unless your session says so.
+- Envelope `using` vs a bare `methodCalls` array (MCP/CLI defaults): see
   [JMAP `using` and inline ops](/jmap-using).
 
 ## Successful responses and `_next`
 
-When you call JMAP through **Atomic Mail MCP** or **AgentSkill**, a successful
-JSON body may include a top-level **`_next`** array of short suggested
-follow-ups (the same “self-documenting” idea as REST responses in
-[`REST authentication flow`](/rest-auth)).
+When you call JMAP through MCP or AgentSkill, a successful JSON body may
+include a top-level `_next` array of short suggested follow-ups, the same
+self-describing idea as the REST responses on the
+[REST authentication](/rest-auth) page.
 
-That field is **not** part of RFC 8620’s JMAP response model. If you pipe the
+That field is not part of RFC 8620's response model. If you pipe the
 body into a strict JMAP-only tool, ignore unknown top-level keys or strip
 `_next` before parsing `methodResponses`.
 
@@ -56,7 +60,7 @@ Session also provides RFC 8620 blob templates:
 
 ## Send email (JMAP batch)
 
-Minimal **RFC 8621–credible** flow: draft in at least one mailbox, then submit.
+The minimal RFC 8621 flow: draft in at least one mailbox, then submit.
 Resolve `<inboxMailboxId>` with `Mailbox/query` and `filter: { "role": "inbox" }`
 (see [Read inbox](#read-inbox-query-get)).
 
@@ -110,19 +114,17 @@ server to derive it from the Email’s From/Sender and To/Cc/Bcc. Supplying
 }
 ```
 
-## If submission fails: identities (Cyrus JMAP)
+## If submission fails: set `identityId`
 
-Atomic Mail’s mail store uses **Cyrus IMAP’s JMAP**. Many flows omit
-**`identityId`** on `EmailSubmission/set` when the server can infer the
-identity from the draft’s `from` and/or `envelope`. If you have multiple
-identities, wildcards, or you see `invalidProperties` / identity-related errors,
-set **`identityId`** explicitly (`Identity/get`, pick the `id` whose `email`
-matches the address you send as). See [RFC 8621](https://www.rfc-editor.org/rfc/rfc8621)
+Most flows omit `identityId` on `EmailSubmission/set` because the server
+infers the identity from the draft's `from` or `envelope`. With several identities, wildcards, or an
+`invalidProperties` error, set `identityId` explicitly (`Identity/get`, pick the `id` whose `email`
+matches the address you send as). See [RFC 8621](https://www.rfc-editor.org/rfc/rfc8621.html)
 for submission semantics.
 
 ## Read inbox (query + get)
 
-`inMailbox` must be the JMAP **mailbox id**. Resolve it once with
+`inMailbox` must be the JMAP mailbox id. Resolve it once with
 `Mailbox/query` and `filter: { "role": "inbox" }`, or use the same id the agent
 substitutes as `$INBOX_MAILBOX_ID`.
 
@@ -151,25 +153,24 @@ substitutes as `$INBOX_MAILBOX_ID`.
 }
 ```
 
-For direct HTTP clients, keep request bodies as standard JSON payloads and send
-them unchanged to the session **`apiUrl`** with a capability bearer token.
+Direct HTTP clients send these bodies unchanged to the session `apiUrl` with
+a capability bearer token.
 
 ## Attachments: RFC 9404 inline blob flow
 
-Use `Blob/upload` and `Blob/get` on the session **`apiUrl`** with
+Use `Blob/upload` and `Blob/get` on the session `apiUrl` with
 `urn:ietf:params:jmap:blob` in `using`. Each `Blob/upload` `create` value is an
-**UploadObject**: **`data`** is a JSON **array** of **DataSourceObject** entries;
-each entry uses **exactly one** of `data:asText`, `data:asBase64`, or `blobId`
-(+ optional range). Optional **`type`** is a media-type hint. Invalid shapes
-include `data` as a plain string, or `data:asBase64` on the upload object
-instead of **inside** an array element. Attach in `Email/set` with `attachments[]`
-and **`blobId`** (for example `"#b1"` for create key `b1`) plus **`type`** /
-**`name`**.
+UploadObject: `data` is a JSON array of DataSourceObject entries, and each
+entry uses exactly one of `data:asText`, `data:asBase64` or `blobId` (plus an
+optional range). `type` is an optional media-type hint. Two shapes are invalid:
+`data` as a plain string, and `data:asBase64` on the upload object instead of
+inside an array element. Attach in `Email/set` with `attachments[]` and a
+`blobId` (`"#b1"` for create key `b1`) plus `type` and `name`.
 
-**Further reading:** [RFC 9404 §4.1](https://www.rfc-editor.org/rfc/rfc9404#section-4.1).
+Further reading: [RFC 9404 §4.1](https://www.rfc-editor.org/rfc/rfc9404.html#section-4.1).
 
-Bundled **`send_mail_attachment.json`** uses
-`"data": [{ "data:asBase64": "…" }]` plus **`type`**, as in the example below.
+The bundled `send_mail_attachment.json` uses
+`"data": [{ "data:asBase64": "…" }]` plus `type`, as below.
 
 ```json
 {
@@ -252,7 +253,7 @@ Blob retrieval in-band:
 }
 ```
 
-For **`properties`**, use only names allowed by [RFC 9404 §4.2](https://www.rfc-editor.org/rfc/rfc9404#section-4.2)
+For `properties`, use only names allowed by [RFC 9404 §4.2](https://www.rfc-editor.org/rfc/rfc9404.html#section-4.2)
 (for example `data:asBase64`, `size`). Each result still includes `id`; do not
 list `id` or `type` in `properties`.
 
@@ -260,23 +261,23 @@ list `id` or `type` in `properties`.
 
 The JMAP session includes per-account blob settings under
 `accounts[<accountId>].accountCapabilities["urn:ietf:params:jmap:blob"]` (see
-[RFC 9404 §3.1](https://www.rfc-editor.org/rfc/rfc9404#section-3.1)):
+[RFC 9404 §3.1](https://www.rfc-editor.org/rfc/rfc9404.html#section-3.1)):
 
-- **`maxSizeBlobSet`**: maximum blob size in octets the server allows you to
+- `maxSizeBlobSet`: maximum blob size in octets the server allows you to
   create (including concatenated `data` sources). `null` means no advertised
   limit (the server may still reject oversized blobs).
-- **`maxDataSources`**: maximum `DataSourceObject` entries per `Blob/upload`
+- `maxDataSources`: maximum `DataSourceObject` entries per `Blob/upload`
   create.
-- **`supportedTypeNames`**, **`supportedDigestAlgorithms`**: used for
+- `supportedTypeNames`, `supportedDigestAlgorithms`: used for
   `Blob/lookup` and `Blob/get` digest properties respectively.
 
-**Atomic Mail MCP and AgentSkill** read these values from `GET /.well-known/jmap`
-and, when they are present, **reject before POST** any RFC 8620 attachment file
-or in-band `Blob/upload` whose size or `data` array length would violate
-`maxSizeBlobSet` or `maxDataSources`, with an error that suggests using the
-upload endpoint / MCP `attachments` for large binaries when appropriate. Creates
-that reference a **literal** (non-`#`) `blobId` slice are not size-checked on the
-client because the referenced blob’s length is unknown without a round trip.
+MCP and AgentSkill read these values from `GET /.well-known/jmap` and, when
+present, reject before the POST any attachment file or in-band `Blob/upload`
+whose size or `data` length would exceed `maxSizeBlobSet` or `maxDataSources`.
+The error suggests the upload endpoint, or MCP `attachments`, for large
+binaries. Creates that reference a literal (non-`#`) `blobId` slice are not
+size-checked on the client: the referenced blob's length is unknown without a
+round trip.
 
 ## Blob/lookup (RFC 9404)
 
@@ -284,17 +285,39 @@ client because the referenced blob’s length is unknown without a round trip.
 `Mailbox`, `Thread`) that reference those blobs. It requires
 `urn:ietf:params:jmap:blob` in `using`, plus `accountId`, `typeNames`, and `ids`.
 Unknown types or missing capabilities for a requested type yield the
-`unknownDataType` error (see [RFC 9404 §4.3](https://www.rfc-editor.org/rfc/rfc9404#section-4.3)).
+`unknownDataType` error (see [RFC 9404 §4.3](https://www.rfc-editor.org/rfc/rfc9404.html#section-4.3)).
 
 ## Attachments: RFC 8620 upload/download endpoints
 
 For out-of-band blob transfer:
 
-1. Resolve `uploadUrl` / `downloadUrl` from session.
-2. Expand URI-template variables (`accountId`, and for download: `blobId`,
-   `name`, `type`).
-3. Use capability bearer auth for upload/download HTTP requests.
-4. Use returned `blobId` in normal JMAP mail methods (`Email/set`, etc.).
+<div class="steps">
 
-This path is useful when a client/tool needs direct binary transport outside
-JMAP method calls.
+### Resolve the endpoints
+
+Read `uploadUrl` and `downloadUrl` from the JMAP session.
+
+### Expand the URI template
+
+Fill in `accountId`, and for download also `blobId`, `name` and `type`.
+
+### Authenticate
+
+Use the capability bearer on the upload and download HTTP requests.
+
+### Use the blob
+
+Pass the returned `blobId` to normal JMAP mail methods such as `Email/set`.
+
+</div>
+
+Use this path when a client needs binary transport outside JMAP method calls.
+
+## Related
+
+<LinkRows :items="[
+  { title: 'JMAP using & inline ops', desc: 'Envelope vs bare methodCalls, capabilities', link: '/jmap-using' },
+  { title: 'Code examples', desc: 'Python, Node.js and curl for auth and mail', link: '/examples' },
+  { title: 'REST authentication flow', desc: 'Challenge, session and capability tokens', link: '/rest-auth' },
+  { title: 'Local MCP server', desc: 'jmap_request presets and placeholders', link: '/mcp' },
+]" />

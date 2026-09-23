@@ -1,94 +1,100 @@
 ---
-description: Use Atomic Mail in Dify from marketplace install to Agent/Workflow usage, including a practical workflow pattern and polling guidance.
+description: Use Atomic Mail in Dify — install the marketplace plugin, the six tools it adds, the optional credentials, and a triage workflow pattern.
 ---
 
-# Dify Plugin
+# Dify
 
-Atomic Mail is available in the Dify marketplace as a tool plugin for Dify
-Agent and Workflow apps.
+Atomic Mail is a tool plugin in the Dify marketplace. It works in Agent apps,
+where the model picks tools itself, and in Workflow apps, where you wire tool
+nodes by hand.
 
 ## Auth model
 
-Proof of work — the plugin's `register` tool creates or recovers an inbox the
+Proof of work: the plugin's `register` tool creates or recovers an inbox the
 app itself owns, with no human sign-in. The underlying HTTP chain is
-[REST authentication](/rest-auth). If a **person** should own the mailbox and
-authorize the app instead, use [OAuth 2.0](/oauth) from a Dify HTTP Request node.
+[REST authentication](/rest-auth). If a person should own the mailbox and
+authorize the app instead, call [OAuth 2.0](/oauth) from a Dify HTTP Request
+node.
 
-## How to install in Dify
+## Install
 
-1. Open **Plugins** in your Dify workspace.
-2. Search for **Atomic Mail** in Marketplace and install it in the workspace.
-3. Open the plugin settings and configure credentials.
+<div class="steps">
 
-Dify plugin behavior to keep in mind (official docs):
+### Install from the marketplace
 
-- Plugins are workspace-scoped (install once, usable in all apps in that
-  workspace): [Dify Plugins docs](https://docs.dify.ai/en/use-dify/workspace/plugins)
-- Most plugins need configuration after install (API keys, endpoints, or other
-  provider settings): [Dify Plugins docs](https://docs.dify.ai/en/use-dify/workspace/plugins)
+In your Dify workspace open **Plugins**, search for **Atomic Mail** and
+install it. Plugins are workspace-scoped: install once, use in every app of
+that workspace.
 
-## First-run setup (recommended order)
+### Credentials are optional
 
-After installing Atomic Mail, use the same operational order as MCP/AgentSkill:
+The plugin settings have three fields, all optional. **API Key**: an existing
+Atomic Mail key, if you want to skip `register`. **Auth URL** and **API URL**:
+leave at the defaults, `https://auth.atomicmail.ai` and
+`https://api.atomicmail.ai`, unless you were given a custom environment.
 
-1. `register` once (create/recover inbox credentials)
-2. `help` (especially topic `cron` and `presets`)
-3. `jmap_request` for inbox/send flows
+### Register once
 
-Use `help` early and often inside the plugin tools to avoid guessing JMAP
-details.
+Run the `register` tool with a `username`. It creates the inbox, or logs back
+into it when an API key is set. Then read `help` with topic `cron` and decide
+with the operator how the inbox will be read.
 
-## Using Atomic Mail in Dify apps
+</div>
 
-### Agent app
+## Tools
 
-- Add Atomic Mail tools in the app's tool section.
-- Start with `register`, then call `jmap_request` for read/send actions.
-- Keep `help` available so the agent can fetch topic guidance while running.
+| Tool | What it does |
+| --- | --- |
+| `register` | Create the inbox or log into it. Inputs: `username`, optional `forced`, `account_id` |
+| `send_mail` | Send a message: `to`, `subject`, `body`, optional attachments |
+| `reply` | Reply to a message by id |
+| `list_inbox` | List recent messages |
+| `jmap_request` | Any JMAP batch, inline `ops` or an `ops_file` preset with `vars` |
+| `help` | Built-in topics: `cron`, `presets`, `jmap_cheatsheet`, `troubleshooting` |
 
-### Workflow app
+`send_mail`, `reply` and `list_inbox` are shortcuts over `jmap_request`; use
+`jmap_request` when you need anything they do not cover. `account_id` on every
+tool isolates a second inbox inside the same workspace.
 
-1. Add a **Tool** node and choose an Atomic Mail action.
-2. If prompted, select/create plugin credentials in node settings.
-3. Map workflow variables to the tool inputs (`ops`, `ops_file`, `vars`).
+## In an Agent app
 
-Relevant Dify docs for tool-node behavior:
+Add the Atomic Mail tools to the app, start with `register`, and keep `help`
+in the tool list so the agent can look things up while it runs.
 
-- [Tool Node](https://docs.dify.ai/en/use-dify/nodes/tools)
-- [Tools in workspace](https://docs.dify.ai/en/use-dify/workspace/tools)
+## In a Workflow app
 
-## Example workflow pattern
+Add a **Tool** node, choose an Atomic Mail action, pick or create the plugin
+credentials if Dify asks, and map workflow variables to the tool inputs.
+Dify's own guides: [Tool node](https://docs.dify.ai/en/cloud/use-dify/nodes/tools)
+and [tools in a workspace](https://docs.dify.ai/en/cloud/use-dify/workspace/tools).
 
-Use this minimal pattern for mailbox triage in Dify Workflow:
+A minimal triage pattern:
 
-1. **Start/User Input** node (optional controls such as mailbox scope)
-2. **Tool node** -> Atomic Mail `jmap_request` with `ops_file:
-   "list_inbox.json"`
-3. **LLM node** -> summarize messages and extract required follow-ups
-4. **If/Else** -> route urgent vs non-urgent items
-5. **Tool node** (optional) -> send response via Atomic Mail preset
-6. **End** node
+1. **Start**: optional inputs such as which mailbox to scan.
+2. **Tool**: `list_inbox`, or `jmap_request` with `ops_file: "list_inbox.json"`.
+3. **LLM**: summarize the messages and extract follow-ups.
+4. **If/Else**: route urgent items one way, the rest another.
+5. **Tool**: `reply` or `send_mail` where a response is due.
+6. **End**.
 
-For Dify's general plugin-in-workflow style (install tool, authorize, wire
-nodes), see:
-[Workflow lesson: Enhance Workflows (Plugins)](https://docs.dify.ai/en/use-dify/tutorials/workflow-101/lesson-07)
+Dify's lesson on plugins in workflows:
+[Enhance workflows with plugins](https://docs.dify.ai/en/learn/tutorials/workflow-101/lesson-07).
 
 ## Inbox checks after `register`
 
-`register` takes a required `watch` value (`scheduled` or `on-demand`) — the
-operator's decision about whether anything reads this inbox unattended. On
-`scheduled`, arrange a **once-daily** inbox check (`0 9 * * *`). The important
-rule is to run a full **agent turn** that uses `list_inbox.json`, not a raw
-`jmap_request` one-shot cron job without agent reasoning.
+In Dify, whether the inbox is read unattended is not a `register` input; the
+tool takes only `username`. Decide it with the operator. If the inbox should be
+watched, schedule a full agent turn once a day (`0 9 * * *`) that runs
+`list_inbox` and reports what arrived, not a bare `jmap_request` on a timer.
+If your runtime has no scheduler of its own, ask the operator to run the check
+from a host that has one. `help` with topic `cron` has the prompt to use.
 
-If your runtime has no native agent cron/scheduler, ask the operator to schedule
-it on a capable host, or use manual fetch reminders.
+## Related
 
-For exact prompt patterns and runtime-specific guidance, use Atomic Mail `help`
-topic `cron`.
-
-## See also
-
-- [Raw JMAP requests](/jmap) — the method shapes behind `jmap_request`
-- Other integrations: [Make.com](/make) · [n8n](/n8n) · [LangChain](/langchain) ·
-  [Remote MCP](/mcp-remote)
+<LinkRows :items="[
+  { title: 'Raw JMAP requests', desc: 'The method shapes behind jmap_request', link: '/jmap' },
+  { title: 'n8n', desc: 'Community node, proof-of-work path', link: '/n8n' },
+  { title: 'LangChain', desc: 'Tools for JS and Python agents', link: '/langchain' },
+  { title: 'Zapier', desc: 'OAuth connection for a person-owned inbox', link: '/zapier' },
+  { title: 'Hosted MCP server', desc: 'One URL for chat hosts', link: '/mcp-remote' },
+]" />

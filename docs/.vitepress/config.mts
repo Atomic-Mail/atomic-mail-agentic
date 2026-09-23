@@ -63,6 +63,14 @@ export default defineConfig({
   head: [
     ["link", { rel: "icon", type: "image/svg+xml", href: `${pagesBase}favicon.svg` }],
     ["link", { rel: "alternate icon", href: `${pagesBase}favicon.ico` }],
+    // Google tag (gtag.js) — GA4 stream shared with the marketing site and the
+    // dashboard; all are *.atomicmail.ai subdomains, so one session spans them.
+    ["script", { async: "", src: "https://www.googletagmanager.com/gtag/js?id=G-Q776YFK5Q1" }],
+    [
+      "script",
+      {},
+      "window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','G-Q776YFK5Q1');",
+    ],
   ],
   lang: "en-US",
   title: "Atomic Mail Docs",

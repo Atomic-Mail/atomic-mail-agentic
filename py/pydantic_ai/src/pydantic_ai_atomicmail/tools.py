@@ -1,0 +1,210 @@
+"""Plain function wrappers around the Atomic Mail runtime.
+
+These are transport-agnostic: the Pydantic AI toolset registers them, but they
+can also be called directly.
+"""
+
+from __future__ import annotations
+
+import json
+from dataclasses import asdict
+from typing import Any, Mapping, Sequence
+
+from atomicmail.help import HELP_TOPIC_LIST, help as atomicmail_help
+from atomicmail.jmap_request import (
+    DEFAULT_JMAP_USING,
+    USER_VAR_KEY_RE,
+    JmapAttachmentInput,
+    jmap_request as atomicmail_jmap_request,
+)
+from atomicmail.session import register as atomicmail_register
+from atomicmail.shared_assets import try_read_shared_json, try_read_shared_text
+
+__all__ = [
+    "HELP_TOPIC_LIST",
+    "AttachmentArg",
+    "help_tool",
+    "jmap_request_tool",
+    "register_tool",
+]
+
+_POST_REGISTER_CRON_REMINDER_FALLBACK = """\
+AFTER REGISTER — WHO READS THE INBOX
+  register takes a required `watch` value. It is your operator's decision, not yours — ask them.
+  On "scheduled", schedule a daily AGENT turn with list_inbox.json on your runtime's OWN scheduler (openclaw cron, hermes cron, atomic-agent task, a Claude Code local routine).
+  Never schedule at the OS level: no crontab, launchd, systemd or wrapper scripts.
+  Never register in one runtime and schedule in another. Do NOT cron atomicmail jmap_request alone.
+  See help topic "cron"."""
+
+
+def _load_post_register_cron_reminder() -> str:
+    text = try_read_shared_text("help/fragments/post_register_cron_reminder.md")
+    if text:
+        return text.strip()
+    return _POST_REGISTER_CRON_REMINDER_FALLBACK.strip()
+
+
+_POST_REGISTER_CRON_REMINDER = _load_post_register_cron_reminder()
+
+
+def _shared_error(key: str, fallback: str) -> str:
+    messages = try_read_shared_json("messages/errors.json")
+    if isinstance(messages, dict):
+        value = messages.get(key)
+        if isinstance(value, str) and value:
+            return value
+    return fallback
+
+
+class AttachmentArg(Mapping[str, Any]):  # pragma: no cover - typing helper only
+    """Structural alias documenting the attachment mapping shape."""
+
+    path: str
+    filename: str | None
+    content_type: str | None
+
+
+def _validate_vars(vars_map: Mapping[str, str] | None) -> None:
+    if vars_map is None:
+        return
+    invalid_key = next(
+        (key for key in vars_map if USER_VAR_KEY_RE.fullmatch(key) is None),
+        None,
+    )
+    if invalid_key is not None:
+        raise ValueError(f"vars key '{invalid_key}' must match /^[A-Z][A-Z0-9_]*$/.")
+
+
+def _coerce_attachments(
+    attachments: Sequence[Mapping[str, Any]] | None,
+) -> list[JmapAttachmentInput] | None:
+    if attachments is None:
+        return None
+    out: list[JmapAttachmentInput] = []
+    for index, item in enumerate(attachments):
+        if not isinstance(item, Mapping):
+            raise ValueError(f"attachments[{index}] must be an object")
+        path = item.get("path")
+        filename = item.get("filename")
+        content_type = item.get("content_type")
+        if not isinstance(path, str) or not path:
+            raise ValueError(f"attachments[{index}].path must be a non-empty string")
+        if filename is not None and not isinstance(filename, str):
+            raise ValueError(f"attachments[{index}].filename must be a string")
+        if content_type is not None and not isinstance(content_type, str):
+            raise ValueError(f"attachments[{index}].content_type must be a string")
+        out.append(
+            JmapAttachmentInput(
+                path=path,
+                filename=filename,
+                contentType=content_type,
+            )
+        )
+    return out
+
+
+def register_tool(
+    username: str,
+    credentials_dir: str | None = None,
+    forced: bool = False,
+) -> str:
+    """Register an Atomic Mail inbox; PoW signup that writes credentials.
+
+    Usernames are 5-21 characters. Idempotent for the same username and stored
+    inbox; a different username is rejected unless a separate `credentials_dir`
+    is used. After success, the operator's `watch` value decides who reads the
+    inbox (see the `cron` help topic).
+
+    Args:
+        username: Desired inbox username, 5-21 characters.
+        credentials_dir: Directory the credentials are written to; defaults to
+            the runtime's standard location.
+        forced: Overwrite an existing stored inbox for this credentials dir.
+
+    Returns:
+        JSON with the registered inbox, account id and api key.
+    """
+    result = atomicmail_register(
+        username=username,
+        credentials_dir=credentials_dir,
+        forced=forced,
+    )
+    payload = {**asdict(result), "_next": [_POST_REGISTER_CRON_REMINDER]}
+    return json.dumps(payload, indent=2)
+
+
+def jmap_request_tool(
+    ops: str | None = None,
+    ops_file: str | None = None,
+    vars: Mapping[str, str] | None = None,
+    dry_run: bool = False,
+    attachments: Sequence[Mapping[str, Any]] | None = None,
+    using: Sequence[str] | None = None,
+    credentials_dir: str | None = None,
+) -> str:
+    """Run a JMAP method-call batch against the registered inbox.
+
+    Authentication is handled automatically from stored credentials. Exactly one
+    of `ops` or `ops_file` must be provided.
+
+    Args:
+        ops: JMAP method calls as a JSON string.
+        ops_file: Path to a preset file holding the method calls.
+        vars: Placeholder substitutions; keys must match /^[A-Z][A-Z0-9_]*$/.
+        dry_run: Return the request that would be sent without sending it.
+        attachments: Local files to upload, each `{"path", "filename",
+            "content_type"}`; cannot be combined with `dry_run`.
+        using: JMAP capability URIs; defaults to the Atomic Mail set.
+        credentials_dir: Directory the credentials are read from.
+
+    Returns:
+        The raw JMAP response body.
+    """
+    if isinstance(ops, str) and isinstance(ops_file, str):
+        raise ValueError(
+            _shared_error(
+                "mcp_ops_mutually_exclusive",
+                "ops and ops_file are mutually exclusive — provide one.",
+            )
+        )
+    if not isinstance(ops, str) and not isinstance(ops_file, str):
+        raise ValueError(
+            _shared_error("mcp_ops_required", "Provide either ops or ops_file.")
+        )
+    if dry_run and attachments:
+        raise ValueError(
+            _shared_error(
+                "cli_dry_run_with_attachment",
+                "--dry-run cannot be combined with --attachment.",
+            )
+        )
+    _validate_vars(vars)
+    normalized_attachments = _coerce_attachments(attachments)
+    normalized_using = list(using) if using is not None else list(DEFAULT_JMAP_USING)
+
+    result = atomicmail_jmap_request(
+        ops=ops if isinstance(ops, str) else None,
+        ops_file=ops_file if isinstance(ops_file, str) else None,
+        vars=vars,
+        dry_run=dry_run,
+        attachments=normalized_attachments,
+        using=normalized_using,
+        credentials_dir=credentials_dir,
+    )
+    if not result.ok:
+        raise ValueError(
+            f"JMAP request failed (HTTP {result.status}): {result.bodyText}"
+        )
+    return result.bodyText
+
+
+def help_tool(topic: str | None = None) -> str:
+    """Return the built-in Atomic Mail docs. Call early and often.
+
+    Args:
+        topic: Help topic to read; omit for the topic index.
+
+    Returns:
+        The help text for the topic.
+    """
+    return atomicmail_help(topic=topic)

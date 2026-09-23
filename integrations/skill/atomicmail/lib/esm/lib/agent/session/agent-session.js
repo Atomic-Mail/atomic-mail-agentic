@@ -3,6 +3,7 @@ import { FilesystemCredentialStore, writeCredentials, writeJwtFile, } from "./ag
 import { CAPABILITY_SAFETY_MARGIN_MS, decodeJwtPayload, isJwtExpired, SESSION_SAFETY_MARGIN_MS, } from "../auth/agent-jwt.js";
 import { extractBlobEndpoints, extractBlobUploadLimits, extractJmapApiUrl, extractPrimaryMailAccountId, fetchJmapWellKnown, } from "../jmap/agent-jmap-run.js";
 import { fetchCapability, performPoWAndSession, } from "../auth/agent-auth-http.js";
+import { sharedErrorTemplate } from "../../core/messages.js";
 function normalizeUsername(u) {
     return u.trim().toLowerCase();
 }
@@ -179,15 +180,10 @@ export class AgentSession {
                 };
             }
             if (options.forced !== true) {
-                throw new Error("Register refused because credentials already belong to " +
-                    `"${this.inboxId}" and requested username is "${want}". ` +
-                    "Alternatively, use a separate credential directory " +
-                    "(credentials_dir in MCP / --credentials-dir in AgentSkill) to " +
-                    "register another account without replacing the current one. " +
-                    "If you want to replace credentials in this directory, first " +
-                    "back it up and remember where you copied it, otherwise you may " +
-                    "lose access to your old account. Then retry with forced=true " +
-                    "(MCP) or --forced (AgentSkill).");
+                // Wording lives in shared/messages/errors.json so TS and Python refuse
+                // in the same words. Replacing credentials here is irreversible, so the
+                // message opens with that and never ends with the flag that does it.
+                throw new Error(sharedErrorTemplate("agent_register_refused_existing_credentials_template", { inbox: this.inboxId, username: want }));
             }
             await this.store.clear();
             this.apiKey = undefined;

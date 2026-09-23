@@ -1,6 +1,6 @@
 // JMAP execution for integration hosts (n8n bundle) — fetch-only, no node:fs.
 import { JMAP_NEXT_HINTS } from "../../core/jmap-hints.js";
-import { inboxIdToMailboxEmail } from "../session/inbox-id-to-mailbox-email.js";
+import { resolveInboxMailboxEmail } from "../session/inbox-id-to-mailbox-email.js";
 import { assertBlobUploadEnvelopeWithinLimits, } from "./agent-jmap-blob-limits.js";
 import { ensureTextCharsetOnEmailSetBlobParts } from "./agent-jmap-email-charset.js";
 import { substituteVars } from "./agent-vars.js";
@@ -131,20 +131,34 @@ export async function runJmapRequest(input) {
         autoResolvers: {
             ACCOUNT_ID: () => input.session.getPrimaryMailAccountId(),
             INBOX: async () => {
-                const rawInbox = input.session.currentInboxId;
-                if (!rawInbox) {
+                const inboxId = input.session.currentInboxId;
+                // The JMAP primary mail accountId resolves to the inbox's REAL address
+                // (including custom domains), so prefer it over appending a domain.
+                let accountId;
+                try {
+                    accountId = await input.session.getPrimaryMailAccountId();
+                }
+                catch {
+                    accountId = undefined;
+                }
+                const email = resolveInboxMailboxEmail({
+                    inboxId,
+                    accountId,
+                    inboxDomain: input.inboxDomain,
+                });
+                if (!email) {
                     throw new Error("No inbox in session; run register first.");
                 }
-                return inboxIdToMailboxEmail(rawInbox);
+                return email;
             },
             INBOX_MAILBOX_ID: () => fetchInboxMailboxId(input.session),
-            UPLOAD_URL: async () => {
+            UPLOAD_URL: () => {
                 if (input.session.currentUploadUrl) {
                     return input.session.currentUploadUrl;
                 }
                 throw new Error("JMAP session missing uploadUrl.");
             },
-            DOWNLOAD_URL: async () => {
+            DOWNLOAD_URL: () => {
                 if (input.session.currentDownloadUrl) {
                     return input.session.currentDownloadUrl;
                 }

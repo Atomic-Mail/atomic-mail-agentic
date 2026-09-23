@@ -20,6 +20,8 @@ const repoRoot = path.resolve(n8nDir, '../..');
 const vettingPaths = [
 	'credentials/AtomicMailApi.credentials.ts',
 	'dist/credentials/AtomicMailApi.credentials.js',
+	'credentials/AtomicMailOAuth2Api.credentials.ts',
+	'dist/credentials/AtomicMailOAuth2Api.credentials.js',
 	'dist/nodes/AtomicMail/AtomicMail.node.js',
 	'dist/nodes/AtomicMailTrigger/AtomicMailTrigger.node.js',
 ];

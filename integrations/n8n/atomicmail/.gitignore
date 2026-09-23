@@ -3,6 +3,7 @@ node_modules/
 dist/**
 !dist/credentials/
 !dist/credentials/AtomicMailApi.credentials.js
+!dist/credentials/AtomicMailOAuth2Api.credentials.js
 !dist/nodes/
 !dist/nodes/AtomicMail/
 !dist/nodes/AtomicMail/AtomicMail.node.js

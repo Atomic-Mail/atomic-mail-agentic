@@ -2,24 +2,17 @@
 description: The anonymous-agent path—PoW challenge, session JWT, capability JWT, and token TTLs for calling JMAP without MCP or AgentSkill. For human-owned inboxes and third-party apps, see the OAuth 2.0 page.
 ---
 
-# REST Authentication Flow
+# REST authentication flow
 
-::: warning This is the anonymous-agent path, not the only one
-This page documents **proof-of-work** authentication: an autonomous agent
-registers its **own** inbox with no human involved, and mints its own short-lived
-capability tokens.
-
-If a **human** is authorizing an **application** to act on inboxes they own —
-Make, n8n, Zapier, a hosted connector, or the remote MCP server — you want
-**[OAuth 2.0](/oauth)** instead. That path has its own endpoints
-(`/oauth/authorize`, `/oauth/token`), its own credential model (a rotating
-refresh token, no PoW), and uses the OAuth access token directly as the JMAP
-bearer. See [Which path do I want?](/oauth#which-path-do-i-want) for the
-side-by-side.
+::: info Not the only path
+This page is proof of work: the agent registers its own inbox and mints its own
+tokens, no human involved. When a person authorizes an app on inboxes they own
+(Zapier, n8n, the hosted MCP server), use [OAuth 2.0](/oauth) instead. The two
+paths are compared on the [Authentication](/authentication) page.
 :::
 
-Use this path when you are integrating directly over HTTP, including custom
-client libraries and non-wrapper runtimes.
+Use this path when you talk to the API over plain HTTP: a custom client
+library, or a runtime the wrappers do not cover.
 
 Base URLs:
 
@@ -28,13 +21,33 @@ Base URLs:
 
 ## PoW and token flow
 
-1. `POST /api/v1/challenge` -> receive challenge JWT in `Authorization: Bearer <challengeJWT>`.
-2. Solve `scrypt` PoW locally.
-3. `POST /api/v1/session` with challenge JWT in `Authorization` and PoW payload in JSON body.
-   Receive session JWT from response `Authorization: Bearer <sessionJWT>`.
-4. `POST /api/v1/capability` with session bearer.
-   Receive capability JWT from response `Authorization: Bearer <capabilityJWT>`.
-5. Use capability JWT for JMAP requests.
+<div class="steps">
+
+### Request a challenge
+
+`POST /api/v1/challenge` returns the challenge JWT in
+`Authorization: Bearer <challengeJWT>`.
+
+### Solve the proof of work
+
+Solve the `scrypt` puzzle locally.
+
+### Open a session
+
+`POST /api/v1/session` with the challenge JWT in `Authorization` and the PoW
+payload in the JSON body. The session JWT comes back in
+`Authorization: Bearer <sessionJWT>`.
+
+### Mint a capability token
+
+`POST /api/v1/capability` with the session bearer. The capability JWT comes
+back in `Authorization: Bearer <capabilityJWT>`.
+
+### Call JMAP
+
+Use the capability JWT as the bearer on JMAP requests.
+
+</div>
 
 Token TTLs:
 
@@ -43,7 +56,7 @@ Token TTLs:
 
 ## Agent hints in auth responses
 
-Authentication endpoints are designed to be self-guiding for agents.
+The auth endpoints explain themselves to agents.
 
 - Auth errors include:
   - `error.message` (what failed)
@@ -122,11 +135,13 @@ Read capability JWT from response header:
 Authorization: Bearer <capabilityJWT>
 ```
 
-Continue with [`Raw JMAP requests`](/jmap) to execute mail method
-calls after capability token issuance.
+With a capability JWT in hand, continue with [Raw JMAP requests](/jmap).
 
-## See also
+## Related
 
-- [`OAuth 2.0 for third-party apps`](/oauth) — the account-based path, for
-  human-owned inboxes and applications acting on their behalf
-- [`Raw JMAP requests`](/jmap)
+<LinkRows :items="[
+  { title: 'Authentication', desc: 'Proof of work and OAuth 2.0 side by side', link: '/authentication' },
+  { title: 'OAuth 2.0 for third-party apps', desc: 'The path for human-owned inboxes', link: '/oauth' },
+  { title: 'Raw JMAP requests', desc: 'What to send with the capability JWT', link: '/jmap' },
+  { title: 'Code examples', desc: 'This chain in Python, Node.js and curl', link: '/examples' },
+]" />

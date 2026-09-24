@@ -1,90 +1,250 @@
 import { defineConfig } from "vitepress";
 import llmstxt from "vitepress-plugin-llms";
 import { copyOrDownloadAsMarkdownButtons } from "vitepress-plugin-llms";
+import type { ShikiTransformer } from "shiki";
+import { copyFileSync, existsSync } from "node:fs";
+import { join } from "node:path";
 
-const repositoryName = process.env.GITHUB_REPOSITORY?.split("/")[1];
-const pagesBase = process.env.GITHUB_ACTIONS && repositoryName
-  ? `/${repositoryName}/`
-  : "/";
+type HastNode = { type: string; value?: string; tagName?: string; properties?: Record<string, unknown>; children?: HastNode[] };
+
+/**
+ * Code blocks soft-wrap (custom.css), and browsers happily break a line after
+ * a hyphen — so `--username` could split into `--` / `username`. This wraps
+ * every run of non-space characters in a nowrap span, so lines only break at
+ * spaces. Copying is unaffected: spans carry the original text.
+ */
+const nowrapWords: ShikiTransformer = {
+  name: "atomicmail:nowrap-words",
+  line(node) {
+    const text = (n: HastNode): string =>
+      n.type === "text" ? (n.value ?? "") : (n.children ?? []).map(text).join("");
+    const out: HastNode[] = [];
+    let group: HastNode[] = [];
+    const NOWRAP_MAX = 40; // longer "words" (a JSON blob, a URL) may still break rather than overflow
+    const flush = () => {
+      if (!group.length) return;
+      const len = group.map(text).join("").length;
+      if (len > NOWRAP_MAX) out.push(...group);
+      else out.push({ type: "element", tagName: "span", properties: { className: ["nb"] }, children: group });
+      group = [];
+    };
+    const pieces = (n: HastNode): HastNode[] => {
+      // split a node into alternating word / whitespace nodes with the same styling
+      const t = text(n);
+      const parts = t.match(/\s+|\S+/g) ?? [];
+      if (parts.length <= 1) return [n];
+      const make = (value: string): HastNode =>
+        n.type === "text"
+          ? { type: "text", value }
+          : { ...n, children: [{ type: "text", value }] };
+      return parts.map(make);
+    };
+    for (const child of node.children as HastNode[]) {
+      const simple = child.type === "text" || (child.children?.length === 1 && child.children[0].type === "text");
+      for (const piece of simple ? pieces(child) : [child]) {
+        if (/^\s+$/.test(text(piece))) {
+          flush();
+          out.push(piece);
+        } else {
+          group.push(piece);
+        }
+      }
+    }
+    flush();
+    node.children = out as never;
+  },
+};
+
+const pagesBase = "/";
 
 // https://vitepress.dev/reference/site-config
 export default defineConfig({
   base: pagesBase,
-  head: [["link", { rel: "icon", href: `${pagesBase}favicon.ico` }]],
+  head: [
+    ["link", { rel: "icon", type: "image/svg+xml", href: `${pagesBase}favicon.svg` }],
+    ["link", { rel: "alternate icon", href: `${pagesBase}favicon.ico` }],
+    // Google tag (gtag.js) — GA4 stream shared with the marketing site and the
+    // dashboard; all are *.atomicmail.ai subdomains, so one session spans them.
+    ["script", { async: "", src: "https://www.googletagmanager.com/gtag/js?id=G-Q776YFK5Q1" }],
+    [
+      "script",
+      {},
+      "window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','G-Q776YFK5Q1');",
+    ],
+  ],
   lang: "en-US",
-  title: "Atomic Mail Agentic",
-  description: "API, MCP and AgentSkill Documentation",
+  title: "Atomic Mail Docs",
+  description: "Email API built for AI agents: quickstart, AgentSkill, MCP, REST + JMAP and integrations.",
+  appearance: "dark",
+  lastUpdated: true,
+  // Clean URLs: /changelog instead of /changelog.html (GitHub Pages resolves the
+  // .html on request). Canonical/OG URLs below are built without .html to match.
+  cleanUrls: true,
+  // Emit sitemap.xml at build so search engines (and LLM crawlers) can find
+  // every page. Served at https://docs.atomicmail.ai/sitemap.xml.
+  sitemap: { hostname: "https://docs.atomicmail.ai" },
+  // Make.com is not ready: keep the draft in the repo, out of the build.
+  srcExclude: ["make.md"],
+
+  // Release pages (changelog/[version].md) take their title and labels from the route params.
+  transformPageData(pageData) {
+    // SKILL.md is the published skill file (its headings are numbered for the
+    // agent); keep only its sections in the outline.
+    if (pageData.relativePath === "SKILL.md") pageData.frontmatter.outline = 2;
+    const v = pageData.params?.version as string | undefined;
+    if (v && pageData.relativePath.startsWith("changelog/")) {
+      pageData.title = v;
+      pageData.description = `Atomic Mail agent packages ${v}: what changed.`;
+      pageData.frontmatter.outline = 2;
+      pageData.frontmatter.prev = false;
+      pageData.frontmatter.next = false;
+    }
+
+    // Per-page canonical + Open Graph / Twitter cards. Canonical matters with the
+    // .io/.ai entity collision; the OG image is reused from the marketing site.
+    const SITE = "https://docs.atomicmail.ai";
+    const OG_IMAGE = `${SITE}/og.png`;
+    const path =
+      v && pageData.relativePath.startsWith("changelog/")
+        ? `changelog/${v}`
+        : pageData.relativePath.replace(/(^|\/)index\.md$/, "$1").replace(/\.md$/, "");
+    const url = `${SITE}/${path}`;
+    const ogTitle = `${pageData.frontmatter.title ?? pageData.title ?? "Atomic Mail Docs"} | Atomic Mail Docs`;
+    const ogDesc =
+      pageData.frontmatter.description ??
+      pageData.description ??
+      "Email API built for AI agents: quickstart, AgentSkill, MCP, REST + JMAP and integrations.";
+    (pageData.frontmatter.head ??= []).push(
+      ["link", { rel: "canonical", href: url }],
+      ["meta", { property: "og:type", content: "website" }],
+      ["meta", { property: "og:site_name", content: "Atomic Mail Docs" }],
+      ["meta", { property: "og:title", content: ogTitle }],
+      ["meta", { property: "og:description", content: ogDesc }],
+      ["meta", { property: "og:url", content: url }],
+      ["meta", { property: "og:image", content: OG_IMAGE }],
+      ["meta", { property: "og:image:width", content: "1800" }],
+      ["meta", { property: "og:image:height", content: "945" }],
+      ["meta", { name: "twitter:card", content: "summary_large_image" }],
+      ["meta", { name: "twitter:title", content: ogTitle }],
+      ["meta", { name: "twitter:description", content: ogDesc }],
+      ["meta", { name: "twitter:image", content: OG_IMAGE }],
+    );
+  },
+
+  // The llms plugin folds the homepage into llms.txt and does not emit an
+  // /index.md, so agents that GET docs.atomicmail.ai/index.md would 404 (every
+  // other page already serves its .md). Serve the clean docs index there too.
+  buildEnd(siteConfig) {
+    const idx = join(siteConfig.outDir, "llms.txt");
+    if (existsSync(idx)) copyFileSync(idx, join(siteConfig.outDir, "index.md"));
+  },
+
   vite: {
-    plugins: [llmstxt()],
+    plugins: [llmstxt({ ignoreFiles: ["make.md", "changelog/*.md"], domain: "https://docs.atomicmail.ai" })],
   },
   markdown: {
+    codeTransformers: [nowrapWords],
     config(md) {
       md.use(copyOrDownloadAsMarkdownButtons);
     },
   },
   themeConfig: {
     // https://vitepress.dev/reference/default-theme-config
+    logo: { light: "/logo-light.svg", dark: "/logo-dark.svg", alt: "Atomic Mail" },
+    siteTitle: false,
+
+    search: { provider: "local" },
+
+    notFound: {
+      code: "404",
+      title: "Page not found",
+      quote: "The page moved or never existed. The quickstart is the fastest way back in.",
+      linkText: "Go to the quickstart",
+      linkLabel: "Go to the quickstart",
+    },
+
+    // Site link and socials live in the page footer (DocFooter.vue).
     nav: [
-      { text: "Home", link: "/" },
-      { text: "Getting Started", link: "/getting-started" },
+      { text: "Dashboard", link: "https://dashboard.atomicmail.ai" },
     ],
 
+    // Order mirrors the Quickstart switcher: AgentSkill, MCP, REST.
+    // Pages not listed here (oauth, rest-auth, make) stay reachable by link.
+    // Agno-style: bold section labels, plain pages under them, chevrons only on
+    // the three client groups. Pages not listed here (oauth, rest-auth, make)
+    // stay reachable by link.
     sidebar: [
       {
-        text: "Getting Started",
+        text: "Get started",
         items: [
-          { text: "Overview and ideal flow", link: "/getting-started" },
+          { text: "Overview", link: "/overview" },
+          { text: "Quickstart", link: "/" },
+          { text: "Agent flow", link: "/getting-started" },
+          {
+            text: "Authentication",
+            collapsed: true,
+            items: [
+              { text: "Overview", link: "/authentication" },
+              { text: "REST authentication flow", link: "/rest-auth" },
+              { text: "OAuth 2.0", link: "/oauth" },
+            ],
+          },
           { text: "Using your own domain", link: "/custom-domains" },
+          { text: "Use cases", link: "/use-cases" },
         ],
       },
       {
-        text: "Authentication",
+        text: "Connect",
         items: [
-          { text: "OAuth 2.0 (apps and humans)", link: "/oauth" },
-          { text: "REST + PoW (autonomous agents)", link: "/rest-auth" },
-        ],
-      },
-      {
-        text: "MCP",
-        items: [
-          { text: "Remote MCP server (hosted)", link: "/mcp-remote" },
-          { text: "@atomicmail/mcp-gh-pages (local)", link: "/mcp" },
+          {
+            text: "AgentSkill",
+            collapsed: true,
+            items: [
+              { text: "Install", link: "/skill-install" },
+              { text: "Skill reference", link: "/SKILL" },
+            ],
+          },
+          {
+            text: "MCP",
+            collapsed: true,
+            items: [
+              { text: "Hosted server", link: "/mcp-remote" },
+              { text: "Local server", link: "/mcp" },
+            ],
+          },
+          {
+            text: "REST + JMAP",
+            collapsed: true,
+            items: [
+              { text: "Raw JMAP requests", link: "/jmap" },
+              { text: "JMAP using & inline ops", link: "/jmap-using" },
+              { text: "Code examples", link: "/examples" },
+            ],
+          },
         ],
       },
       {
         text: "Integrations",
         items: [
-          { text: "Make.com", link: "/make" },
+          { text: "Zapier", link: "/zapier" },
           { text: "n8n", link: "/n8n" },
+          { text: "Dify", link: "/dify" },
           { text: "LangChain", link: "/langchain" },
           { text: "Pydantic AI", link: "/pydantic-ai" },
-          { text: "Dify", link: "/dify" },
-          { text: "@atomicmail/agentic-core", link: "/core" },
+          { text: "Agentic core (npm)", link: "/core" },
         ],
       },
       {
-        text: "AgentSkill",
+        text: "Resources",
         items: [
-          { text: "@atomicmail/agent-skill-gh-pages", link: "/skill-install" },
-          { text: "Skill reference", link: "/SKILL" },
-        ],
-      },
-      {
-        text: "REST API + JMAP",
-        items: [
-          { text: "Raw JMAP requests", link: "/jmap" },
-          { text: "JMAP `using` and inline ops", link: "/jmap-using" },
-          { text: "Code examples", link: "/examples" },
+          { text: "Changelog", link: "/changelog" },
+          { text: "Support", link: "/support" },
         ],
       },
     ],
 
-    socialLinks: [
-      { icon: "x", link: "https://x.com/atomic_mail" },
-      {
-        icon: "github",
-        link: "https://github.com/Atomic-Mail/atomic-mail-agentic",
-      },
-    ],
+    outline: { level: [2, 3], label: "On this page" },
+    docFooter: { prev: "Previous", next: "Next" },
+
   },
 });

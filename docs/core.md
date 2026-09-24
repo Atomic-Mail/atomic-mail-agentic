@@ -1,6 +1,6 @@
-# @atomicmail/agentic-core
+# Agentic core
 
-Shared Atomic Mail runtime for integrations — PoW auth, JMAP batch execution, presets, and help topics.
+`@atomicmail/agentic-core` is the shared Atomic Mail runtime for integrations — PoW auth, JMAP batch execution, presets, and help topics.
 
 Use this package when building connectors (Activepieces, custom hosts) instead of shelling out to MCP or AgentSkill.
 
@@ -55,3 +55,12 @@ Bundled assets: `shared/` presets and help topics, `presets/` JMAP JSON files.
 - Do not use sync webhooks for register or other PoW-heavy steps.
 
 See the Atomic Mail Agentic repo for full integration guidelines.
+
+## Related
+
+<LinkRows :items="[
+  { title: 'LangChain', desc: 'JS and Python tools on this runtime', link: '/langchain' },
+  { title: 'REST authentication flow', desc: 'The PoW and token chain it implements', link: '/rest-auth' },
+  { title: 'Raw JMAP requests', desc: 'Batches the runtime executes', link: '/jmap' },
+  { title: 'Install AgentSkill', desc: 'The CLI packaging of the same runtime', link: '/skill-install' },
+]" />

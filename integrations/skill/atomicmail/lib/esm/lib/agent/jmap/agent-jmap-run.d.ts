@@ -36,6 +36,12 @@ export interface RunJmapRequestInput {
     sourceLabel: string;
     dryRun?: boolean;
     vars?: Record<string, string>;
+    /**
+     * `ATOMIC_MAIL_INBOX_DOMAIN` fallback for `$INBOX` when the inbox is stored as
+     * a bare local-part and the JMAP account id is not a real address. Integration
+     * hosts (no `process.env`) must pass this explicitly to override the default.
+     */
+    inboxDomain?: string;
 }
 export declare function runJmapRequest(input: RunJmapRequestInput): Promise<{
     ok: boolean;

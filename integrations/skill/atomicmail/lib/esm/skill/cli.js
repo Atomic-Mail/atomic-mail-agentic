@@ -4,6 +4,7 @@ import "../_dnt.polyfills.js";
 import process from "node:process";
 import { parseArgs } from "node:util";
 import { AgentSession, DEFAULT_API_URL, DEFAULT_AUTH_URL, DEFAULT_JMAP_USING, DEFAULT_POW_SCRYPT_SALT_HEX, defaultFilesFromOutDir, expandCredentialDirInput, getHelp, parseUserVarsJson, parseUtm, persistLoginWithApiKey, readCredentials, readOpsFile, runJmapRequest, sharedError, } from "../lib/mod.js";
+import { resolveRegisterWatch, scheduleSetup } from "./register-watch.js";
 const USAGE = `Atomic Mail — AgentSkill
 
 Usage:
@@ -29,6 +30,38 @@ over guessing JMAP or preset details.
 
 Run  atomicmail <command> --help  for command-specific flags.
 `;
+// The accepted `--watch` values are deliberately NOT listed here: an agent that
+// reads them off --help can fill the flag in without ever hitting the validation
+// error, where the "operator's decision" wording lives. Run register without the
+// flag to see the values.
+export const REGISTER_HELP = `Usage: atomicmail register [OPTIONS]
+
+Register a new inbox (--username) or log in with an existing API key (--api-key).
+
+Options:
+  --auth-url URL       Auth-service base URL [env: ATOMIC_MAIL_AUTH_URL, default: https://auth.atomicmail.ai]
+  --api-url URL        API / JMAP base URL [env: ATOMIC_MAIL_API_URL, default: https://api.atomicmail.ai]
+  --scrypt-salt SALT   PoW salt override [env: ATOMIC_MAIL_SCRYPT_SALT]
+  --username NAME      New account (5–21 characters; mutually exclusive with --api-key).
+                       Permanent public address — it appears on every message this
+                       inbox sends and cannot be changed afterwards. If your operator
+                       has not named it, ask them rather than inventing one.
+  --api-key KEY        Existing API key (mutually exclusive with --username)
+  --credentials-dir DIR  Credential directory (default: ~/.atomicmail)
+  --utm STRING         Install-attribution, URL-query style (only with --username) [env: ATOMICMAIL_UTM]
+                       e.g. "utm_source=blog&utm_medium=cpc&utm_campaign=launch"
+  --watch VALUE        Required. Decides whether a recurring job is created that wakes
+                       an agent to read this inbox — a standing commitment on your
+                       operator's machine, so it is their call, not yours. Ask them.
+                       Run register with no --watch for what each value does.
+  --quiet              Less stderr output
+  --help, -h           This message
+
+The --watch value comes from your operator (run register without it to see the
+choices). When it enables a recurring check, register prints the setup step for
+your host's own scheduler — you run it (see atomicmail help --topic cron).
+Otherwise it prints nothing extra.
+`;
 function exitUsage(code = 0) {
     process.stdout.write(USAGE);
     process.exit(code);
@@ -50,7 +83,12 @@ async function cmdRegister(argv) {
                 "api-key": { type: "string" },
                 "credentials-dir": { type: "string" },
                 utm: { type: "string" },
+                // --forced still parses, but is deliberately absent from REGISTER_HELP
+                // (same reason as the watch values): overwriting an inbox is irreversible,
+                // and an agent that finds a ready-made flag in --help reaches for it. Its
+                // danger is spelled out only in the refusal error.
                 forced: { type: "boolean" },
+                watch: { type: "string" },
                 quiet: { type: "boolean" },
                 help: { type: "boolean", short: "h" },
             },
@@ -62,30 +100,17 @@ async function cmdRegister(argv) {
         fail(err.message, 2);
     }
     if (parsed.values.help) {
-        process.stdout.write(`Usage: atomicmail register [OPTIONS]
-
-Register a new inbox (--username) or log in with an existing API key (--api-key).
-
-Options:
-  --auth-url URL       Auth-service base URL [env: ATOMIC_MAIL_AUTH_URL, default: https://auth.atomicmail.ai]
-  --api-url URL        API / JMAP base URL [env: ATOMIC_MAIL_API_URL, default: https://api.atomicmail.ai]
-  --scrypt-salt SALT   PoW salt override [env: ATOMIC_MAIL_SCRYPT_SALT]
-  --username NAME      New account (5–21 characters; mutually exclusive with --api-key)
-  --api-key KEY        Existing API key (mutually exclusive with --username)
-  --credentials-dir DIR  Credential directory (default: ~/.atomicmail)
-  --utm STRING         Install-attribution, URL-query style (only with --username) [env: ATOMICMAIL_UTM]
-                       e.g. "utm_source=blog&utm_medium=cpc&utm_campaign=launch"
-  --forced             Allow replacing existing credentials with a new account
-  --quiet              Less stderr output
-  --help, -h           This message
-
-After register, arrange hourly inbox polling per your runtime (atomicmail help
---topic cron): native cron hosts schedule an AGENT turn with list_inbox.json;
-no-native-cron hosts ask the operator or remind manual fetch — do not work
-around with OS crontab or cross-platform scheduling. Do NOT cron atomicmail
-jmap_request alone.
-`);
+        process.stdout.write(REGISTER_HELP);
         process.exit(0);
+    }
+    // `watch` is a wrapper-only precondition: the register command cannot proceed
+    // without an operator-supplied value. It never reaches session.register().
+    let watch;
+    try {
+        watch = resolveRegisterWatch(parsed.values.watch);
+    }
+    catch (err) {
+        fail(err.message, 2);
     }
     const env = process.env;
     const authUrl = parsed.values["auth-url"] ??
@@ -124,6 +149,12 @@ jmap_request alone.
         });
         log(`Wrote credentials under ${credentialDir}`);
         process.stdout.write(JSON.stringify(result, null, 2) + "\n");
+        if (watch === "scheduled") {
+            process.stdout.write(`\n${scheduleSetup({
+                credentialsDir: credentialDir,
+                inboxId: result.inbox,
+            })}\n`);
+        }
         return;
     }
     log("Logging in with API key...");
@@ -136,6 +167,9 @@ jmap_request alone.
     });
     log(`Wrote ${files.credentialsFile}`);
     process.stdout.write(JSON.stringify({ inboxId }, null, 2) + "\n");
+    if (watch === "scheduled") {
+        process.stdout.write(`\n${scheduleSetup({ credentialsDir: credentialDir, inboxId })}\n`);
+    }
 }
 async function cmdJmapRequest(argv) {
     let parsed;
@@ -324,6 +358,10 @@ async function main() {
             process.exit(2);
     }
 }
-main().catch((err) => {
-    fail(err instanceof Error ? err.message : String(err));
-});
+// Guarded so importing this module (e.g. for REGISTER_HELP in tests) does not
+// run the CLI against the importer's argv.
+if (globalThis[Symbol.for("import-meta-ponyfill-esmodule")](import.meta).main) {
+    main().catch((err) => {
+        fail(err instanceof Error ? err.message : String(err));
+    });
+}

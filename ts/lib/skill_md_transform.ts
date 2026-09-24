@@ -3,6 +3,14 @@ export const DEFAULT_SKILL_TEMPLATE_PATH = "../shared/skill/SKILL.template.md";
 
 export const NPX_SKILL_INVOCATION =
   "npx --package=@atomicmail/agent-skill-gh-pages atomicmail";
+// Package-agnostic matcher for the legacy npx launcher line in a source
+// SKILL.md. The published package name has changed before (agent-skill,
+// agent-skill-github, agent-skill-gh-pages) and docs/SKILL.md is edited
+// independently of this transform, so match any @atomicmail/* package rather
+// than a single hardcoded literal — otherwise a docs-only package rename
+// silently drops the {baseDir}/scripts/atomicmail rewrite from the build.
+export const NPX_SKILL_INVOCATION_PATTERN =
+  /npx --package=@atomicmail\/\S+ atomicmail/g;
 export const BUNDLED_CLI_INVOCATION = "{baseDir}/scripts/atomicmail";
 export const HERMES_CLI_INVOCATION = "${HERMES_SKILL_DIR}/scripts/atomicmail";
 export const HERMES_CREDENTIALS_DIR = "~/.hermes/atomicmail";
@@ -288,8 +296,8 @@ export function transformSkillMdForBundled(
   manifest?: SkillManifest,
 ): string {
   const m = manifest ?? loadSkillManifest();
-  const withPlaceholders = content.replaceAll(
-    NPX_SKILL_INVOCATION,
+  const withPlaceholders = content.replace(
+    NPX_SKILL_INVOCATION_PATTERN,
     PLACEHOLDER_CLI,
   ).replaceAll(m.credentialsDir.default, PLACEHOLDER_CREDENTIALS_DIR);
 
@@ -320,7 +328,7 @@ function templateFromLegacyContent(
   manifest: SkillManifest,
 ): string {
   return extractBodyTemplate(
-    content.replaceAll(NPX_SKILL_INVOCATION, PLACEHOLDER_CLI)
+    content.replace(NPX_SKILL_INVOCATION_PATTERN, PLACEHOLDER_CLI)
       .replaceAll(manifest.credentialsDir.default, PLACEHOLDER_CREDENTIALS_DIR)
       .replaceAll(manifest.credentialsDir.hermes, PLACEHOLDER_CREDENTIALS_DIR),
   );

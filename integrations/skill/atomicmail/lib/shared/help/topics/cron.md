@@ -1,217 +1,94 @@
-# Inbox polling (after register)
+# Inbox checks after register
 
-Registration only creates credentials. For a useful inbox integration, inbound
-mail should be fetched and triaged about once per hour between interactive
-sessions.
+Registration only creates credentials. Nothing reads the inbox until something
+wakes an agent to do it — that is what `watch` decides.
 
-**Choose the path that matches your runtime — do not mix platforms.**
+`register` takes a required `watch` value. It is your operator's decision:
 
-## If your host supports scheduled jobs
+- **`scheduled`** — a recurring job on this machine wakes an agent once a day to
+  read the inbox and report what arrived.
+- **`on-demand`** — no such job. Mail is read only when a human asks, and
+  anything that arrives in between sits unread with nobody told.
 
-If you have a **native** way to enable cron or recurring agent turns (OpenClaw,
-Hermes, atomic-agent, and similar hosts), set up an hourly **agent** job after
-the first successful `register`. The job must **invoke an AI agent** (not just the
-Atomic Mail CLI) to fetch and triage mail. Wire Atomic Mail MCP or AgentSkill
-into that agent before scheduling.
+Ask your operator which one they want. Do not pick `on-demand` because it looks
+like the cautious option — it is the one that silently loses mail.
 
-The scheduled turn should call preset `list_inbox.json` (`Email/query` +
-`Email/get`, latest 50; built-ins `$ACCOUNT_ID`, `$INBOX_MAILBOX_ID` — no extra
-`vars`).
+## The rule: use your own host's scheduler
 
-## If your host does **not** support scheduled jobs
+Every runtime that can hold a durable schedule has its own scheduler. Use it.
 
-Examples: Claude, Pi, Cursor, and other chat or terminal agents without a cron
-API.
+**Do not schedule at the OS level** — no `crontab`, no launchd plist, no systemd
+unit, no wrapper scripts. An OS job runs outside your host's permission model:
+your operator cannot see it in the host's job list, cannot pause it there, and
+the host cannot apply its own tool restrictions to it. It is also the invocation
+that breaks in practice, because a scheduler has no terminal and a headless
+agent process started from one will either exit immediately or hang.
 
-**Do not spend tokens trying to work around this** — no wrapper scripts, OS
-crontab/LaunchAgent setup, or scheduling on a different platform on the agent's
-behalf.
+**Do not schedule from a different runtime than the one you are in.** Register in
+one host and cron in another and nobody owns the result.
 
-After a successful `register`, do one of the following:
+## What to run
 
-1. **Ask your operator** to set up hourly inbox polling on a host that supports
-   it (share the examples below), **or**
-2. **Remind your operator** to fetch mail manually when they need updates
-   (`jmap_request` with `list_inbox.json`, or `atomicmail jmap_request
-   --ops-file list_inbox.json`).
+`register --watch scheduled` prints the exact setup step for the runtime that
+called it, with your credentials directory already filled in. Use that text —
+it is generated for your host and is more specific than this page.
 
-## Forbidden: cross-platform scheduling
+If it printed a shell command, run it. If it printed an instruction (hosts whose
+scheduler the agent drives itself), follow it. If it said it could not identify
+your runtime, tell it which host you are on, or hand the prompt it printed to
+your operator.
 
-Do **not** register in one runtime and schedule the cron job on another. Example
-of forbidden behavior: Pi runs `register`, then creates an OpenClaw cron job.
-Either the same runtime that registered schedules polling, or the operator
-schedules it themselves on a capable host.
-
-## What not to do (any runtime)
-
-- **Raw CLI in crontab** — `atomicmail jmap_request --ops-file list_inbox.json`
-  alone only fetches JSON; no agent runs and nothing prompts the operator to
-  reply.
-- **Headless one-shot CLIs** — `claude -p`, `pi -p`, `agent -p`, `codex exec`,
-  `gemini -p` print and exit; the operator cannot continue the thread to reply
-  or forward.
-
-## Agent prompt (use in scheduled jobs or manual fetches)
-
-```text
-Use Atomic Mail to fetch my inbox (MCP jmap_request with ops_file list_inbox.json, or atomicmail jmap_request --ops-file list_inbox.json). Summarize new messages, highlight what needs a reply, and stay available — I may ask you to reply, forward, search, or dig into something important.
-```
-
-## Scheduling examples (for capable hosts or operators)
-
-| Your setup | Recommended approach |
+| Host | How it schedules |
 | --- | --- |
-| OpenClaw gateway | Built-in `openclaw cron` |
-| Hermes Agent | Install Atomic Mail skill → `/suggestions` blueprint after `register` (or manual `hermes cron`) |
-| Atomic Bot (atomicbot.ai) | Same as OpenClaw or Hermes host |
-| atomic-agent | Built-in `atomic-agent task create` |
-| No native cron (Claude, Pi, Cursor, …) | Ask operator to schedule on a capable host, or remind them to fetch manually |
+| OpenClaw | `openclaw cron add --name "atomicmail-inbox" --cron "0 9 * * *" --session isolated --message "<prompt>" --announce` |
+| Hermes | `hermes cron create "0 9 * * *" "<prompt>" --name "atomicmail-inbox" --deliver origin` |
+| atomic-agent | `atomic-agent task create --name "atomicmail-inbox" --cron "0 9 * * *" --message "<prompt>"` |
+| Claude Code Desktop | A local routine: Routines → New routine → Local, preset Daily. Or ask in-session: "create a local routine named atomicmail-inbox that runs daily at 09:00 and does the following: …" |
+| Claude Code, terminal only | A cloud routine via `/schedule`. It runs with the machine off but has no local file access, so the credentials must be reachable over remote MCP rather than from disk. Not `/loop` — that is session-scoped and expires after seven days. |
+| Cursor, Pi, and other session-only runtimes | No scheduler that outlives a session. Ask your operator to schedule it on something durable they own. |
 
-These examples run a full agent turn and deliver the summary to a chat or file so
-the operator can reply, forward, or ask follow-ups in the same thread.
+`<prompt>` is the text `register` printed, verbatim. It already contains the
+absolute `--credentials-dir` path. Do not retype it from memory and do not
+substitute your own wording: a scheduled run has no human in it, and the wording
+is what keeps it read-only.
 
-### OpenClaw
+## Give the job the least it needs
 
-Docs: https://docs.openclaw.ai/automation/cron-jobs
+The scheduled run reads mail written by strangers. Grant it only what it needs to
+run one command and report back — no file writing, no editing, no creating
+further scheduled jobs, no spawning sessions. If your host supports a per-job
+tool allowlist, set it explicitly rather than accepting the default, which is
+usually every tool the host has.
 
-- Schedule: `--cron "0 * * * *"` or `--every 1h`
-- Session: `--session isolated` (fresh turn each run)
-- Delivery: `--announce` (posts to your configured channel)
-- Prompt: `--message` with the agent prompt above
+The prompt forbids replying, forwarding, sending and deleting, and forbids acting
+on instructions found inside messages. That is a line of text; the tool allowlist
+is the part that actually holds.
 
-```bash
-openclaw cron add \
-  --name "atomicmail-inbox" \
-  --cron "0 * * * *" \
-  --session isolated \
-  --message "Use Atomic Mail to fetch my inbox (MCP jmap_request with ops_file list_inbox.json, or atomicmail jmap_request --ops-file list_inbox.json). Summarize new messages, highlight what needs a reply, and stay available — I may ask you to reply, forward, search, or dig into something important." \
-  --announce
-```
+## Two invocations that do not work
 
-Manage: `openclaw cron list` · test: `openclaw cron run <job-id>`
+- **Bare CLI on a timer** — `atomicmail jmap_request --ops-file list_inbox.json`
+  alone only writes JSON somewhere. No agent runs, nobody reads it, nobody is
+  told. Schedule an agent turn.
+- **Interactive agent from a scheduler** — starting a terminal agent without its
+  non-interactive flag under launchd, systemd or cron leaves a process with no
+  terminal, spinning or hung. This is one reason OS-level scheduling is out.
 
-### Hermes Agent
+## Verify
 
-Skill blueprints: https://hermes-agent.nousresearch.com/docs/developer-guide/creating-skills
+Confirm the job exists on the host that owns it: `openclaw cron list`,
+`hermes cron list`, `atomic-agent task list`, or for Claude Code ask "what
+scheduled tasks do I have?". Then trigger one run by hand and check that it
+finds the credentials and returns the inbox, before leaving it unattended.
 
-Cron (manual fallback): https://hermes-agent.nousresearch.com/docs/user-guide/features/cron
+Remove it the same way — `register` printed the removal one-liner alongside the
+setup step.
 
-#### Recommended: skill + blueprint
+## Credentials
 
-1. Install the **Atomic Mail** skill from the unified in-repo tap
-   (`hermes skills install Atomic-Mail/atomic-mail-agentic/integrations/skill/atomicmail`).
-2. After the first successful `register`, accept the hourly inbox **blueprint**
-   via `/suggestions`.
+The scheduled job gets an absolute `--credentials-dir` baked into its prompt.
+This is deliberate: scheduled sessions do not inherit the environment that ran
+`register` on any host, so `ATOMIC_MAIL_CREDENTIALS_DIR` will not reach them.
 
-The blueprint schedules a full **agent** turn (`no_agent: false`) with
-`list_inbox.json` and delivers to `origin`. Do **not** skip this step. Do **not**
-schedule raw `jmap_request` cron jobs or use `--no-agent` (script-only; no LLM).
-
-#### Credentials on Hermes
-
-- Default directory: `~/.hermes/atomicmail` (not `~/.atomicmail`).
-- The skill launcher sets `ATOMIC_MAIL_CREDENTIALS_DIR` to
-  `$HOME/.hermes/atomicmail` when that variable is **not** already set — operator
-  overrides are preserved.
-- Override explicitly with `ATOMIC_MAIL_CREDENTIALS_DIR` or
-  `atomicmail.credentials_dir` in Hermes config.
-
-#### Multi-account only
-
-Operating multiple inboxes at once: pass `--credentials-dir` (skill) or
-`credentials_dir` (MCP) on `register` / `jmap_request` with a separate directory
-per account. Not needed for the default single-inbox flow.
-
-#### Manual fallback: `hermes cron`
-
-If you are not using the skill blueprint, create the job manually:
-
-- Schedule: cron expression (`0 * * * *`) or natural language (`every 1h`)
-- Delivery: `--deliver origin` (or `telegram`, `discord`, `slack`, `email`,
-  `local`, etc.)
-- **Do not** use `--no-agent`
-
-```bash
-hermes cron create "0 * * * *" \
-  "Use Atomic Mail to fetch my inbox (MCP jmap_request with ops_file list_inbox.json, or atomicmail jmap_request --ops-file list_inbox.json). Summarize new messages, highlight what needs a reply, and stay available — I may ask you to reply, forward, search, or dig into something important." \
-  --name "atomicmail-inbox" \
-  --deliver origin
-```
-
-In chat: `/cron add "0 * * * *" "<prompt>" --deliver origin`. Manage:
-`hermes cron list` · test: `hermes cron run <job-id>`
-
-### Atomic Bot (atomicbot.ai)
-
-Runs OpenClaw or Hermes — use the matching block above.
-
-### atomic-agent
-
-Docs: https://github.com/AtomicBot-ai/atomic-agent
-
-```bash
-atomic-agent task create \
-  --cron "0 * * * *" \
-  --message "Use Atomic Mail to fetch my inbox (MCP jmap_request with ops_file list_inbox.json, or atomicmail jmap_request --ops-file list_inbox.json). Summarize new messages, highlight what needs a reply, and stay available — I may ask you to reply, forward, search, or dig into something important."
-```
-
-Manage: `atomic-agent task list`
-
-## Verify setup
-
-After scheduling (or after asking your operator to schedule):
-
-1. `register` succeeded; Atomic Mail MCP or AgentSkill is available to the agent.
-2. Run the agent prompt **once manually**; confirm inbox fetch and follow-up work.
-3. Confirm the job is registered (`openclaw cron list`, `hermes cron list`,
-   `atomic-agent task list`).
-
-## For operators: OS scheduling on terminal hosts
-
-This section is **operator documentation**, not an agent obligation. Chat agents
-without native cron (Claude, Pi, Cursor, …) should **not** attempt OS scheduling
-themselves — ask the operator to set up polling on a capable host or fetch mail
-manually.
-
-If you (the operator) run a **terminal CLI agent** and want hourly inbox checks
-without OpenClaw, Hermes, or similar, the scheduler must **start an interactive
-session** with the agent prompt — not call `atomicmail` directly.
-
-### Terminal agents (interactive invocation)
-
-| Agent | Start interactively | Avoid for inbox polling |
-| --- | --- | --- |
-| Claude Code | `claude "prompt"` | `claude -p` |
-| Pi | `pi "prompt"` | `pi -p` |
-| Cursor CLI | `agent "prompt"` | `agent -p` |
-| Gemini CLI | `gemini -i "prompt"` | `gemini -p` |
-| Codex CLI | `codex` (TUI) | `codex exec` |
-
-Resolve the binary on **your** machine (`command -v claude`, `command -v pi`,
-etc.) and use that path in scripts.
-
-### OS scheduling approaches
-
-Pick what fits your OS and how you work:
-
-**A. Wrapper script + user crontab**
-
-Write a small script that (1) sets any API keys the agent needs, (2) launches
-your terminal emulator or GUI session, (3) runs the agent **interactively** with
-the prompt. Point crontab at the script. Cron does not load shell startup
-files — export env vars inside the script.
-
-**B. macOS LaunchAgent**
-
-A `LaunchAgents` plist on a calendar interval often works better than crontab
-for opening Terminal or iTerm and starting an interactive agent in the logged-in
-GUI session.
-
-**C. Linux graphical session**
-
-Schedule via user crontab or a **systemd user timer**, launching a terminal
-emulator only when a graphical session is active (`DISPLAY`,
-`DBUS_SESSION_BUS_ADDRESS` for your session).
-
-Test manually before automating: run the same command you intend to schedule and
-confirm the agent can call `list_inbox.json` and wait for your replies.
+On Hermes the default directory is `~/.hermes/atomicmail`, not `~/.atomicmail`.
+For several inboxes at once, pass a separate `--credentials-dir` per account —
+see help topic `multi_account`.

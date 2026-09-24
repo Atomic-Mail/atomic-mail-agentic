@@ -1,38 +1,38 @@
 ---
-description: Install and configure the @atomicmail/mcp-gh-pages stdio server, tools (register, jmap_request, help), and host-specific notes for chat-based agents.
+description: Install and configure the @atomicmail/mcp stdio server, tools (register, jmap_request, help), and host-specific notes for chat-based agents.
 ---
 
-# @atomicmail/mcp-gh-pages
+# Local MCP server
 
-Atomic Mail MCP server — a **local stdio** Model Context Protocol server that
-gives an AI agent a programmable email inbox over JMAP, with automatic
-Proof-of-Work auth and capability-token rotation.
+A local stdio Model Context Protocol server that gives an agent an email inbox
+over JMAP. Proof-of-work sign-up and token rotation happen inside the server,
+so the agent only ever calls three tools.
 
-::: tip There are two MCP servers
-This page is the **local** one: it runs on your machine via `npx`, registers its
-own inbox with proof of work, and keeps credentials on disk.
-
-There is also a **hosted [remote MCP server](/mcp-remote)** at
-`https://mcp.atomicmail.ai/mcp` — no local code, no credential files, OAuth
-sign-in with Google or GitHub, and inboxes owned by a human account. Use that one
-when your host cannot run `npx`, or when a person should own the mailbox.
+::: tip Two MCP servers
+This page is the local server: it runs through `npx`, registers its own inbox
+with proof of work and keeps credentials on disk. The
+[hosted server](/mcp-remote) at `https://mcp.atomicmail.ai/mcp` needs no local
+code and signs in with OAuth. Pick it when your host cannot run `npx`, or when a
+person should own the mailbox.
 :::
 
-## For AI agents — call `help` early and often
+## For AI agents
 
-**Use the `help` tool as your primary documentation source.** MCP hosts choose
-tools from short descriptions; when placeholders, JMAP `using` URNs, attachment
-uploads, or cron setup are unclear, **call `help` instead of guessing** from
-general JMAP knowledge or a stale README copy. The topics ship inside the
-installed package and always match the version your host is running.
+Use the `help` tool as your documentation. Hosts pick tools from short
+descriptions; when placeholders, JMAP `using` URNs, attachments or cron setup
+are unclear, call `help` instead of guessing from general JMAP knowledge or a
+stale README. The topics ship inside the package and match the version your
+host runs.
 
-**Suggested calls:** `help` with no topic (overview) at the start of a mail
-task; `help` with topic `presets` before your first non-trivial `jmap_request`;
-`help` with topic `cron` immediately after a successful `register`; `help`
-with topic `jmap_cheatsheet` when sending mail or using blobs; `help` with
-topic `troubleshooting` when errors mention missing placeholders, auth, or
-preset shadowing. If anything disagrees with docs you read elsewhere, **trust
-`help` from this package**.
+When to call it:
+
+- with no topic, at the start of a mail task
+- topic `presets`, before your first non-trivial `jmap_request`
+- topic `cron`, right after a successful `register`
+- topic `jmap_cheatsheet`, when sending mail or using blobs
+- topic `troubleshooting`, when an error mentions placeholders, auth or preset shadowing
+
+When anything else disagrees with help, trust help.
 
 ## Install
 
@@ -43,26 +43,13 @@ preset shadowing. If anything disagrees with docs you read elsewhere, **trust
   "mcpServers": {
     "atomicmail": {
       "command": "npx",
-      "args": ["-y", "@atomicmail/mcp-gh-pages"]
+      "args": ["-y", "@atomicmail/mcp"]
     }
   }
 }
 ```
 
-Your MCP host spawns this process; see configuration below.
-
-For ClawHub, use the MCP-only channel package:
-
-```json
-{
-  "mcpServers": {
-    "atomicmail": {
-      "command": "npx",
-      "args": ["-y", "@atomicmail/mcp-clawhub"]
-    }
-  }
-}
-```
+Your host starts this process on demand.
 
 ## Tools exposed
 
@@ -74,28 +61,43 @@ For ClawHub, use the MCP-only channel package:
 
 ## Typical MCP workflow
 
-1. Call `register` with a `username` **and** a `watch` value (or rely on an
-   existing `credentials.json`):
+<div class="steps">
 
-   ```json
-   { "username": "myagent", "watch": "scheduled" }
-   ```
+### Register
 
-   Omit `watch` and the call comes back with the requirement rather than an
-   inbox. If credentials already exist for a different username, pass a
-   **separate** `credentials_dir` to add another account — the refusal error
-   spells out the safe path.
-2. **After register:** if `watch` was `scheduled`, set up the daily inbox check
-   now. `register` prints the exact step for the runtime that called it; run
-   that. Hosts with their own scheduler (OpenClaw, Hermes, atomic-agent, Claude
-   Code) schedule a once-daily **agent** job whose prompt fetches mail via
-   `{ "ops_file": "list_inbox.json" }`. Hosts with no durable scheduler should
-   ask the operator to schedule it on a capable host — do **not** work around
-   with OS schedulers or cross-platform scheduling, and do **not** cron
-   `atomicmail jmap_request` alone. Call `help` with topic `cron` for examples.
-3. `jmap_request` with `ops` or `ops_file` (optional `vars` for `$TO`,
-   `$SUBJECT`, etc.).
-4. `help` when stuck.
+Call `register` with a `username` **and** a `watch` value (or rely on an
+existing `credentials.json`):
+
+```json
+{ "username": "myagent", "watch": "scheduled" }
+```
+
+Omit `watch` and the call comes back with the requirement rather than an
+inbox. If credentials already exist for a different username, pass a
+**separate** `credentials_dir` to add another account — the refusal error
+spells out the safe path.
+
+### Set up the inbox check
+
+If `watch` was `scheduled`, set up the daily inbox check now. `register`
+prints the exact step for the runtime that called it; run that. Hosts with
+their own scheduler (OpenClaw, Hermes, atomic-agent, Claude Code) schedule a
+once-daily **agent** job whose prompt fetches mail via
+`{ "ops_file": "list_inbox.json" }`. Hosts with no durable scheduler should
+ask the operator to schedule it on a capable host — do **not** work around
+with OS schedulers or cross-platform scheduling, and do **not** cron
+`atomicmail jmap_request` alone. Call `help` with topic `cron` for examples.
+
+### Send and read
+
+`jmap_request` with `ops` or `ops_file` (optional `vars` for `$TO`,
+`$SUBJECT`, etc.).
+
+### Ask for help
+
+`help` when stuck.
+
+</div>
 
 ### The required `watch` value
 
@@ -152,10 +154,10 @@ merges the tool’s default capability list — today
 **`EmailSubmission/set`**, **`Blob/upload`**, or **`Blob/get`**, either pass a
 full envelope that includes the right URNs in `using`, or rely on your MCP host
 passing an extended `using` array on the tool call (when supported). See
-[`JMAP using and inline ops`](/jmap-using) for the full picture.
+[JMAP using and inline ops](/jmap-using) for the full picture.
 
 Successful responses may include a top-level **`_next`** field (suggested
-follow-ups); that is not part of RFC 8620 — see [`Raw JMAP requests`](/jmap)
+follow-ups); that is not part of RFC 8620 — see [Raw JMAP requests](/jmap)
 (“Successful responses and `_next`”).
 
 ## Presets and placeholders
@@ -165,16 +167,20 @@ Pass **`vars`** on the **`jmap_request`** tool next to **`ops`** or
 
 Examples:
 
-`{ "ops_file": "list_inbox.json" }`
+```json
+{ "ops_file": "list_inbox.json" }
+```
 
-`{ "ops_file": "send_mail.json", "vars": { "TO": "a@b.com", "SUBJECT": "Hi", "BODY": "..." } }`
+```json
+{ "ops_file": "send_mail.json", "vars": { "TO": "a@b.com", "SUBJECT": "Hi", "BODY": "..." } }
+```
 
 **Resolution:** relative `ops_file` paths resolve to the credential directory
 first, then bundled presets in the package.
 
 **Preset shadowing:** a file such as `list_inbox.json` in the credential
 directory replaces the bundled preset with the same name. After upgrading
-`@atomicmail/mcp-gh-pages`, errors about missing placeholders often mean an **older**
+`@atomicmail/mcp`, errors about missing placeholders often mean an **older**
 preset copy on disk — delete or update it, or pass an absolute `ops_file` path.
 
 **Full** placeholder grammar, built-ins (`$INBOX` vs `$INBOX_MAILBOX_ID`,
@@ -188,10 +194,10 @@ URL templates), `session.jwt` (session bearer, rotated), `capability.jwt` (JMAP
 bearer, short TTL). MCP and the AgentSkill CLI create and rotate these
 automatically.
 
-For raw HTTP auth steps, see [`REST authentication flow`](/rest-auth). For the
+For raw HTTP auth steps, see [REST authentication flow](/rest-auth). For the
 account-based alternative — a human authorizing an app over OAuth, with no PoW
-and no credential files — see [`OAuth 2.0`](/oauth) and the
-[`remote MCP server`](/mcp-remote).
+and no credential files — see [OAuth 2.0](/oauth) and the
+[hosted MCP server](/mcp-remote).
 
 ## Attachments and blobs
 
@@ -205,7 +211,7 @@ and no credential files — see [`OAuth 2.0`](/oauth) and the
 
 When the session advertises blob limits, **`jmap_request`** may **reject before
 POST** computable oversize `Blob/upload` payloads and attachment file sizes (see
-[RFC 9404 §3.1](https://www.rfc-editor.org/rfc/rfc9404#section-3.1)). If
+[RFC 9404 §3.1](https://www.rfc-editor.org/rfc/rfc9404.html#section-3.1)). If
 `maxSizeBlobSet` is `null`, no client octet cap is applied (the server may still
 reject the request).
 
@@ -227,45 +233,17 @@ AgentSkill `--credentials-dir`). When omitted, the default directory applies
   this, by design. Registering a different username over existing credentials
   is refused, and the refusal error is the only place the escape hatch is
   documented — because replacing credentials permanently destroys access to the
-  current inbox. It is operator-authorised only; if you are reading this as an
+  current inbox. It is operator-authorized only; if you are reading this as an
   agent, use a separate `credentials_dir` instead.
 - **Concurrency:** do not run parallel tool calls against the same
   `credentials_dir` (JWT files have no locking).
 
 Full details: MCP `help` topic **`multi_account`**.
 
-## Defaults
+## Environment
 
-- auth endpoint: `https://auth.atomicmail.ai`
-- api endpoint: `https://api.atomicmail.ai`
-- credentials directory: `~/.atomicmail`
-
-## Overriding defaults
-
-```json
-{
-  "mcpServers": {
-    "atomicmail": {
-      "command": "npx",
-      "args": ["-y", "@atomicmail/mcp-gh-pages"],
-      "env": {
-        "ATOMIC_MAIL_AUTH_URL": "https://custom-auth.example",
-        "ATOMIC_MAIL_API_URL": "https://custom-api.example",
-        "ATOMIC_MAIL_CREDENTIALS_DIR": "/Users/me/.atomicmail",
-        "ATOMIC_MAIL_INBOX_DOMAIN": "mail.example.com",
-        "ATOMIC_MAIL_SCRYPT_SALT": "hex-salt-override",
-        "ATOMIC_MAIL_API_KEY": "existing-api-key"
-      }
-    }
-  }
-}
-```
-
-## Install attribution (UTM)
-
-The MCP server is stdio-only, so there is no CLI flag — set `ATOMICMAIL_UTM` in
-the `env` block to tag where the install came from. A landing page templates
-this into the copy-paste `mcpServers` config:
+Everything has a default; set these in the host's `env` block only when you
+need to.
 
 ```json
 {
@@ -274,15 +252,25 @@ this into the copy-paste `mcpServers` config:
       "command": "npx",
       "args": ["-y", "@atomicmail/mcp"],
       "env": {
-        "ATOMICMAIL_UTM": "utm_source=blog&utm_medium=cpc&utm_campaign=launch"
+        "ATOMIC_MAIL_CREDENTIALS_DIR": "/Users/me/.atomicmail",
+        "ATOMIC_MAIL_API_KEY": "existing-api-key",
+        "ATOMIC_MAIL_INBOX_DOMAIN": "mail.example.com"
       }
     }
   }
 }
 ```
 
-The value is a URL-query-style string. Recognized keys are `utm_source`,
-`utm_medium`, `utm_campaign`, `utm_term`, and `utm_content`; anything else is
-ignored and each value is capped at 64 characters. Attribution is attached when
-the `register` tool creates a new account, never on API-key login, and never
-blocks registration.
+`ATOMIC_MAIL_CREDENTIALS_DIR` picks the inbox (default `~/.atomicmail`),
+`ATOMIC_MAIL_API_KEY` logs into an existing inbox instead of registering, and
+`ATOMIC_MAIL_INBOX_DOMAIN` is explained under
+[Using your own domain](/custom-domains).
+
+## Related
+
+<LinkRows :items="[
+  { title: 'Hosted MCP server', desc: 'One URL for hosts that cannot run npx', link: '/mcp-remote' },
+  { title: 'Install AgentSkill', desc: 'The same commands as a shell CLI', link: '/skill-install' },
+  { title: 'Raw JMAP requests', desc: 'The method shapes behind jmap_request', link: '/jmap' },
+  { title: 'Agent flow', desc: 'Where register and the watch fit in', link: '/getting-started' },
+]" />

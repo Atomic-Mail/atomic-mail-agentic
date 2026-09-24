@@ -64,6 +64,12 @@ export interface RunJmapRequestInput {
     attachmentPathBase?: string;
     /** Values for `$VAR` tokens (keys without `$`). Overrides injected attachment vars. */
     vars?: Record<string, string>;
+    /**
+     * `ATOMIC_MAIL_INBOX_DOMAIN` fallback for `$INBOX` when the inbox is stored
+     * as a bare local-part and the JMAP account id is not a real address.
+     * Defaults to `process.env.ATOMIC_MAIL_INBOX_DOMAIN` when omitted.
+     */
+    inboxDomain?: string;
 }
 /**
  * Parse ops JSON, substitute `$VAR_NAME` tokens (session + caller vars), POST to JMAP.

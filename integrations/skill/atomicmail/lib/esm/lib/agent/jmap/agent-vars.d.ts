@@ -22,8 +22,18 @@ export interface SubstituteVarsResult {
 /** Unique variable names in order of first occurrence (without leading `$`). */
 export declare function findVarReferences(raw: string): string[];
 /**
- * Replaces every `$VAR_NAME` in `raw` with the corresponding string.
- * Single pass — values are not scanned for further `$` tokens.
+ * Replaces every `$VAR_NAME` in `raw` with its resolved value, JSON-context
+ * aware: when a token sits inside a JSON string literal the value is escaped
+ * for string context (so newlines, quotes, backslashes, tabs, and other control
+ * characters round-trip and never break `JSON.parse`); bare tokens (outside a
+ * string) are substituted verbatim, preserving numeric/structural placeholders.
+ *
+ * Single pass over the original text — resolved values are not rescanned for
+ * further `$` tokens.
+ */
+export declare function substituteResolvedVars(raw: string, resolved: Map<string, string>): string;
+/**
+ * Resolves every `$VAR_NAME` referenced in `raw` and substitutes it JSON-safely.
  * Throws if any referenced variable has no value (after vars + autoResolvers).
  */
 export declare function substituteVars(input: SubstituteVarsInput): Promise<SubstituteVarsResult>;

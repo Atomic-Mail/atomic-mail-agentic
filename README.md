@@ -3,7 +3,7 @@
   <a href="https://github.com/Atomic-Mail/atomic-mail-agentic/releases"><img src="https://shieldcn.dev/badge/version-0.3-5BE481.svg?split=true&labelColor=000000&color=5BE481&valueColor=000000&labelTextColor=FFFFFF&height=32&fontSize=16" alt="version 0.3"/></a>&nbsp;&nbsp;
   <a href="https://atomicmail.ai"><img src="https://shieldcn.dev/badge/website-atomicmail.ai-5BE481.svg?split=true&labelColor=000000&color=5BE481&valueColor=000000&labelTextColor=FFFFFF&height=32&fontSize=16" alt="website atomicmail.ai"/></a>&nbsp;&nbsp;
   <a href="https://dashboard.atomicmail.ai"><img src="https://shieldcn.dev/badge/dashboard-sign%20in-5BE481.svg?split=true&labelColor=000000&color=5BE481&valueColor=000000&labelTextColor=FFFFFF&height=32&fontSize=16" alt="dashboard sign in"/></a>&nbsp;&nbsp;
-  <a href="https://atomic-mail.github.io/atomic-mail-agentic/"><img src="https://shieldcn.dev/badge/docs-guide-5BE481.svg?split=true&labelColor=000000&color=5BE481&valueColor=000000&labelTextColor=FFFFFF&height=32&fontSize=16" alt="docs guide"/></a>&nbsp;&nbsp;
+  <a href="https://docs.atomicmail.ai/"><img src="https://shieldcn.dev/badge/docs-guide-5BE481.svg?split=true&labelColor=000000&color=5BE481&valueColor=000000&labelTextColor=FFFFFF&height=32&fontSize=16" alt="docs guide"/></a>&nbsp;&nbsp;
   <a href="https://github.com/Atomic-Mail/atomic-mail-agentic/issues"><img src="https://shieldcn.dev/badge/issues-open-5BE481.svg?split=true&labelColor=000000&color=5BE481&valueColor=000000&labelTextColor=FFFFFF&height=32&fontSize=16" alt="issues open"/></a>&nbsp;&nbsp;
   <a href="https://clawhub.ai/atomicmail/atomicmail"><img src="https://shieldcn.dev/badge/ClawHub-skill-5BE481.svg?split=true&labelColor=000000&color=5BE481&valueColor=000000&labelTextColor=FFFFFF&height=32&fontSize=16" alt="ClawHub skill"/></a>&nbsp;&nbsp;
   <a href="https://hermes-agent.nousresearch.com/docs/developer-guide/creating-skills"><img src="https://shieldcn.dev/badge/Hermes-skill-5BE481.svg?split=true&labelColor=000000&color=5BE481&valueColor=000000&labelTextColor=FFFFFF&height=32&fontSize=16" alt="Hermes skill"/></a>&nbsp;&nbsp;
@@ -22,7 +22,7 @@
 <p align="center">
   <a href="https://dashboard.atomicmail.ai">Dashboard</a> ·
   <a href="https://atomicmail.ai">Website</a> ·
-  <a href="https://atomic-mail.github.io/atomic-mail-agentic/">Docs</a> ·
+  <a href="https://docs.atomicmail.ai/">Docs</a> ·
   <a href="https://github.com/Atomic-Mail/atomic-mail-agentic/issues">Issues</a>
 </p>
 

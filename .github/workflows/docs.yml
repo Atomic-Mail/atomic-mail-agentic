@@ -3,6 +3,8 @@ name: Deploy docs
 on:
   push:
     branches: [main]
+  release:
+    types: [published]
   workflow_dispatch:
 
 permissions:
@@ -37,6 +39,10 @@ jobs:
 
       - name: Build docs
         run: npm run docs:build
+        env:
+          # Lets docs/scripts/sync-releases.mjs read the Releases API without hitting
+          # the anonymous rate limit; fail-soft if absent. contents:read already covers it.
+          GITHUB_TOKEN: ${{ github.token }}
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v4

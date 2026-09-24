@@ -3,9 +3,9 @@ requires = ["setuptools>=69", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "atomicmail-shared"
+name = "atomicmail"
 version = "0.1.0"
-description = "Shared Atomic Mail Python foundation library"
+description = "Atomic Mail Python library — proof-of-work signup, JMAP, presets and help for AI agents"
 requires-python = ">=3.9"
 license = {text = "MIT"}
 authors = [

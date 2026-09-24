@@ -14,9 +14,10 @@ SEMVER_RE = re.compile(
 )
 
 PY_ROOT = Path(__file__).resolve().parents[1]
+CORE_PYPROJECT = PY_ROOT / "pyproject.toml"
 LANGCHAIN_PYPROJECT = PY_ROOT / "langchain" / "pyproject.toml"
 PYDANTIC_AI_PYPROJECT = PY_ROOT / "pydantic_ai" / "pyproject.toml"
-RELEASE_PYPROJECTS = (LANGCHAIN_PYPROJECT, PYDANTIC_AI_PYPROJECT)
+RELEASE_PYPROJECTS = (CORE_PYPROJECT, LANGCHAIN_PYPROJECT, PYDANTIC_AI_PYPROJECT)
 
 
 def parse_release_version(raw: str) -> str:

@@ -21,7 +21,7 @@ concurrency:
 jobs:
   publish:
     runs-on: ubuntu-latest
-    # Trusted publishing on PyPI (langchain-atomicmail, pydantic-ai-atomicmail):
+    # Trusted publishing on PyPI (atomicmail, langchain-atomicmail, pydantic-ai-atomicmail):
     #   Owner: Atomic-Mail
     #   Repository: atomic-mail-agentic
     #   Workflow: publish-pypi.yml
@@ -57,6 +57,21 @@ jobs:
       - name: Sync release version into integration pyproject.toml files
         working-directory: py
         run: python scripts/sync_release_version.py "${{ steps.version.outputs.version }}"
+
+      - name: Stage shared assets for the atomicmail wheel
+        run: bash py/scripts/prepare_core_release.sh
+
+      - name: Build atomicmail wheel
+        working-directory: py
+        run: python -m build --outdir dist .
+
+      - name: Publish atomicmail to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: py/dist
+          print-hash: true
+          skip-existing: true
+          verbose: true
 
       - name: Stage atomicmail runtime for langchain-atomicmail wheel
         run: bash py/scripts/prepare_langchain_release.sh

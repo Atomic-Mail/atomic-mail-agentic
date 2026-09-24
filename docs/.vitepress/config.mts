@@ -61,8 +61,16 @@ const pagesBase = "/";
 export default defineConfig({
   base: pagesBase,
   head: [
-    ["link", { rel: "icon", type: "image/svg+xml", href: `${pagesBase}favicon.svg` }],
-    ["link", { rel: "alternate icon", href: `${pagesBase}favicon.ico` }],
+    // Favicons — light/dark pair (prefers-color-scheme), .ico fallback, apple-touch
+    // webclip + PWA icons. Same set on the marketing site (Webflow) and the dashboard.
+    ["link", { rel: "icon", type: "image/png", sizes: "32x32", href: `${pagesBase}favicon-light-32.png`, media: "(prefers-color-scheme: light)" }],
+    ["link", { rel: "icon", type: "image/png", sizes: "32x32", href: `${pagesBase}favicon-dark-32.png`, media: "(prefers-color-scheme: dark)" }],
+    ["link", { rel: "icon", type: "image/png", sizes: "96x96", href: `${pagesBase}favicon-96x96.png` }],
+    ["link", { rel: "icon", href: `${pagesBase}favicon.ico`, sizes: "48x48" }],
+    ["link", { rel: "apple-touch-icon", sizes: "180x180", href: `${pagesBase}apple-touch-icon.png` }],
+    ["link", { rel: "icon", type: "image/png", sizes: "192x192", href: `${pagesBase}web-app-manifest-192x192.png` }],
+    ["link", { rel: "icon", type: "image/png", sizes: "512x512", href: `${pagesBase}web-app-manifest-512x512.png` }],
+    ["link", { rel: "manifest", href: `${pagesBase}site.webmanifest` }],
     // Google tag (gtag.js) — GA4 stream shared with the marketing site and the
     // dashboard; all are *.atomicmail.ai subdomains, so one session spans them.
     ["script", { async: "", src: "https://www.googletagmanager.com/gtag/js?id=G-Q776YFK5Q1" }],

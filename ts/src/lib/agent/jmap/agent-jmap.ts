@@ -18,6 +18,7 @@ import {
 } from "./agent-jmap-blob-upload.ts";
 import { ensureTextCharsetOnEmailSetBlobParts } from "./agent-jmap-email-charset.ts";
 import { substituteVars } from "./agent-vars.ts";
+import { fetchReplyContext, replyContextResolvers } from "./reply-context.ts";
 
 export type { JmapAttachmentInput } from "./agent-jmap-blob-upload.ts";
 export type { JmapBlobUploadLimits } from "./agent-jmap-blob-limits.ts";
@@ -36,6 +37,7 @@ const sharedHints = tryReadSharedJson<{ jmap_next_hints: string[] }>(
 );
 export const BUNDLED_OPS_PRESET_NAMES = [
   "list_inbox.json",
+  "list_sent.json",
   "reply.json",
   "send_mail.json",
   "send_mail_attachment.json",
@@ -372,6 +374,19 @@ export async function runJmapRequest(
         return email;
       },
       INBOX_MAILBOX_ID: () => fetchInboxMailboxId(input.session),
+      SENT_MAILBOX_ID: () => fetchSentMailboxId(input.session),
+      ...replyContextResolvers(async () =>
+        fetchReplyContext(
+          async (envelope) =>
+            postJmap(
+              await input.session.getJmapPostUrl(),
+              await input.session.getCapabilityToken(),
+              envelope,
+            ),
+          await input.session.getPrimaryMailAccountId(),
+          mergedVars.MAIL_ID,
+        )
+      ),
       UPLOAD_URL: async () => {
         if (input.session.currentUploadUrl) {
           return input.session.currentUploadUrl;
@@ -435,14 +450,11 @@ export async function runJmapRequest(
   return { ok, status, bodyText: attachJmapNextHints(bodyText) };
 }
 
-/**
- * Resolves the JMAP `Mailbox` id for the account inbox (`role: "inbox"`).
- * Used for `$INBOX_MAILBOX_ID` substitution (distinct from `$INBOX`, which is
- * the mailbox *email address* — see `inboxIdToMailboxEmail` for normalization).
- */
-export async function fetchInboxMailboxId(
+/** First `Mailbox` id with the given RFC 8621 role, or undefined if none. */
+async function fetchMailboxIdByRole(
   port: JmapSessionPort,
-): Promise<string> {
+  role: string,
+): Promise<string | undefined> {
   const accountId = await port.getPrimaryMailAccountId();
   const capabilityJwt = await port.getCapabilityToken();
   const envelope: JmapEnvelope = {
@@ -453,7 +465,7 @@ export async function fetchInboxMailboxId(
     methodCalls: [
       [
         "Mailbox/query",
-        { accountId, filter: { role: "inbox" } },
+        { accountId, filter: { role } },
         "mq0",
       ],
     ],
@@ -484,10 +496,35 @@ export async function fetchInboxMailboxId(
   }
   const payload = first[1] as { ids?: string[] };
   const id = payload.ids?.[0];
-  if (typeof id !== "string" || id.length === 0) {
+  return typeof id === "string" && id.length > 0 ? id : undefined;
+}
+
+/**
+ * Resolves the JMAP `Mailbox` id for the account inbox (`role: "inbox"`).
+ * Used for `$INBOX_MAILBOX_ID` substitution (distinct from `$INBOX`, which is
+ * the mailbox *email address* — see `inboxIdToMailboxEmail` for normalization).
+ */
+export async function fetchInboxMailboxId(
+  port: JmapSessionPort,
+): Promise<string> {
+  const id = await fetchMailboxIdByRole(port, "inbox");
+  if (!id) {
     throw new Error("Mailbox/query returned no inbox mailbox id.");
   }
   return id;
+}
+
+/**
+ * Resolves `$SENT_MAILBOX_ID`: the `role: "sent"` mailbox, where the send
+ * presets file the sender's copy. Falls back to the inbox for accounts that
+ * have no Sent folder (never provisioned with the standard mailboxes), so a
+ * send never fails over where its copy is kept.
+ */
+export async function fetchSentMailboxId(
+  port: JmapSessionPort,
+): Promise<string> {
+  return (await fetchMailboxIdByRole(port, "sent")) ??
+    await fetchInboxMailboxId(port);
 }
 
 function collectBlobUploadAccountIds(envelope: JmapEnvelope): string[] {

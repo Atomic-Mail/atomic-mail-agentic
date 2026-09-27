@@ -29,6 +29,7 @@ DEFAULT_JMAP_USING = [
 ]
 BUNDLED_OPS_PRESET_NAMES = [
     "list_inbox.json",
+    "list_sent.json",
     "reply.json",
     "send_mail.json",
     "send_mail_attachment.json",
@@ -36,7 +37,7 @@ BUNDLED_OPS_PRESET_NAMES = [
 ]
 _VAR_PATTERN = re.compile(r"\$([A-Z][A-Z0-9_]*)")
 USER_VAR_KEY_RE = re.compile(r"^[A-Z][A-Z0-9_]*$")
-_SESSION_VAR_NAMES = {"ACCOUNT_ID", "INBOX", "INBOX_MAILBOX_ID"}
+_SESSION_VAR_NAMES = {"ACCOUNT_ID", "INBOX", "INBOX_MAILBOX_ID", "SENT_MAILBOX_ID"}
 _EXT_TO_MIME = {
     ".txt": "text/plain",
     ".html": "text/html",
@@ -369,7 +370,8 @@ def _find_var_references(raw: str) -> list[str]:
     return ordered
 
 
-def _fetch_inbox_mailbox_id(session: AgentSession) -> str:
+def _fetch_mailbox_id_by_role(session: AgentSession, role: str) -> str | None:
+    """First Mailbox id with the given RFC 8621 role, or None if none."""
     envelope = {
         "using": ["urn:ietf:params:jmap:core", "urn:ietf:params:jmap:mail"],
         "methodCalls": [
@@ -377,7 +379,7 @@ def _fetch_inbox_mailbox_id(session: AgentSession) -> str:
                 "Mailbox/query",
                 {
                     "accountId": session.get_primary_mail_account_id(),
-                    "filter": {"role": "inbox"},
+                    "filter": {"role": role},
                 },
                 "mq0",
             ]
@@ -433,13 +435,94 @@ def _fetch_inbox_mailbox_id(session: AgentSession) -> str:
         )
     ids = first[1].get("ids")
     if not isinstance(ids, list) or not ids or not isinstance(ids[0], str) or not ids[0]:
+        return None
+    return ids[0]
+
+
+def _reply_subject(subject: object) -> str:
+    text = subject.strip() if isinstance(subject, str) else ""
+    return text if text.lower().startswith("re:") else f"Re: {text}".rstrip()
+
+
+def _first_email(addresses: object) -> str | None:
+    if isinstance(addresses, list) and addresses and isinstance(addresses[0], dict):
+        email = addresses[0].get("email")
+        if isinstance(email, str) and email:
+            return email
+    return None
+
+
+def _fetch_reply_context(session: AgentSession, mail_id: str | None) -> dict[str, str]:
+    """Look up $REPLY_TO / $REPLY_SUBJECT / $REPLY_MESSAGE_ID from the message
+    named by MAIL_ID. JMAP result references are only valid at the top level of
+    method arguments (RFC 8620 section 3.7), not inside an Email/set create
+    object, so reply.json cannot copy the original's fields in one batch."""
+    if not mail_id:
+        raise ValueError(
+            "$REPLY_TO / $REPLY_SUBJECT / $REPLY_MESSAGE_ID need MAIL_ID in vars "
+            "(the id of the message to reply to)."
+        )
+    envelope = {
+        "using": ["urn:ietf:params:jmap:core", "urn:ietf:params:jmap:mail"],
+        "methodCalls": [
+            [
+                "Email/get",
+                {
+                    "accountId": session.get_primary_mail_account_id(),
+                    "ids": [mail_id],
+                    "properties": ["from", "replyTo", "subject", "messageId"],
+                },
+                "rg0",
+            ]
+        ],
+    }
+    outcome = _post_jmap(session.get_jmap_post_url(), session.get_capability_token(), envelope)
+    if not outcome.ok:
+        raise ValueError(f"Email/get for reply failed (HTTP {outcome.status}): {outcome.bodyText}")
+    try:
+        parsed = json.loads(outcome.bodyText)
+    except json.JSONDecodeError as err:
+        raise ValueError("Email/get for reply returned invalid JSON.") from err
+    email = None
+    responses = parsed.get("methodResponses") if isinstance(parsed, dict) else None
+    if isinstance(responses, list) and responses:
+        first = responses[0]
+        if isinstance(first, list) and len(first) >= 2 and first[0] == "Email/get":
+            found = first[1].get("list") if isinstance(first[1], dict) else None
+            if isinstance(found, list) and found and isinstance(found[0], dict):
+                email = found[0]
+    if email is None:
+        raise ValueError(f"MAIL_ID {mail_id} not found; nothing to reply to.")
+    to = _first_email(email.get("replyTo")) or _first_email(email.get("from"))
+    if not to:
+        raise ValueError(f"Message {mail_id} has no From or Reply-To address.")
+    ids = email.get("messageId")
+    message_id = ids[0] if isinstance(ids, list) and ids and isinstance(ids[0], str) else None
+    if not message_id:
+        raise ValueError(f"Message {mail_id} has no Message-ID to thread on.")
+    return {
+        "REPLY_TO": to,
+        "REPLY_SUBJECT": _reply_subject(email.get("subject")),
+        "REPLY_MESSAGE_ID": message_id,
+    }
+
+
+def _fetch_inbox_mailbox_id(session: AgentSession) -> str:
+    mailbox_id = _fetch_mailbox_id_by_role(session, "inbox")
+    if mailbox_id is None:
         raise ValueError(
             _error(
                 "mailbox_query_missing_inbox_id",
                 "Mailbox/query returned no inbox mailbox id.",
             )
         )
-    return ids[0]
+    return mailbox_id
+
+
+def _fetch_sent_mailbox_id(session: AgentSession) -> str:
+    """Resolve $SENT_MAILBOX_ID: the role "sent" mailbox the send presets file
+    the sender's copy in, falling back to the inbox for accounts without one."""
+    return _fetch_mailbox_id_by_role(session, "sent") or _fetch_inbox_mailbox_id(session)
 
 
 def _substitute_vars(
@@ -473,7 +556,7 @@ def _substitute_vars(
         if any(name in _SESSION_VAR_NAMES for name in missing):
             message += _error(
                 "vars_missing_session_suffix",
-                " For $ACCOUNT_ID, $INBOX, and $INBOX_MAILBOX_ID, ensure register "
+                " For $ACCOUNT_ID, $INBOX, $INBOX_MAILBOX_ID, and $SENT_MAILBOX_ID, ensure register "
                 "completed and credentials are valid, or pass overrides in vars.",
             )
         raise ValueError(message)
@@ -828,6 +911,7 @@ def run_jmap_request(
     auto_resolvers: dict[str, Callable[[], str]] = {
         "ACCOUNT_ID": session.get_primary_mail_account_id,
         "INBOX_MAILBOX_ID": lambda: _fetch_inbox_mailbox_id(session),
+        "SENT_MAILBOX_ID": lambda: _fetch_sent_mailbox_id(session),
         "INBOX": lambda: _resolve_inbox_mailbox_email(session),
         "UPLOAD_URL": lambda: (
             session.current_upload_url
@@ -838,6 +922,15 @@ def run_jmap_request(
             or _fallback_jmap_url_from_files(session, "downloadUrl")
         ),
     }
+    reply_context: dict[str, str] = {}
+
+    def _reply_value(name: str) -> str:
+        if not reply_context:
+            reply_context.update(_fetch_reply_context(session, merged_vars.get("MAIL_ID")))
+        return reply_context[name]
+
+    for reply_name in ("REPLY_TO", "REPLY_SUBJECT", "REPLY_MESSAGE_ID"):
+        auto_resolvers[reply_name] = lambda name=reply_name: _reply_value(name)
 
     substituted = _substitute_vars(
         ops_json,

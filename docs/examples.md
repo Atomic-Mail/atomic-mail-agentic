@@ -260,8 +260,10 @@ if __name__ == "__main__":
 
 This example assumes you already have `capabilityJwt` (from the auth flow). It
 discovers **`apiUrl`** and **`accountId`** from `GET /.well-known/jmap` (RFC
-8620), then resolves the inbox **mailbox id** with `Mailbox/query` (same pattern
-as [Raw JMAP requests](/jmap)).
+8620), then resolves the Sent **mailbox id** with `Mailbox/query` (falling back
+to the inbox on accounts without a Sent mailbox) and files the sender's copy
+there, clearing `$draft` once the submission succeeds (same pattern as
+[Raw JMAP requests](/jmap)).
 
 ```js
 const API_BASE = "https://api.atomicmail.ai";
@@ -277,14 +279,14 @@ async function discoverJmapContext(capabilityJwt) {
   return { accountId, jmapPostUrl };
 }
 
-/** JMAP mailbox id for the account inbox (`role: "inbox"`). */
-async function getInboxMailboxId(capabilityJwt, accountId, jmapPostUrl) {
+/** First JMAP mailbox id with the given role, or undefined if none. */
+async function getMailboxIdByRole(capabilityJwt, accountId, jmapPostUrl, role) {
   const payload = {
     using: ["urn:ietf:params:jmap:core", "urn:ietf:params:jmap:mail"],
     methodCalls: [
       [
         "Mailbox/query",
-        { accountId, filter: { role: "inbox" } },
+        { accountId, filter: { role } },
         "mq0",
       ],
     ],
@@ -299,16 +301,23 @@ async function getInboxMailboxId(capabilityJwt, accountId, jmapPostUrl) {
   });
   if (!r.ok) throw new Error(await r.text());
   const data = await r.json();
-  const ids = data.methodResponses?.[0]?.[1]?.ids;
-  if (!ids?.length) throw new Error("Mailbox/query returned no inbox id");
-  return ids[0];
+  return data.methodResponses?.[0]?.[1]?.ids?.[0];
+}
+
+/** Sent mailbox id (`role: "sent"`), falling back to the inbox. */
+async function getSentMailboxId(capabilityJwt, accountId, jmapPostUrl) {
+  const id =
+    (await getMailboxIdByRole(capabilityJwt, accountId, jmapPostUrl, "sent")) ??
+    (await getMailboxIdByRole(capabilityJwt, accountId, jmapPostUrl, "inbox"));
+  if (!id) throw new Error("Mailbox/query returned no sent or inbox id");
+  return id;
 }
 
 const SENDER = "myagent@atomicmail.ai";
 
 async function sendEmail(capabilityJwt, to, subject, bodyText) {
   const { accountId, jmapPostUrl } = await discoverJmapContext(capabilityJwt);
-  const inboxMailboxId = await getInboxMailboxId(
+  const sentMailboxId = await getSentMailboxId(
     capabilityJwt,
     accountId,
     jmapPostUrl,
@@ -327,7 +336,7 @@ async function sendEmail(capabilityJwt, to, subject, bodyText) {
           accountId,
           create: {
             draft1: {
-              mailboxIds: { [inboxMailboxId]: true },
+              mailboxIds: { [sentMailboxId]: true },
               from: [{ email: SENDER }],
               to: [{ email: to }],
               subject,
@@ -335,7 +344,7 @@ async function sendEmail(capabilityJwt, to, subject, bodyText) {
               bodyValues: {
                 body: { value: bodyText },
               },
-              keywords: { "$draft": true },
+              keywords: { "$draft": true, "$seen": true },
             },
           },
         },
@@ -345,6 +354,9 @@ async function sendEmail(capabilityJwt, to, subject, bodyText) {
         "EmailSubmission/set",
         {
           accountId,
+          onSuccessUpdateEmail: {
+            "#sub1": { "keywords/$draft": null, "keywords/$sent": true },
+          },
           create: {
             sub1: {
               emailId: "#draft1",

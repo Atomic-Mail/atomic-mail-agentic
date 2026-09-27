@@ -5,6 +5,24 @@ Notable changes to Atomic Mail Agentic. Format loosely follows
 
 ## [Unreleased]
 
+### Security
+
+- **Python clients now JSON-escape `$VAR` values.** `langchain-atomicmail`,
+  `pydantic-ai-atomicmail` and the Dify plugin substituted `$VAR` values into
+  the JMAP JSON unescaped, so a crafted inbound subject could add method calls
+  to a `reply.json` batch (reachable since 0.3.30). Values are now escaped in
+  string context, like the TypeScript runtime. Python callers who pre-escaped
+  values (for example `\n` for a newline) should now pass raw text.
+
+### Fixed
+
+- `reply.json` picks its recipient like the hosted MCP server (first usable
+  Reply-To, else From, else Sender) and replies to that one address only.
+  Line breaks in the subject collapse to a space and an existing `Re:` is kept.
+- Send examples in `help` and the docs now file the sender's copy in Sent and
+  clear `$draft` on success, like the bundled presets.
+- `list_sent.json` returns `keywords`.
+
 ## [0.3.30] - 2026-09-27
 
 ### Fixed

@@ -37,8 +37,8 @@ and reports what arrived.
 
 `jmap_request` runs a JMAP batch, inline or from a preset file. Placeholders
 stand in for the values the session knows: `$ACCOUNT_ID`, `$INBOX`,
-`$INBOX_MAILBOX_ID`, `$UPLOAD_URL`, `$DOWNLOAD_URL`, plus anything you pass in
-`vars`.
+`$INBOX_MAILBOX_ID`, `$SENT_MAILBOX_ID`, `$UPLOAD_URL`, `$DOWNLOAD_URL`, plus
+anything you pass in `vars`.
 
 ### Ask `help`
 

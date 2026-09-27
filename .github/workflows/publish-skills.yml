@@ -267,10 +267,18 @@ jobs:
             exit 0
           fi
 
-          gh pr create \
+          # The organization may forbid GITHUB_TOKEN from opening PRs
+          # ("GitHub Actions is not permitted to create or approve pull
+          # requests"). The branch is already pushed, so that is not a failed
+          # publish: warn with the link and let a maintainer open the PR.
+          if ! gh pr create \
             --base main \
             --head "$BRANCH" \
             --title "chore(skill): publish atomicmail skill v${VERSION}" \
             --body "Syncs \`integrations/skill/atomicmail\` (the in-repo Hermes tap) to the artifact built for release v${VERSION}.
 
-          Opened automatically by \`.github/workflows/publish-skills.yml\`, which cannot push to \`main\` directly under the branch-protection ruleset. Merging this is what makes \`hermes skills install Atomic-Mail/atomic-mail-agentic/integrations/skill/atomicmail\` serve v${VERSION}."
+          Opened automatically by \`.github/workflows/publish-skills.yml\`, which cannot push to \`main\` directly under the branch-protection ruleset. Merging this is what makes \`hermes skills install Atomic-Mail/atomic-mail-agentic/integrations/skill/atomicmail\` serve v${VERSION}."; then
+            URL="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/compare/main...${BRANCH}?expand=1"
+            echo "::warning title=Open the skill-tap PR by hand::Could not open the PR from Actions (organization policy). Branch ${BRANCH} is pushed; open ${URL} and merge it into main."
+            echo "Skill tap branch \`${BRANCH}\` is pushed. Open the PR by hand: ${URL}" >> "$GITHUB_STEP_SUMMARY"
+          fi

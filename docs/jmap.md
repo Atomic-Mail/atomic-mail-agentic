@@ -60,9 +60,13 @@ Session also provides RFC 8620 blob templates:
 
 ## Send email (JMAP batch)
 
-The minimal RFC 8621 flow: draft in at least one mailbox, then submit.
-Resolve `<inboxMailboxId>` with `Mailbox/query` and `filter: { "role": "inbox" }`
-(see [Read inbox](#read-inbox-query-get)).
+The minimal RFC 8621 flow: create the message in a mailbox, then submit. File
+the sender's copy in Sent: resolve `<sentMailboxId>` with `Mailbox/query` and
+`filter: { "role": "sent" }`, falling back to `filter: { "role": "inbox" }` on
+accounts without a Sent mailbox (the agent substitutes the same id as
+`$SENT_MAILBOX_ID`). Create it with `$draft` and `$seen`, then let
+`onSuccessUpdateEmail` on `EmailSubmission/set` clear `$draft` and set `$sent`
+once the submission succeeds; without it the copy stays flagged as a draft.
 
 You may omit `envelope` on `EmailSubmission/set` create; RFC 8621 allows the
 server to derive it from the Email’s From/Sender and To/Cc/Bcc. Supplying
@@ -82,13 +86,13 @@ server to derive it from the Email’s From/Sender and To/Cc/Bcc. Supplying
         "accountId": "<accountId>",
         "create": {
           "d1": {
-            "mailboxIds": { "<inboxMailboxId>": true },
+            "mailboxIds": { "<sentMailboxId>": true },
             "from": [{ "email": "<from@example.com>" }],
             "to": [{ "email": "<to@example.com>" }],
             "subject": "Hi",
             "textBody": [{ "partId": "b", "type": "text/plain" }],
             "bodyValues": { "b": { "value": "Hello." } },
-            "keywords": { "$draft": true }
+            "keywords": { "$draft": true, "$seen": true }
           }
         }
       },
@@ -98,6 +102,9 @@ server to derive it from the Email’s From/Sender and To/Cc/Bcc. Supplying
       "EmailSubmission/set",
       {
         "accountId": "<accountId>",
+        "onSuccessUpdateEmail": {
+          "#s1": { "keywords/$draft": null, "keywords/$sent": true }
+        },
         "create": {
           "s1": {
             "emailId": "#d1",
@@ -170,7 +177,8 @@ inside an array element. Attach in `Email/set` with `attachments[]` and a
 Further reading: [RFC 9404 §4.1](https://www.rfc-editor.org/rfc/rfc9404.html#section-4.1).
 
 The bundled `send_mail_attachment.json` uses
-`"data": [{ "data:asBase64": "…" }]` plus `type`, as below.
+`"data": [{ "data:asBase64": "…" }]` plus `type`, as below, and files the copy
+in Sent the same way as [Send email](#send-email-jmap-batch).
 
 ```json
 {
@@ -200,7 +208,7 @@ The bundled `send_mail_attachment.json` uses
         "accountId": "<accountId>",
         "create": {
           "m1": {
-            "mailboxIds": { "<inboxMailboxId>": true },
+            "mailboxIds": { "<sentMailboxId>": true },
             "from": [{ "email": "<from@example.com>" }],
             "to": [{ "email": "<to@example.com>" }],
             "subject": "Inline blob",
@@ -208,7 +216,8 @@ The bundled `send_mail_attachment.json` uses
             "textBody": [{ "partId": "body1", "type": "text/plain" }],
             "attachments": [
               { "blobId": "#b1", "type": "text/plain", "name": "note.txt" }
-            ]
+            ],
+            "keywords": { "$draft": true, "$seen": true }
           }
         }
       },
@@ -218,6 +227,9 @@ The bundled `send_mail_attachment.json` uses
       "EmailSubmission/set",
       {
         "accountId": "<accountId>",
+        "onSuccessUpdateEmail": {
+          "#s1": { "keywords/$draft": null, "keywords/$sent": true }
+        },
         "create": {
           "s1": {
             "emailId": "#m1",

@@ -120,9 +120,13 @@ Grants carry `mail.read` and/or `mail.send`, and can be revoked at any time from
 | `reply_to_message` | Reply in-thread by `message_id` |
 | `list_agents` | The inboxes the signed-in account owns |
 | `search` / `fetch` | ChatGPT connector convention: `{ id, title, url }` results plus full-document fetch |
-| `run_preset` | Bundled JMAP flows by name (`list_inbox`, `send_mail`, `reply`, attachment variants); supports `dry_run` |
+| `run_preset` | Bundled JMAP flows by name (`list_inbox`, `list_sent`, `send_mail`, `reply`, attachment variants); supports `dry_run` |
 | `jmap_request` | Raw JMAP method-call batch (advanced; may be disabled by the operator — `run_preset` always works) |
 | `help` | Built-in docs (topics: `overview`, `tools`, `agents`, `auth`, `advanced`, `troubleshooting`) |
+
+`send_email`, `reply_to_message` and the send presets file the sender's copy in
+the Sent mailbox and mark it `$sent` once submitted, so `read_inbox` lists
+received mail; use `run_preset` with `list_sent` to see what was sent.
 
 `search_messages` is backed by a real full-text index, so `text`, `subject`, and
 `body` filters return matches rather than erroring.

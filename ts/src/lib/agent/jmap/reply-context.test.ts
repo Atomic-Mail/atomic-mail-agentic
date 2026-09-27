@@ -1,4 +1,4 @@
-import { assertEquals, assertRejects } from "@std/assert";
+import { assertEquals, assertRejects, assertStringIncludes } from "@std/assert";
 
 import { readSharedText } from "../../core/shared-assets.ts";
 import { substituteVars } from "./agent-vars.ts";
@@ -54,6 +54,80 @@ Deno.test("fetchReplyContext prefers Reply-To over From", async () => {
   assertEquals(
     (await fetchReplyContext(post, "acc", "M1")).to,
     "billing@example.com",
+  );
+});
+
+Deno.test("replySubject matches the hosted server rule", () => {
+  assertEquals(replySubject("  re : Invoice 42"), "re : Invoice 42");
+  assertEquals(replySubject(" Re:Invoice"), "Re:Invoice");
+  assertEquals(replySubject("Invoice\r\n\r\n 42\n"), "Re: Invoice  42");
+  assertEquals(replySubject("Line one\nLine two"), "Re: Line one Line two");
+  assertEquals(replySubject("Regarding lunch"), "Re: Regarding lunch");
+  assertEquals(replySubject(""), "Re:");
+});
+
+Deno.test("fetchReplyContext skips unusable addresses and trims", async () => {
+  const { post } = postReturning({
+    ...ORIGINAL,
+    replyTo: [{ email: "  " }, { email: null }, { email: " b@example.com " }],
+  });
+  assertEquals(
+    (await fetchReplyContext(post, "acc", "M1")).to,
+    "b@example.com",
+  );
+});
+
+Deno.test("fetchReplyContext scans all of From before Sender", async () => {
+  const { post } = postReturning({
+    ...ORIGINAL,
+    replyTo: [{ email: "" }],
+    from: [{ email: " " }, { email: "second@example.com" }],
+    sender: [{ email: "sender@example.com" }],
+  });
+  assertEquals(
+    (await fetchReplyContext(post, "acc", "M1")).to,
+    "second@example.com",
+  );
+});
+
+Deno.test("fetchReplyContext falls back to Sender and requests it", async () => {
+  const { post, calls } = postReturning({
+    ...ORIGINAL,
+    from: [{ email: "" }],
+    sender: [{ email: "list@example.com" }],
+  });
+  assertEquals(
+    (await fetchReplyContext(post, "acc", "M1")).to,
+    "list@example.com",
+  );
+  const [[, args]] = (calls[0] as {
+    methodCalls: [string, { properties: string[] }, string][];
+  }).methodCalls;
+  assertEquals(args.properties.includes("sender"), true);
+});
+
+Deno.test("fetchReplyContext reports a JMAP error response", async () => {
+  const post = () =>
+    Promise.resolve({
+      ok: true,
+      status: 200,
+      bodyText: JSON.stringify({
+        methodResponses: [["error", { type: "accountNotFound" }, "rg0"]],
+      }),
+    });
+  const err = await assertRejects(() => fetchReplyContext(post, "acc", "M1"));
+  assertEquals(
+    (err as Error).message,
+    'Email/get for reply failed: {"type":"accountNotFound"}',
+  );
+});
+
+Deno.test("fetchReplyContext without Message-ID points to send_mail", async () => {
+  const { post } = postReturning({ ...ORIGINAL, messageId: null });
+  const err = await assertRejects(() => fetchReplyContext(post, "acc", "M1"));
+  assertStringIncludes(
+    (err as Error).message,
+    "; use send_mail.json with TO/SUBJECT instead.",
   );
 });
 

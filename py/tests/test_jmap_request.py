@@ -498,3 +498,151 @@ def test_reply_preset_requires_mail_id() -> None:
     raw = (shared_dir() / "presets" / "reply.json").read_text(encoding="utf-8")
     with pytest.raises(ValueError, match="need MAIL_ID"):
         run_jmap_request(session=_FakeSession(), ops_json=raw, vars={"SENT_MAILBOX_ID": "x", "BODY": "b"})
+
+
+def _reply_post(original: dict[str, object] | None, posted: list[dict[str, object]], *, error: dict | None = None):
+    def fake_post(_url: str, _token: str, envelope: dict[str, object]):
+        posted.append(envelope)
+        call = envelope["methodCalls"][0]  # type: ignore[index]
+        if call[0] == "Email/get":
+            if error is not None:
+                body = {"methodResponses": [["error", error, "rg0"]]}
+            else:
+                body = {"methodResponses": [["Email/get", {"list": [original] if original else []}, "rg0"]]}
+            return JmapRequestResult(ok=True, status=200, bodyText=json.dumps(body))
+        return JmapRequestResult(ok=True, status=200, bodyText='{"ok":true}')
+
+    return fake_post
+
+
+_ORIGINAL = {
+    "from": [{"name": None, "email": "alice@example.com"}],
+    "replyTo": None,
+    "subject": "Invoice 42",
+    "messageId": ["abc@example.com"],
+}
+
+
+def _run_reply(monkeypatch, original=None, *, error=None, body: str = "Thanks"):
+    from atomicmail.shared_assets import shared_dir
+
+    posted: list[dict[str, object]] = []
+    monkeypatch.setattr(JMAP_MODULE, "_post_jmap", _reply_post(original, posted, error=error))
+    raw = (shared_dir() / "presets" / "reply.json").read_text(encoding="utf-8")
+    run_jmap_request(
+        session=_FakeSession(),
+        ops_json=raw,
+        vars={"SENT_MAILBOX_ID": "mb-sent", "MAIL_ID": "M1", "BODY": body},
+    )
+    return posted
+
+
+def test_hostile_reply_subject_cannot_inject_method_calls(monkeypatch) -> None:
+    hostile = (
+        'x"}}}, "c0"], ["Email/query", {"accountId": "$ACCOUNT_ID"}, "q9"], '
+        '["Email/set", {"accountId": "a", "create": {"d1": {"subject": "y'
+    )
+    posted = _run_reply(monkeypatch, {**_ORIGINAL, "subject": hostile})
+    sent = posted[-1]
+    names = [call[0] for call in sent["methodCalls"]]  # type: ignore[index]
+    assert names == ["Email/set", "EmailSubmission/set"]
+    draft = sent["methodCalls"][0][1]["create"]["d1"]  # type: ignore[index]
+    assert draft["subject"] == f"Re: {hostile}"
+
+
+def test_substitution_round_trips_special_characters(monkeypatch) -> None:
+    body = 'line1\nline2 "quoted" back\\slash\ttab café 日本 \U0001f600'
+    posted = _run_reply(monkeypatch, _ORIGINAL, body=body)
+    draft = posted[-1]["methodCalls"][0][1]["create"]["d1"]  # type: ignore[index]
+    assert draft["bodyValues"]["b"]["value"] == body
+
+
+def test_bare_token_substitutes_verbatim(monkeypatch) -> None:
+    captured: list[dict[str, object]] = []
+    monkeypatch.setattr(JMAP_MODULE, "_post_jmap", _mailbox_query_post({}, captured))
+    run_jmap_request(
+        session=_FakeSession(),
+        ops_json='[["Email/query",{"accountId":"$ACCOUNT_ID","limit": $LIMIT},"q0"]]',
+        vars={"LIMIT": "5"},
+    )
+    assert captured[-1]["methodCalls"][0][1] == {"accountId": "acc-1", "limit": 5}  # type: ignore[index]
+
+
+def test_dollar_in_value_is_not_re_expanded(monkeypatch) -> None:
+    captured: list[dict[str, object]] = []
+    monkeypatch.setattr(JMAP_MODULE, "_post_jmap", _mailbox_query_post({}, captured))
+    run_jmap_request(
+        session=_FakeSession(),
+        ops_json='[["Email/set",{"subject":"$SUBJECT","note":"\\"$SUBJECT\\""},"s0"]]',
+        vars={"SUBJECT": "costs $ACCOUNT_ID and $TO"},
+    )
+    args = captured[-1]["methodCalls"][0][1]  # type: ignore[index]
+    assert args["subject"] == "costs $ACCOUNT_ID and $TO"
+    assert args["note"] == '"costs $ACCOUNT_ID and $TO"'
+
+
+@pytest.mark.parametrize(
+    ("subject", "expected"),
+    [
+        ("Invoice 42", "Re: Invoice 42"),
+        ("RE: Invoice 42", "RE: Invoice 42"),
+        ("  re : Invoice 42", "re : Invoice 42"),
+        ("Invoice\r\n\r\n 42\n", "Re: Invoice  42"),
+        ("Line one\nLine two", "Re: Line one Line two"),
+        ("Regarding lunch", "Re: Regarding lunch"),
+        ("", "Re:"),
+        (None, "Re:"),
+        # JavaScript whitespace set, not Python's: U+FEFF trims, U+0085/U+001F do not.
+        ("\ufeffRe: hi", "Re: hi"),
+        ("\u0085Re: hi", "Re: \u0085Re: hi"),
+        ("hi\u001f", "Re: hi\u001f"),
+    ],
+)
+def test_reply_subject_matches_hosted_server_rule(subject: object, expected: str) -> None:
+    assert JMAP_MODULE._reply_subject(subject) == expected
+
+
+def test_first_email_uses_javascript_whitespace_rule() -> None:
+    addresses = [{"email": "\ufeff"}, {"email": " \u0085b@example.com "}]
+    assert JMAP_MODULE._first_email(addresses) == "\u0085b@example.com"
+
+
+@pytest.mark.parametrize("value", [5, True, 3.5, None])
+def test_non_string_var_value_is_rejected(value: object) -> None:
+    with pytest.raises(ValueError, match="must be a string"):
+        JMAP_MODULE._substitute_vars('{"a": "$N", "b": $N}', {"N": value}, {})
+
+
+def test_reply_skips_unusable_addresses_and_trims(monkeypatch) -> None:
+    original = {**_ORIGINAL, "replyTo": [{"email": "  "}, {"email": None}, {"email": " b@example.com "}]}
+    posted = _run_reply(monkeypatch, original)
+    assert posted[-1]["methodCalls"][0][1]["create"]["d1"]["to"] == [{"email": "b@example.com"}]  # type: ignore[index]
+
+
+def test_reply_scans_all_of_from_before_sender(monkeypatch) -> None:
+    original = {
+        **_ORIGINAL,
+        "replyTo": [{"email": ""}],
+        "from": [{"email": " "}, {"email": "second@example.com"}],
+        "sender": [{"email": "sender@example.com"}],
+    }
+    posted = _run_reply(monkeypatch, original)
+    assert posted[-1]["methodCalls"][0][1]["create"]["d1"]["to"] == [{"email": "second@example.com"}]  # type: ignore[index]
+
+
+def test_reply_falls_back_to_sender_and_requests_it(monkeypatch) -> None:
+    original = {**_ORIGINAL, "from": [{"email": ""}], "sender": [{"email": "list@example.com"}]}
+    posted = _run_reply(monkeypatch, original)
+    assert "sender" in posted[0]["methodCalls"][0][1]["properties"]  # type: ignore[index]
+    assert posted[-1]["methodCalls"][0][1]["create"]["d1"]["to"] == [{"email": "list@example.com"}]  # type: ignore[index]
+
+
+def test_reply_reports_jmap_error_response(monkeypatch) -> None:
+    with pytest.raises(ValueError) as err:
+        _run_reply(monkeypatch, error={"type": "accountNotFound"})
+    assert str(err.value) == 'Email/get for reply failed: {"type":"accountNotFound"}'
+
+
+def test_reply_without_message_id_points_to_send_mail(monkeypatch) -> None:
+    with pytest.raises(ValueError, match="; use send_mail.json with TO/SUBJECT instead."):
+        _run_reply(monkeypatch, {**_ORIGINAL, "messageId": None})

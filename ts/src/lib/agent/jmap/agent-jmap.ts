@@ -18,6 +18,7 @@ import {
 } from "./agent-jmap-blob-upload.ts";
 import { ensureTextCharsetOnEmailSetBlobParts } from "./agent-jmap-email-charset.ts";
 import { substituteVars } from "./agent-vars.ts";
+import { fetchReplyContext, replyContextResolvers } from "./reply-context.ts";
 
 export type { JmapAttachmentInput } from "./agent-jmap-blob-upload.ts";
 export type { JmapBlobUploadLimits } from "./agent-jmap-blob-limits.ts";
@@ -374,6 +375,18 @@ export async function runJmapRequest(
       },
       INBOX_MAILBOX_ID: () => fetchInboxMailboxId(input.session),
       SENT_MAILBOX_ID: () => fetchSentMailboxId(input.session),
+      ...replyContextResolvers(async () =>
+        fetchReplyContext(
+          async (envelope) =>
+            postJmap(
+              await input.session.getJmapPostUrl(),
+              await input.session.getCapabilityToken(),
+              envelope,
+            ),
+          await input.session.getPrimaryMailAccountId(),
+          mergedVars.MAIL_ID,
+        )
+      ),
       UPLOAD_URL: async () => {
         if (input.session.currentUploadUrl) {
           return input.session.currentUploadUrl;

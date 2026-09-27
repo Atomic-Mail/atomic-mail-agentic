@@ -1,7 +1,7 @@
 ---
 name: atomicmail
 description: Read and write email through the Atomic Mail from an AI agent. Handles proof-of-work authentication and JMAP so the agent thinks in JMAP method calls. Use when the user asks to register an email inbox, list mailboxes, fetch or send email.
-version: 0.3.30
+version: 0.3.31
 author: Atomic Mail
 license: MIT
 platforms: [macos, linux, windows]

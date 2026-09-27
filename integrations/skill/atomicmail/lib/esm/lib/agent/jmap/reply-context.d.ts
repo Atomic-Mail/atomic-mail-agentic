@@ -7,7 +7,7 @@ type PostJmap = (envelope: {
     bodyText: string;
 }>;
 export interface ReplyContext {
-    /** Reply-To address of the original, else its From address. */
+    /** First usable Reply-To address of the original, else From, else Sender. */
     to: string;
     /** Original subject with a single `Re: ` prefix. */
     subject: string;
@@ -15,6 +15,10 @@ export interface ReplyContext {
     messageId: string;
 }
 export declare const REPLY_VAR_NAMES: readonly ["REPLY_TO", "REPLY_SUBJECT", "REPLY_MESSAGE_ID"];
+/**
+ * Same rule as the hosted MCP server: newlines collapse to one space, and a
+ * single `Re: ` is added unless the subject already starts with one.
+ */
 export declare function replySubject(subject: unknown): string;
 export declare function fetchReplyContext(post: PostJmap, accountId: string, mailId: string | undefined): Promise<ReplyContext>;
 /**

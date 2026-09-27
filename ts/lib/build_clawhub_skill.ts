@@ -17,7 +17,7 @@ export {
 export const DEFAULT_SKILL_MD_SOURCE = "../shared/skill/SKILL.template.md";
 export const DEFAULT_OUT_DIR = "../integrations_dist/clawhub/atomicmail";
 
-export const CLAWHUB_CLI_INVOCATION = "{baseDir}/scripts/atomicmail";
+export const CLAWHUB_CLI_INVOCATION = "bash {baseDir}/scripts/atomicmail";
 
 const SKILL_MANIFEST = loadSkillManifest();
 export const CLAWHUB_OPENCLAW_METADATA = {

@@ -11,8 +11,13 @@ export const NPX_SKILL_INVOCATION =
 // silently drops the {baseDir}/scripts/atomicmail rewrite from the build.
 export const NPX_SKILL_INVOCATION_PATTERN =
   /npx --package=@atomicmail\/\S+ atomicmail/g;
-export const BUNDLED_CLI_INVOCATION = "{baseDir}/scripts/atomicmail";
-export const HERMES_CLI_INVOCATION = "${HERMES_SKILL_DIR}/scripts/atomicmail";
+// Invoke the launcher through `bash`: ClawHub re-zips skills without unix
+// modes and actions/upload-artifact drops them too, so scripts/atomicmail
+// arrives as 0644 and a bare `{baseDir}/scripts/atomicmail` fails with
+// "permission denied".
+export const BUNDLED_CLI_INVOCATION = "bash {baseDir}/scripts/atomicmail";
+export const HERMES_CLI_INVOCATION =
+  "bash ${HERMES_SKILL_DIR}/scripts/atomicmail";
 export const HERMES_CREDENTIALS_DIR = "~/.hermes/atomicmail";
 
 export const PLACEHOLDER_CLI = "{{ATOMICMAIL_CLI}}";

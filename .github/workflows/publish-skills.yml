@@ -166,6 +166,10 @@ jobs:
           name: unified-skill-atomicmail
           path: skill
 
+      # upload/download-artifact drop file modes; restore the launcher's exec bit.
+      - name: Restore launcher exec bit
+        run: chmod +x skill/scripts/atomicmail
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -240,6 +244,8 @@ jobs:
           rm -rf integrations/skill/atomicmail
           mkdir -p integrations/skill
           cp -a skill/. integrations/skill/atomicmail/
+          # upload/download-artifact drop file modes; keep the tap's launcher 0755.
+          chmod +x integrations/skill/atomicmail/scripts/atomicmail
 
       - name: Open PR for in-repo skill tap
         env:

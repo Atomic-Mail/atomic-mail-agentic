@@ -5,6 +5,8 @@ Notable changes to Atomic Mail Agentic. Format loosely follows
 
 ## [Unreleased]
 
+## [0.3.31] - 2026-09-27
+
 ### Security
 
 - **Python clients now JSON-escape `$VAR` values.** `langchain-atomicmail`,

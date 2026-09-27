@@ -15,7 +15,7 @@
   "vars_key_invalid_template": "--vars key '{key}' must match /^[A-Z][A-Z0-9_]*$/.",
   "vars_value_not_string_template": "--vars value for '{key}' must be a string.",
   "vars_missing_template": "Missing values for variables: {vars}. Pass custom placeholders in vars (MCP) or --vars (skill).",
-  "vars_missing_session_suffix": " For $ACCOUNT_ID, $INBOX, and $INBOX_MAILBOX_ID, ensure register completed and credentials are valid, or pass overrides in vars.",
+  "vars_missing_session_suffix": " For $ACCOUNT_ID, $INBOX, $INBOX_MAILBOX_ID, and $SENT_MAILBOX_ID, ensure register completed and credentials are valid, or pass overrides in vars.",
   "jmap_json_invalid_template": "{source} is not valid JSON: {details}",
   "jmap_envelope_invalid_template": "{source} must be a methodCalls array, e.g. [[\"Mailbox/get\",{...},\"m0\"]], or an object with a methodCalls array.",
   "jmap_ops_file_not_found_template": "ops_file '{ops_file}' not found under credential directory ({path}) and not among bundled presets: {presets}.",

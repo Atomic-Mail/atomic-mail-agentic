@@ -1,7 +1,7 @@
 ---
 name: atomicmail
 description: Read and write email through the Atomic Mail from an AI agent. Handles proof-of-work authentication and JMAP so the agent thinks in JMAP method calls. Use when the user asks to register an email inbox, list mailboxes, fetch or send email.
-version: 0.3.29
+version: 0.3.30
 author: Atomic Mail
 license: MIT
 platforms: [macos, linux, windows]
@@ -132,7 +132,7 @@ credentials in the **same** directory (after backing it up).
   --ops '[["Mailbox/get", {"accountId": "$ACCOUNT_ID"}, "m0"]]'
 ```
 
-`$ACCOUNT_ID`, `$INBOX`, `$INBOX_MAILBOX_ID`, `$UPLOAD_URL`, and `$DOWNLOAD_URL`
+`$ACCOUNT_ID`, `$INBOX`, `$INBOX_MAILBOX_ID`, `$SENT_MAILBOX_ID`, `$UPLOAD_URL`, and `$DOWNLOAD_URL`
 resolve from the session/credentials. Other placeholders such as `$TO` or
 `$SUBJECT` require `--vars` with a JSON object of strings (same substitution
 applies to `--ops` and `--ops-file`).
@@ -161,6 +161,8 @@ Bundled presets (no local file creation required):
   repeatable **`--attachment PATH`** for RFC 8620 upload →
   `$ATTACHMENT_0_BLOB_ID`, …)
 - `list_inbox.json` (latest 50; uses `$INBOX_MAILBOX_ID`) — **used for the scheduled inbox check**
+- `list_sent.json` (latest 50 the agent sent; uses `$SENT_MAILBOX_ID`) — send presets
+  file their copy in Sent with `$draft` cleared, so it never shows in the inbox
 - `reply.json` (`$MAIL_ID`, `$BODY`)
 
 ## Inbox checks (after register)

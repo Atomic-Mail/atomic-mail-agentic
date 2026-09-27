@@ -39,6 +39,7 @@ const NODE_PACKAGE_PATH = new URL("package.json", PLUGIN_DIR);
 
 const PRESET_FILES = [
   "list_inbox.json",
+  "list_sent.json",
   "reply.json",
   "send_mail.json",
   "send_mail_attachment.json",

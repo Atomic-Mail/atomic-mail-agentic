@@ -9,7 +9,9 @@
       "Email/get",
       {
         "accountId": "$ACCOUNT_ID",
-        "ids": ["$MAIL_ID"],
+        "ids": [
+          "$MAIL_ID"
+        ],
         "properties": [
           "id",
           "threadId",
@@ -27,8 +29,14 @@
         "accountId": "$ACCOUNT_ID",
         "create": {
           "d1": {
-            "mailboxIds": { "$INBOX_MAILBOX_ID": true },
-            "from": [{ "email": "$INBOX" }],
+            "mailboxIds": {
+              "$SENT_MAILBOX_ID": true
+            },
+            "from": [
+              {
+                "email": "$INBOX"
+              }
+            ],
             "#to": {
               "resultOf": "g0",
               "name": "Email/get",
@@ -44,9 +52,21 @@
               "name": "Email/get",
               "path": "/list/0/messageId"
             },
-            "textBody": [{ "partId": "b", "type": "text/plain" }],
-            "bodyValues": { "b": { "value": "$BODY" } },
-            "keywords": { "$draft": true }
+            "textBody": [
+              {
+                "partId": "b",
+                "type": "text/plain"
+              }
+            ],
+            "bodyValues": {
+              "b": {
+                "value": "$BODY"
+              }
+            },
+            "keywords": {
+              "$draft": true,
+              "$seen": true
+            }
           }
         }
       },
@@ -56,11 +76,19 @@
       "EmailSubmission/set",
       {
         "accountId": "$ACCOUNT_ID",
+        "onSuccessUpdateEmail": {
+          "#s1": {
+            "keywords/$draft": null,
+            "keywords/$sent": true
+          }
+        },
         "create": {
           "s1": {
             "emailId": "#d1",
             "envelope": {
-              "mailFrom": { "email": "$INBOX" },
+              "mailFrom": {
+                "email": "$INBOX"
+              },
               "#rcptTo": {
                 "resultOf": "g0",
                 "name": "Email/get",

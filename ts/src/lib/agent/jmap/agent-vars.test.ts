@@ -16,6 +16,7 @@ Deno.test("substituteVars: multiline $BODY into send_mail.json stays valid JSON"
     vars: {
       ACCOUNT_ID: "acct-1",
       INBOX_MAILBOX_ID: "mbox-1",
+      SENT_MAILBOX_ID: "mbox-sent",
       INBOX: "sasha@cdtest.atomicmail.ai",
       TO: "dest@example.com",
       SUBJECT: "Hi there",

@@ -3,7 +3,7 @@ import { type JmapAttachmentInput } from "./agent-jmap-blob-upload.js";
 export type { JmapAttachmentInput } from "./agent-jmap-blob-upload.js";
 export type { JmapBlobUploadLimits } from "./agent-jmap-blob-limits.js";
 export declare const DEFAULT_JMAP_USING: readonly ["urn:ietf:params:jmap:core", "urn:ietf:params:jmap:mail"];
-export declare const BUNDLED_OPS_PRESET_NAMES: readonly ["list_inbox.json", "reply.json", "send_mail.json", "send_mail_attachment.json", "send_mail_blob_attachment.json"];
+export declare const BUNDLED_OPS_PRESET_NAMES: readonly ["list_inbox.json", "list_sent.json", "reply.json", "send_mail.json", "send_mail_attachment.json", "send_mail_blob_attachment.json"];
 export declare const JMAP_MAIL_URN: "urn:ietf:params:jmap:mail";
 /** RFC 9404 blob extension URN (Blob/upload, Blob/get, Blob/lookup). */
 export declare const JMAP_BLOB_URN: "urn:ietf:params:jmap:blob";
@@ -85,6 +85,13 @@ export declare function runJmapRequest(input: RunJmapRequestInput): Promise<{
  * the mailbox *email address* — see `inboxIdToMailboxEmail` for normalization).
  */
 export declare function fetchInboxMailboxId(port: JmapSessionPort): Promise<string>;
+/**
+ * Resolves `$SENT_MAILBOX_ID`: the `role: "sent"` mailbox, where the send
+ * presets file the sender's copy. Falls back to the inbox for accounts that
+ * have no Sent folder (never provisioned with the standard mailboxes), so a
+ * send never fails over where its copy is kept.
+ */
+export declare function fetchSentMailboxId(port: JmapSessionPort): Promise<string>;
 export declare function postJmap(jmapPostUrl: string, capabilityJwt: string, envelope: JmapEnvelope): Promise<{
     ok: boolean;
     status: number;

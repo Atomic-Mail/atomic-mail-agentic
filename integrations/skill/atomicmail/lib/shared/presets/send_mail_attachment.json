@@ -30,7 +30,7 @@
         "create": {
           "m1": {
             "mailboxIds": {
-              "$INBOX_MAILBOX_ID": true
+              "$SENT_MAILBOX_ID": true
             },
             "from": [
               {
@@ -60,7 +60,11 @@
                 "type": "$ATTACHMENT_TYPE",
                 "name": "$ATTACHMENT_NAME"
               }
-            ]
+            ],
+            "keywords": {
+              "$draft": true,
+              "$seen": true
+            }
           }
         }
       },
@@ -70,6 +74,12 @@
       "EmailSubmission/set",
       {
         "accountId": "$ACCOUNT_ID",
+        "onSuccessUpdateEmail": {
+          "#s1": {
+            "keywords/$draft": null,
+            "keywords/$sent": true
+          }
+        },
         "create": {
           "s1": {
             "emailId": "#m1",

@@ -6,52 +6,31 @@
   ],
   "methodCalls": [
     [
-      "Email/get",
-      {
-        "accountId": "$ACCOUNT_ID",
-        "ids": [
-          "$MAIL_ID"
-        ],
-        "properties": [
-          "id",
-          "threadId",
-          "from",
-          "replyTo",
-          "subject",
-          "messageId"
-        ]
-      },
-      "g0"
-    ],
-    [
       "Email/set",
       {
         "accountId": "$ACCOUNT_ID",
         "create": {
           "d1": {
             "mailboxIds": {
-              "$INBOX_MAILBOX_ID": true
+              "$SENT_MAILBOX_ID": true
             },
             "from": [
               {
                 "email": "$INBOX"
               }
             ],
-            "#to": {
-              "resultOf": "g0",
-              "name": "Email/get",
-              "path": "/list/0/replyTo"
-            },
-            "#subject": {
-              "resultOf": "g0",
-              "name": "Email/get",
-              "path": "/list/0/subject"
-            },
-            "#inReplyTo": {
-              "resultOf": "g0",
-              "name": "Email/get",
-              "path": "/list/0/messageId"
-            },
+            "to": [
+              {
+                "email": "$REPLY_TO"
+              }
+            ],
+            "subject": "$REPLY_SUBJECT",
+            "inReplyTo": [
+              "$REPLY_MESSAGE_ID"
+            ],
+            "references": [
+              "$REPLY_MESSAGE_ID"
+            ],
             "textBody": [
               {
                 "partId": "b",
@@ -64,7 +43,8 @@
               }
             },
             "keywords": {
-              "$draft": true
+              "$draft": true,
+              "$seen": true
             }
           }
         }
@@ -75,6 +55,12 @@
       "EmailSubmission/set",
       {
         "accountId": "$ACCOUNT_ID",
+        "onSuccessUpdateEmail": {
+          "#s1": {
+            "keywords/$draft": null,
+            "keywords/$sent": true
+          }
+        },
         "create": {
           "s1": {
             "emailId": "#d1",
@@ -82,11 +68,11 @@
               "mailFrom": {
                 "email": "$INBOX"
               },
-              "#rcptTo": {
-                "resultOf": "g0",
-                "name": "Email/get",
-                "path": "/list/0/replyTo"
-              }
+              "rcptTo": [
+                {
+                  "email": "$REPLY_TO"
+                }
+              ]
             }
           }
         }

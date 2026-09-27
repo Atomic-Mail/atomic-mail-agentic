@@ -36,6 +36,7 @@ export const SESSION_VAR_NAMES = new Set([
     "ACCOUNT_ID",
     "INBOX",
     "INBOX_MAILBOX_ID",
+    "SENT_MAILBOX_ID",
 ]);
 /** Unique variable names in order of first occurrence (without leading `$`). */
 export function findVarReferences(raw) {
@@ -57,8 +58,9 @@ function formatMissingError(missing) {
         "Pass custom placeholders in vars (MCP) or --vars (skill).";
     if (hasSession) {
         msg +=
-            " For $ACCOUNT_ID, $INBOX, and $INBOX_MAILBOX_ID, ensure register completed " +
-                "and credentials are valid, or pass overrides in vars.";
+            " For $ACCOUNT_ID, $INBOX, $INBOX_MAILBOX_ID, and $SENT_MAILBOX_ID, " +
+                "ensure register completed and credentials are valid, or pass " +
+                "overrides in vars.";
     }
     return new Error(msg);
 }

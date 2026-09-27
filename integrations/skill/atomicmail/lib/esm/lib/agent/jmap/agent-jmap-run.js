@@ -4,12 +4,14 @@ import { resolveInboxMailboxEmail } from "../session/inbox-id-to-mailbox-email.j
 import { assertBlobUploadEnvelopeWithinLimits, } from "./agent-jmap-blob-limits.js";
 import { ensureTextCharsetOnEmailSetBlobParts } from "./agent-jmap-email-charset.js";
 import { substituteVars } from "./agent-vars.js";
+import { fetchReplyContext, replyContextResolvers } from "./reply-context.js";
 export const DEFAULT_JMAP_USING = [
     "urn:ietf:params:jmap:core",
     "urn:ietf:params:jmap:mail",
 ];
 export const BUNDLED_OPS_PRESET_NAMES = [
     "list_inbox.json",
+    "list_sent.json",
     "reply.json",
     "send_mail.json",
     "send_mail_attachment.json",
@@ -152,6 +154,8 @@ export async function runJmapRequest(input) {
                 return email;
             },
             INBOX_MAILBOX_ID: () => fetchInboxMailboxId(input.session),
+            SENT_MAILBOX_ID: () => fetchSentMailboxId(input.session),
+            ...replyContextResolvers(async () => fetchReplyContext(async (envelope) => postJmap(await input.session.getJmapPostUrl(), await input.session.getCapabilityToken(), envelope), await input.session.getPrimaryMailAccountId(), mergedVars.MAIL_ID)),
             UPLOAD_URL: () => {
                 if (input.session.currentUploadUrl) {
                     return input.session.currentUploadUrl;
@@ -184,13 +188,14 @@ export async function runJmapRequest(input) {
     }
     return { ok, status, bodyText: attachJmapNextHints(bodyText) };
 }
-export async function fetchInboxMailboxId(port) {
+/** First `Mailbox` id with the given RFC 8621 role, or undefined if none. */
+async function fetchMailboxIdByRole(port, role) {
     const accountId = await port.getPrimaryMailAccountId();
     const capabilityJwt = await port.getCapabilityToken();
     const envelope = {
         using: ["urn:ietf:params:jmap:core", "urn:ietf:params:jmap:mail"],
         methodCalls: [
-            ["Mailbox/query", { accountId, filter: { role: "inbox" } }, "mq0"],
+            ["Mailbox/query", { accountId, filter: { role } }, "mq0"],
         ],
     };
     const jmapPostUrl = await port.getJmapPostUrl();
@@ -216,10 +221,24 @@ export async function fetchInboxMailboxId(port) {
     }
     const payload = first[1];
     const id = payload.ids?.[0];
-    if (typeof id !== "string" || id.length === 0) {
+    return typeof id === "string" && id.length > 0 ? id : undefined;
+}
+export async function fetchInboxMailboxId(port) {
+    const id = await fetchMailboxIdByRole(port, "inbox");
+    if (!id) {
         throw new Error("Mailbox/query returned no inbox mailbox id.");
     }
     return id;
+}
+/**
+ * Resolves `$SENT_MAILBOX_ID`: the `role: "sent"` mailbox, where the send
+ * presets file the sender's copy. Falls back to the inbox for accounts that
+ * have no Sent folder (never provisioned with the standard mailboxes), so a
+ * send never fails over where its copy is kept.
+ */
+export async function fetchSentMailboxId(port) {
+    return (await fetchMailboxIdByRole(port, "sent")) ??
+        await fetchInboxMailboxId(port);
 }
 function collectBlobUploadAccountIds(envelope) {
     const ids = new Set();

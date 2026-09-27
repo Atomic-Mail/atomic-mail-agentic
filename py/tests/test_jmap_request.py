@@ -452,3 +452,49 @@ def test_send_presets_file_in_sent_and_clear_draft(preset: str) -> None:
     assert submission["onSuccessUpdateEmail"] == {
         f"#{sub_id}": {"keywords/$draft": None, "keywords/$sent": True}
     }
+
+
+def test_reply_preset_resolves_original_with_one_email_get(monkeypatch) -> None:
+    from atomicmail.shared_assets import shared_dir
+
+    posted: list[dict[str, object]] = []
+
+    def fake_post(_url: str, _token: str, envelope: dict[str, object]):
+        posted.append(envelope)
+        call = envelope["methodCalls"][0]  # type: ignore[index]
+        if call[0] == "Email/get":
+            original = {
+                "from": [{"name": None, "email": "alice@example.com"}],
+                "replyTo": None,
+                "subject": "Invoice 42",
+                "messageId": ["abc@example.com"],
+            }
+            body = {"methodResponses": [["Email/get", {"list": [original]}, "rg0"]]}
+            return JmapRequestResult(ok=True, status=200, bodyText=json.dumps(body))
+        return JmapRequestResult(ok=True, status=200, bodyText='{"ok":true}')
+
+    monkeypatch.setattr(JMAP_MODULE, "_post_jmap", fake_post)
+    raw = (shared_dir() / "presets" / "reply.json").read_text(encoding="utf-8")
+    run_jmap_request(
+        session=_FakeSession(),
+        ops_json=raw,
+        vars={"SENT_MAILBOX_ID": "mb-sent", "MAIL_ID": "M1", "BODY": "Thanks"},
+    )
+    lookups = [e for e in posted if e["methodCalls"][0][0] == "Email/get"]  # type: ignore[index]
+    assert len(lookups) == 1
+    sent = posted[-1]
+    draft = sent["methodCalls"][0][1]["create"]["d1"]  # type: ignore[index]
+    assert draft["to"] == [{"email": "alice@example.com"}]
+    assert draft["subject"] == "Re: Invoice 42"
+    assert draft["inReplyTo"] == ["abc@example.com"]
+    assert not any(key.startswith("#") for key in draft)
+    rcpt = sent["methodCalls"][1][1]["create"]["s1"]["envelope"]["rcptTo"]  # type: ignore[index]
+    assert rcpt == [{"email": "alice@example.com"}]
+
+
+def test_reply_preset_requires_mail_id() -> None:
+    from atomicmail.shared_assets import shared_dir
+
+    raw = (shared_dir() / "presets" / "reply.json").read_text(encoding="utf-8")
+    with pytest.raises(ValueError, match="need MAIL_ID"):
+        run_jmap_request(session=_FakeSession(), ops_json=raw, vars={"SENT_MAILBOX_ID": "x", "BODY": "b"})

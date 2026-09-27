@@ -18,6 +18,18 @@ Notable changes to Atomic Mail Agentic. Format loosely follows
   `list_sent.json` for that. Accounts without a Sent mailbox fall back to the
   inbox, as before.
 
+### Fixed
+
+- **`reply.json` sends again.** It copied the original's recipient, subject and
+  Message-ID with `#to` / `#subject` / `#inReplyTo` result references inside the
+  `Email/set` create object, which RFC 8620 does not allow (references are only
+  valid at the top level of method arguments), so the server answered
+  `invalidProperties` and nothing was sent. The client now looks the original
+  up by `MAIL_ID` and fills `$REPLY_TO` (Reply-To, else From), `$REPLY_SUBJECT`
+  (single `Re: ` prefix) and `$REPLY_MESSAGE_ID` (`inReplyTo` / `references`),
+  in TypeScript and Python. The preset's inputs are unchanged (`MAIL_ID`,
+  `BODY`), so the n8n and Dify reply operations work without changes.
+
 ### Added
 
 - `$SENT_MAILBOX_ID` session placeholder (`role: "sent"` mailbox, inbox

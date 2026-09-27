@@ -5,36 +5,32 @@ Notable changes to Atomic Mail Agentic. Format loosely follows
 
 ## [Unreleased]
 
-### Changed
-
-- **Sent mail is filed in Sent, no longer left as a draft in the inbox.**
-  `send_mail.json`, `send_mail_attachment.json`,
-  `send_mail_blob_attachment.json` and `reply.json` now create the sender's
-  copy in the Sent mailbox and pass `onSuccessUpdateEmail` on
-  `EmailSubmission/set`, so a successful send clears `$draft` and sets `$sent`
-  (RFC 8621 §7.5). Previously every sent copy stayed in the inbox flagged
-  `$draft` forever, which read as "never sent". **Visible change:**
-  `list_inbox.json` no longer returns the agent's own sent mail; use the new
-  `list_sent.json` for that. Accounts without a Sent mailbox fall back to the
-  inbox, as before.
+## [0.3.30] - 2026-09-27
 
 ### Fixed
 
-- **`reply.json` sends again.** It copied the original's recipient, subject and
-  Message-ID with `#to` / `#subject` / `#inReplyTo` result references inside the
-  `Email/set` create object, which RFC 8620 does not allow (references are only
-  valid at the top level of method arguments), so the server answered
-  `invalidProperties` and nothing was sent. The client now looks the original
-  up by `MAIL_ID` and fills `$REPLY_TO` (Reply-To, else From), `$REPLY_SUBJECT`
-  (single `Re: ` prefix) and `$REPLY_MESSAGE_ID` (`inReplyTo` / `references`),
-  in TypeScript and Python. The preset's inputs are unchanged (`MAIL_ID`,
-  `BODY`), so the n8n and Dify reply operations work without changes.
+- **Sent mail no longer stays a draft in the inbox.** The send presets
+  (`send_mail.json`, `send_mail_attachment.json`,
+  `send_mail_blob_attachment.json`, `reply.json`) now file the sender's copy in
+  **Sent** and clear `$draft` once the message is submitted, so it is marked
+  `$sent` instead of looking unsent. Accounts without a Sent mailbox keep
+  using the inbox.
+- **`reply.json` sends again, in the same thread.** The server rejected it
+  with `invalidProperties`, so no reply ever went out. The client now looks up
+  the original by `MAIL_ID` and replies to its Reply-To (else From), with
+  `Re:` and `inReplyTo` set. Inputs are unchanged (`MAIL_ID`, `BODY`), so the
+  n8n and Dify reply actions work too.
+
+### Changed
+
+- `list_inbox.json` shows only mail that arrived; the agent's own sent mail
+  is no longer mixed in. Read it with `list_sent.json`.
 
 ### Added
 
-- `$SENT_MAILBOX_ID` session placeholder (`role: "sent"` mailbox, inbox
-  fallback), resolved in TypeScript and Python.
 - `list_sent.json` preset: the latest 50 messages the agent sent.
+- `$SENT_MAILBOX_ID` placeholder: the Sent mailbox id (inbox if there is no
+  Sent mailbox), resolved in TypeScript and Python.
 
 ## [0.3.26] - 2026-08-07
 

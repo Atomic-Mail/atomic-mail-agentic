@@ -36,6 +36,8 @@ BUNDLED_OPS_PRESET_NAMES = [
     "send_mail_blob_attachment.json",
 ]
 _VAR_PATTERN = re.compile(r"\$([A-Z][A-Z0-9_]*)")
+_VAR_START_RE = re.compile(r"[A-Z]")
+_VAR_CHAR_RE = re.compile(r"[A-Z0-9_]")
 USER_VAR_KEY_RE = re.compile(r"^[A-Z][A-Z0-9_]*$")
 _SESSION_VAR_NAMES = {"ACCOUNT_ID", "INBOX", "INBOX_MAILBOX_ID", "SENT_MAILBOX_ID"}
 _EXT_TO_MIME = {
@@ -439,16 +441,36 @@ def _fetch_mailbox_id_by_role(session: AgentSession, role: str) -> str | None:
     return ids[0]
 
 
+# JavaScript's whitespace set (``\s`` / ``String.prototype.trim``). Python's
+# differs (it adds U+001C-U+001F and U+0085, lacks U+FEFF), so the reply rules
+# spell it out to match the TS client and the hosted MCP server exactly.
+_JS_WS = (
+    "\t\n\v\f\r \u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000\ufeff"
+)
+_JS_TRIM_RE = re.compile(f"^[{_JS_WS}]+|[{_JS_WS}]+\\Z")
+_JS_TRIM_END_RE = re.compile(f"[{_JS_WS}]+\\Z")
+_RE_PREFIX = re.compile(f"^[{_JS_WS}]*re[{_JS_WS}]*:", re.IGNORECASE)
+
+
+def _js_trim(value: str) -> str:
+    return _JS_TRIM_RE.sub("", value)
+
+
 def _reply_subject(subject: object) -> str:
-    text = subject.strip() if isinstance(subject, str) else ""
-    return text if text.lower().startswith("re:") else f"Re: {text}".rstrip()
+    """Same rule as the hosted MCP server: newlines collapse to one space, and
+    a single ``Re: `` is added unless the subject already starts with one."""
+    raw = _js_trim(re.sub(r"[\r\n]+", " ", subject if isinstance(subject, str) else ""))
+    return raw if _RE_PREFIX.match(raw) else _JS_TRIM_END_RE.sub("", f"Re: {raw}")
 
 
 def _first_email(addresses: object) -> str | None:
-    if isinstance(addresses, list) and addresses and isinstance(addresses[0], dict):
-        email = addresses[0].get("email")
-        if isinstance(email, str) and email:
-            return email
+    """First usable (non-blank) address in the list, trimmed."""
+    if not isinstance(addresses, list):
+        return None
+    for item in addresses:
+        email = item.get("email") if isinstance(item, dict) else None
+        if isinstance(email, str) and _js_trim(email):
+            return _js_trim(email)
     return None
 
 
@@ -470,7 +492,7 @@ def _fetch_reply_context(session: AgentSession, mail_id: str | None) -> dict[str
                 {
                     "accountId": session.get_primary_mail_account_id(),
                     "ids": [mail_id],
-                    "properties": ["from", "replyTo", "subject", "messageId"],
+                    "properties": ["from", "replyTo", "sender", "subject", "messageId"],
                 },
                 "rg0",
             ]
@@ -487,19 +509,29 @@ def _fetch_reply_context(session: AgentSession, mail_id: str | None) -> dict[str
     responses = parsed.get("methodResponses") if isinstance(parsed, dict) else None
     if isinstance(responses, list) and responses:
         first = responses[0]
+        if isinstance(first, list) and len(first) >= 2 and first[0] == "error":
+            detail = json.dumps(first[1], ensure_ascii=False, separators=(",", ":"))
+            raise ValueError(f"Email/get for reply failed: {detail}")
         if isinstance(first, list) and len(first) >= 2 and first[0] == "Email/get":
             found = first[1].get("list") if isinstance(first[1], dict) else None
             if isinstance(found, list) and found and isinstance(found[0], dict):
                 email = found[0]
     if email is None:
         raise ValueError(f"MAIL_ID {mail_id} not found; nothing to reply to.")
-    to = _first_email(email.get("replyTo")) or _first_email(email.get("from"))
+    to = (
+        _first_email(email.get("replyTo"))
+        or _first_email(email.get("from"))
+        or _first_email(email.get("sender"))
+    )
     if not to:
-        raise ValueError(f"Message {mail_id} has no From or Reply-To address.")
+        raise ValueError(f"Message {mail_id} has no Reply-To, From or Sender address.")
     ids = email.get("messageId")
     message_id = ids[0] if isinstance(ids, list) and ids and isinstance(ids[0], str) else None
     if not message_id:
-        raise ValueError(f"Message {mail_id} has no Message-ID to thread on.")
+        raise ValueError(
+            f"Message {mail_id} has no Message-ID to thread on; "
+            "use send_mail.json with TO/SUBJECT instead."
+        )
     return {
         "REPLY_TO": to,
         "REPLY_SUBJECT": _reply_subject(email.get("subject")),
@@ -539,7 +571,10 @@ def _substitute_vars(
 
     for name in names:
         if name in provided:
-            resolved[name] = provided[name]
+            value = provided[name]
+            if not isinstance(value, str):
+                raise ValueError(f"vars value for '{name}' must be a string.")
+            resolved[name] = value
             continue
         resolver = auto_resolvers.get(name)
         if resolver is not None:
@@ -561,7 +596,59 @@ def _substitute_vars(
             )
         raise ValueError(message)
 
-    return _VAR_PATTERN.sub(lambda match: resolved[match.group(1)], raw)
+    return _substitute_resolved_vars(raw, resolved)
+
+
+def _substitute_resolved_vars(raw: str, resolved: Mapping[str, str]) -> str:
+    """Replace every ``$VAR_NAME`` in ``raw`` with its resolved value, JSON-context
+    aware (port of TS ``substituteResolvedVars``): inside a JSON string literal
+    the value is escaped for string context, so quotes, backslashes and control
+    characters cannot break out of the string; bare tokens (outside a string)
+    are substituted verbatim, preserving numeric/structural placeholders.
+
+    Single pass over the original text; resolved values are not rescanned for
+    further ``$`` tokens."""
+    out: list[str] = []
+    in_string = False
+    i = 0
+    n = len(raw)
+
+    while i < n:
+        ch = raw[i]
+
+        if in_string:
+            # Copy escape pairs verbatim so an escaped quote doesn't close the
+            # string and a `$` after a backslash stays correctly positioned.
+            if ch == "\\":
+                out.append(raw[i : i + 2])
+                i += 2
+                continue
+            if ch == '"':
+                in_string = False
+                out.append(ch)
+                i += 1
+                continue
+        elif ch == '"':
+            in_string = True
+            out.append(ch)
+            i += 1
+            continue
+
+        if ch == "$" and i + 1 < n and _VAR_START_RE.match(raw[i + 1]):
+            j = i + 1
+            while j < n and _VAR_CHAR_RE.match(raw[j]):
+                j += 1
+            name = raw[i + 1 : j]
+            if name in resolved:
+                value = resolved[name]
+                out.append(json.dumps(value, ensure_ascii=False)[1:-1] if in_string else value)
+                i = j
+                continue
+
+        out.append(ch)
+        i += 1
+
+    return "".join(out)
 
 
 def _resolve_inbox_mailbox_email(session: AgentSession) -> str:
@@ -861,8 +948,8 @@ def _jmap_next_hints() -> list[str]:
             return list(raw)
     return [
         "Use jmap_request with Mailbox/get or Email/query to work with mail data.",
-        "Use presets with $VAR placeholders — $ACCOUNT_ID, $INBOX, and "
-        "$INBOX_MAILBOX_ID come from the session; pass others via vars / --vars.",
+        "Use presets with $VAR placeholders — $ACCOUNT_ID, $INBOX, $INBOX_MAILBOX_ID, "
+        "and $SENT_MAILBOX_ID come from the session; pass others via vars / --vars.",
         "Call help for the JMAP cheatsheet and troubleshooting.",
     ]
 

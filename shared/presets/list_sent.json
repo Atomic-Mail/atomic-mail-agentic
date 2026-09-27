@@ -37,7 +37,8 @@
           "from",
           "to",
           "subject",
-          "preview"
+          "preview",
+          "keywords"
         ]
       },
       "g0"

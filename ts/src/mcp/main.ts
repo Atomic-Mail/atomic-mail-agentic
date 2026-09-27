@@ -33,9 +33,10 @@ WORKFLOW
      exact setup step for your runtime; schedule on your host's OWN scheduler, never
      at the OS level (help topic "cron").
   3. Call jmap_request with JMAP method calls (inline ops JSON or ops_file preset).
-     $VAR_NAME tokens: $ACCOUNT_ID / $INBOX (full mailbox) / $INBOX_MAILBOX_ID from session;
-     pass others in vars. Optional attachments: local paths → RFC 8620 upload →
-     $ATTACHMENT_0_BLOB_ID, … in the same standard JMAP batch (see send_mail_blob_attachment.json).
+     $VAR_NAME tokens: $ACCOUNT_ID / $INBOX (full mailbox) / $INBOX_MAILBOX_ID /
+     $SENT_MAILBOX_ID from session; pass others in vars. Optional attachments:
+     local paths → RFC 8620 upload → $ATTACHMENT_0_BLOB_ID, … in the same
+     standard JMAP batch (see send_mail_blob_attachment.json).
   4. Call help early and often — even when you think you know JMAP. Topics:
      presets (before non-trivial jmap_request), cron (after register),
      jmap_cheatsheet, troubleshooting, …; topic readme returns this package README.

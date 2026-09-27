@@ -579,7 +579,7 @@ export async function postJmap(
 
 const JMAP_NEXT_HINTS = sharedHints?.jmap_next_hints ?? [
   "Use jmap_request with Mailbox/get or Email/query to work with mail data.",
-  "Use presets with $VAR placeholders — $ACCOUNT_ID, $INBOX, and $INBOX_MAILBOX_ID come from the session; pass others via vars / --vars.",
+  "Use presets with $VAR placeholders — $ACCOUNT_ID, $INBOX, $INBOX_MAILBOX_ID, and $SENT_MAILBOX_ID come from the session; pass others via vars / --vars.",
   "Call help for the JMAP cheatsheet and troubleshooting.",
 ];
 

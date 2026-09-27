@@ -50,6 +50,7 @@ one, the server side has to move in the same release — flag it.
 | `$INBOX` resolution + `ATOMIC_MAIL_INBOX_DOMAIN` | The account's real address as the server returns it. Custom domains mean `$INBOX` is **not** always `<user>@atomicmail.ai`; do not reconstruct it from the username. |
 | OAuth `resource` values in `docs/oauth.md` / `docs/mcp-remote.md` | RFC 8707 audience binding — the strings must be **byte-identical** to what the authorization server issues tokens for. A trailing slash breaks the flow. |
 | Remote-MCP tool surface in `docs/mcp-remote.md` | Implemented entirely server-side. Nothing in this repo can add, rename, or remove one of those 11 tools; this doc can only fall out of date. |
+| `shared/presets/*.json` send semantics (mailbox, keywords, `onSuccessUpdateEmail`) and session placeholders | The hosted remote MCP server keeps its own hand-ported copy for `run_preset`, `send_email` and `reply_to_message`; nothing syncs them. Change where sent mail is filed, the reply rules, or which placeholders exist → flag the server side in the same release. |
 
 Not coupled, despite looking like it: `watch` on `register` is a **wrapper-only**
 precondition. It is enforced by the MCP tool and CLI schemas and never reaches
@@ -112,7 +113,7 @@ TypeScript style: 2-space indent, 80-column width (`ts/deno.json`).
 
 3. **`register` idempotency:** Same username is OK; a different username is refused. The documented answer is a separate `credentials_dir`. `forced` still exists but was **deliberately demoted** — removed from `--help` and from the MCP tool descriptions, with its danger spelled out only in the refusal error, because advertising a ready-made replace flag is what let agents destroy another account's credentials without pausing. Do not re-add it to a description, a usage string, or a doc as a normal option.
 
-4. **`jmap_request`:** Exactly one of `ops` or `ops_file`. Custom vars match `^[A-Z][A-Z0-9_]*$`. Session vars: `$ACCOUNT_ID`, `$INBOX`, `$INBOX_MAILBOX_ID`.
+4. **`jmap_request`:** Exactly one of `ops` or `ops_file`. Custom vars match `^[A-Z][A-Z0-9_]*$`. Session vars: `$ACCOUNT_ID`, `$INBOX`, `$INBOX_MAILBOX_ID`, `$SENT_MAILBOX_ID`.
 
 5. **`dry_run` + attachments:** Rejected in both TS and Python.
 

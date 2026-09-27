@@ -104,7 +104,7 @@ Bundled presets (via **JMAP → Request → Preset File**):
 - `send_mail_attachment.json`
 - `reply.json`
 
-Session placeholders `$ACCOUNT_ID`, `$INBOX`, `$INBOX_MAILBOX_ID` are resolved automatically. Pass additional `$VAR` tokens in **Vars JSON**.
+Session placeholders `$ACCOUNT_ID`, `$INBOX`, `$INBOX_MAILBOX_ID`, `$SENT_MAILBOX_ID` are resolved automatically. Pass additional `$VAR` tokens in **Vars JSON**.
 
 ## Worked example: triage inbound mail
 

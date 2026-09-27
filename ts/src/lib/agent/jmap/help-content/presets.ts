@@ -15,6 +15,9 @@ presets that ship in both npm packages.
 - \`send_mail.json\` — sends one email using \`$TO\`, \`$SUBJECT\`, \`$BODY\`.
 - \`list_inbox.json\` — latest 50 inbox messages (uses \`$INBOX_MAILBOX_ID\`).
   **Use this preset for the scheduled inbox check** (see **cron** topic).
+- \`list_sent.json\` — latest 50 messages the agent sent (uses
+  \`$SENT_MAILBOX_ID\`). The send presets file their copy in Sent and clear
+  \`$draft\` on success, so sent mail no longer shows in the inbox listing.
 - \`reply.json\` — replies in-thread using \`$MAIL_ID\` and \`$BODY\`.
 - \`send_mail_attachment.json\` — \`Blob/upload\` + send; \`vars\`: \`TO\`,
   \`SUBJECT\`, \`BODY\`, \`ATTACHMENT_BASE64\`, \`ATTACHMENT_TYPE\`,
@@ -38,6 +41,8 @@ keywords like \`$draft\` stay untouched).
 - \`$INBOX\` — inbox email address from credentials.
 - \`$INBOX_MAILBOX_ID\` — JMAP mailbox id for the inbox (extra \`Mailbox/query\`;
   use for \`Email/query\` / \`Email/set\` where the API wants a mailbox id).
+- \`$SENT_MAILBOX_ID\` — JMAP mailbox id for Sent (\`role: "sent"\`); falls back
+  to the inbox id on accounts without a Sent mailbox.
 - \`$UPLOAD_URL\` — RFC 8620 upload URL template from JMAP session.
 - \`$DOWNLOAD_URL\` — RFC 8620 download URL template from JMAP session.
 - Any other \`$FOO\` — must appear in MCP \`vars\` or skill \`--vars\` as
@@ -49,4 +54,5 @@ keywords like \`$draft\` stay untouched).
   them in \`vars\` / \`--vars\` if needed.
 
 You may override \`ACCOUNT_ID\` / \`INBOX\` / \`INBOX_MAILBOX_ID\` /
-\`UPLOAD_URL\` / \`DOWNLOAD_URL\` via \`vars\` / \`--vars\` if needed.`;
+\`SENT_MAILBOX_ID\` / \`UPLOAD_URL\` / \`DOWNLOAD_URL\` via \`vars\` / \`--vars\` if
+needed.`;

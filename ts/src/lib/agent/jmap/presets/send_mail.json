@@ -11,13 +11,35 @@
         "accountId": "$ACCOUNT_ID",
         "create": {
           "d1": {
-            "mailboxIds": { "$INBOX_MAILBOX_ID": true },
-            "from": [{ "email": "$INBOX" }],
-            "to": [{ "email": "$TO" }],
+            "mailboxIds": {
+              "$SENT_MAILBOX_ID": true
+            },
+            "from": [
+              {
+                "email": "$INBOX"
+              }
+            ],
+            "to": [
+              {
+                "email": "$TO"
+              }
+            ],
             "subject": "$SUBJECT",
-            "textBody": [{ "partId": "b", "type": "text/plain" }],
-            "bodyValues": { "b": { "value": "$BODY" } },
-            "keywords": { "$draft": true }
+            "textBody": [
+              {
+                "partId": "b",
+                "type": "text/plain"
+              }
+            ],
+            "bodyValues": {
+              "b": {
+                "value": "$BODY"
+              }
+            },
+            "keywords": {
+              "$draft": true,
+              "$seen": true
+            }
           }
         }
       },
@@ -27,12 +49,24 @@
       "EmailSubmission/set",
       {
         "accountId": "$ACCOUNT_ID",
+        "onSuccessUpdateEmail": {
+          "#s1": {
+            "keywords/$draft": null,
+            "keywords/$sent": true
+          }
+        },
         "create": {
           "s1": {
             "emailId": "#d1",
             "envelope": {
-              "mailFrom": { "email": "$INBOX" },
-              "rcptTo": [{ "email": "$TO" }]
+              "mailFrom": {
+                "email": "$INBOX"
+              },
+              "rcptTo": [
+                {
+                  "email": "$TO"
+                }
+              ]
             }
           }
         }

@@ -47,6 +47,7 @@ const PRESET_FILES = [
   "send_mail_attachment.json",
   "send_mail_blob_attachment.json",
   "list_inbox.json",
+  "list_sent.json",
   "reply.json",
 ] as const;
 

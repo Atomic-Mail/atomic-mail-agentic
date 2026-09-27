@@ -5,6 +5,25 @@ Notable changes to Atomic Mail Agentic. Format loosely follows
 
 ## [Unreleased]
 
+### Changed
+
+- **Sent mail is filed in Sent, no longer left as a draft in the inbox.**
+  `send_mail.json`, `send_mail_attachment.json`,
+  `send_mail_blob_attachment.json` and `reply.json` now create the sender's
+  copy in the Sent mailbox and pass `onSuccessUpdateEmail` on
+  `EmailSubmission/set`, so a successful send clears `$draft` and sets `$sent`
+  (RFC 8621 §7.5). Previously every sent copy stayed in the inbox flagged
+  `$draft` forever, which read as "never sent". **Visible change:**
+  `list_inbox.json` no longer returns the agent's own sent mail; use the new
+  `list_sent.json` for that. Accounts without a Sent mailbox fall back to the
+  inbox, as before.
+
+### Added
+
+- `$SENT_MAILBOX_ID` session placeholder (`role: "sent"` mailbox, inbox
+  fallback), resolved in TypeScript and Python.
+- `list_sent.json` preset: the latest 50 messages the agent sent.
+
 ## [0.3.26] - 2026-08-07
 
 ### Added

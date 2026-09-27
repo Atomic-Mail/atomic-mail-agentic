@@ -29,6 +29,7 @@ DEFAULT_JMAP_USING = [
 ]
 BUNDLED_OPS_PRESET_NAMES = [
     "list_inbox.json",
+    "list_sent.json",
     "reply.json",
     "send_mail.json",
     "send_mail_attachment.json",
@@ -36,7 +37,7 @@ BUNDLED_OPS_PRESET_NAMES = [
 ]
 _VAR_PATTERN = re.compile(r"\$([A-Z][A-Z0-9_]*)")
 USER_VAR_KEY_RE = re.compile(r"^[A-Z][A-Z0-9_]*$")
-_SESSION_VAR_NAMES = {"ACCOUNT_ID", "INBOX", "INBOX_MAILBOX_ID"}
+_SESSION_VAR_NAMES = {"ACCOUNT_ID", "INBOX", "INBOX_MAILBOX_ID", "SENT_MAILBOX_ID"}
 _EXT_TO_MIME = {
     ".txt": "text/plain",
     ".html": "text/html",
@@ -369,7 +370,8 @@ def _find_var_references(raw: str) -> list[str]:
     return ordered
 
 
-def _fetch_inbox_mailbox_id(session: AgentSession) -> str:
+def _fetch_mailbox_id_by_role(session: AgentSession, role: str) -> str | None:
+    """First Mailbox id with the given RFC 8621 role, or None if none."""
     envelope = {
         "using": ["urn:ietf:params:jmap:core", "urn:ietf:params:jmap:mail"],
         "methodCalls": [
@@ -377,7 +379,7 @@ def _fetch_inbox_mailbox_id(session: AgentSession) -> str:
                 "Mailbox/query",
                 {
                     "accountId": session.get_primary_mail_account_id(),
-                    "filter": {"role": "inbox"},
+                    "filter": {"role": role},
                 },
                 "mq0",
             ]
@@ -433,13 +435,26 @@ def _fetch_inbox_mailbox_id(session: AgentSession) -> str:
         )
     ids = first[1].get("ids")
     if not isinstance(ids, list) or not ids or not isinstance(ids[0], str) or not ids[0]:
+        return None
+    return ids[0]
+
+
+def _fetch_inbox_mailbox_id(session: AgentSession) -> str:
+    mailbox_id = _fetch_mailbox_id_by_role(session, "inbox")
+    if mailbox_id is None:
         raise ValueError(
             _error(
                 "mailbox_query_missing_inbox_id",
                 "Mailbox/query returned no inbox mailbox id.",
             )
         )
-    return ids[0]
+    return mailbox_id
+
+
+def _fetch_sent_mailbox_id(session: AgentSession) -> str:
+    """Resolve $SENT_MAILBOX_ID: the role "sent" mailbox the send presets file
+    the sender's copy in, falling back to the inbox for accounts without one."""
+    return _fetch_mailbox_id_by_role(session, "sent") or _fetch_inbox_mailbox_id(session)
 
 
 def _substitute_vars(
@@ -473,7 +488,7 @@ def _substitute_vars(
         if any(name in _SESSION_VAR_NAMES for name in missing):
             message += _error(
                 "vars_missing_session_suffix",
-                " For $ACCOUNT_ID, $INBOX, and $INBOX_MAILBOX_ID, ensure register "
+                " For $ACCOUNT_ID, $INBOX, $INBOX_MAILBOX_ID, and $SENT_MAILBOX_ID, ensure register "
                 "completed and credentials are valid, or pass overrides in vars.",
             )
         raise ValueError(message)
@@ -828,6 +843,7 @@ def run_jmap_request(
     auto_resolvers: dict[str, Callable[[], str]] = {
         "ACCOUNT_ID": session.get_primary_mail_account_id,
         "INBOX_MAILBOX_ID": lambda: _fetch_inbox_mailbox_id(session),
+        "SENT_MAILBOX_ID": lambda: _fetch_sent_mailbox_id(session),
         "INBOX": lambda: _resolve_inbox_mailbox_email(session),
         "UPLOAD_URL": lambda: (
             session.current_upload_url

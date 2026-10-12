@@ -216,9 +216,13 @@ export function checkLength(
   }
 }
 
-export function newEventUid(organizerEmail: string): string {
-  const domain = organizerEmail.split("@")[1] || "atomicmail.ai";
-  return `${crypto.randomUUID()}@${domain}`;
+/**
+ * A random UUID. RFC 7986 §5.3 recommends UIDs carry no host, domain or user
+ * (the organizer stays private to the object). `_organizerEmail` is unused and
+ * kept for call-site stability.
+ */
+export function newEventUid(_organizerEmail?: string): string {
+  return crypto.randomUUID();
 }
 
 // ---------------------------------------------------------------------------

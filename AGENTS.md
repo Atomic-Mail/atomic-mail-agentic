@@ -4,7 +4,7 @@ Guidance for AI coding agents working in this repository.
 
 ## What this repo is
 
-**Atomic Mail Agentic** ships MCP and CLI clients for [Atomic Mail](https://atomicmail.ai)—a hosted email inbox for AI agents. Everything built **in this repo** — the local stdio MCP server, the AgentSkill CLI, the LangChain tools, the Python parity layer — exposes three operations only: `register`, `jmap_request`, and `help`.
+**Atomic Mail Agentic** ships MCP and CLI clients for [Atomic Mail](https://atomicmail.ai)—a hosted email inbox for AI agents. Everything built **in this repo** — the local stdio MCP server, the AgentSkill CLI, the LangChain tools, the Python parity layer — exposes three core operations: `register`, `jmap_request`, and `help`. The TypeScript CLI and stdio MCP add meeting invitations (`calendar` in the CLI; `send_invite`, `update_invite`, `cancel_invite`, `list_invites`, `respond_to_invite` in MCP), built on the same JMAP path; the Python layer does not have them yet.
 
 That is the *client* surface, not the product surface. The **hosted [remote MCP server](docs/mcp-remote.md)** at `mcp.atomicmail.ai` is a different artifact, built server-side, and exposes 11 tools (`read_inbox`, `read_message`, `search_messages`, `send_email`, `reply_to_message`, `list_agents`, `search`, `fetch`, `run_preset`, `jmap_request`, `help`). Do not "fix" a doc that mentions those tools by trimming it back to three.
 
@@ -116,6 +116,8 @@ TypeScript style: 2-space indent, 80-column width (`ts/deno.json`).
 4. **`jmap_request`:** Exactly one of `ops` or `ops_file`. Custom vars match `^[A-Z][A-Z0-9_]*$`. Session vars: `$ACCOUNT_ID`, `$INBOX`, `$INBOX_MAILBOX_ID`, `$SENT_MAILBOX_ID`.
 
 5. **`dry_run` + attachments:** Rejected in both TS and Python.
+
+6. **Calendar code is shared with the server.** `ts/src/lib/agent/calendar/{ical,invites,flows}.ts` (and `flows.test.ts`) are byte-for-byte copies of the hosted MCP server's `services/mcp-server/src/calendar/` — change both repos together. Invitations go out as `Blob/upload` + `Email/set` with `bodyStructure` + `EmailSubmission/set`; the server adds the `method=` Content-Type parameter on egress (JMAP cannot set it). Times without an offset need an IANA zone — never guess one.
 
 ## Gotchas
 

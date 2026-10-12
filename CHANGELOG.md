@@ -5,6 +5,15 @@ Notable changes to Atomic Mail Agentic. Format loosely follows
 
 ## [Unreleased]
 
+### Added
+
+- **Meeting invitations.** `atomicmail calendar send|update|cancel|list|respond`
+  and the stdio MCP tools `send_invite`, `update_invite`, `cancel_invite`,
+  `list_invites` and `respond_to_invite` (same as the hosted MCP server).
+  Guests get a standard invitation with Yes / No / Maybe in Gmail, Outlook and
+  Apple Mail; their answers, counter-proposals and invitations sent to the inbox
+  are read back from mail. New help topic `calendar`. TypeScript only for now.
+
 ## [0.3.32] - 2026-10-30
 
 ### Added

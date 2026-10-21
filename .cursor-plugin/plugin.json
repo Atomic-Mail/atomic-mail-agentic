@@ -1,0 +1,18 @@
+{
+  "name": "atomic-mail",
+  "displayName": "Atomic Mail",
+  "version": "1.0.0",
+  "description": "Give your agent its own email inbox: read, search, send and reply.",
+  "author": {
+    "name": "AtomicMail Systems OÜ",
+    "email": "support@atomicmail.ai"
+  },
+  "homepage": "https://docs.atomicmail.ai/mcp-remote",
+  "repository": "https://github.com/Atomic-Mail/atomic-mail-agentic",
+  "license": "MIT",
+  "logo": "assets/cursor-plugin-logo.png",
+  "keywords": ["email", "inbox", "agents", "mcp", "jmap"],
+  "category": "productivity",
+  "tags": ["email", "inbox", "mcp", "agents"],
+  "mcpServers": "./mcp.json"
+}

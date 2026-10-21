@@ -1,8 +1,8 @@
 {
-  "name": "atomic-mail",
-  "displayName": "Atomic Mail",
+  "name": "atomic-mail-agentic",
+  "displayName": "Atomic Mail Agentic",
   "version": "1.0.0",
-  "description": "Give your agent its own email inbox: read, search, send and reply.",
+  "description": "Email inboxes for AI agents",
   "author": {
     "name": "AtomicMail Systems OÜ",
     "email": "support@atomicmail.ai"

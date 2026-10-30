@@ -20,5 +20,10 @@ Accounts without a Sent mailbox fall back to the inbox.
 
 `reply.json` takes `MAIL_ID` and `BODY`. The client looks the original up by
 `MAIL_ID` and fills `$REPLY_TO`, `$REPLY_SUBJECT` and `$REPLY_MESSAGE_ID`, so
-the reply goes to Reply-To (else From), with `Re: ` and `inReplyTo` set, and
-lands in the same thread.
+the reply goes to the first usable Reply-To, else From, else Sender address,
+with `Re: ` and `inReplyTo` set, and lands in the same thread.
+
+`reply.json` replies to one address only: the first Reply-To address, else
+From, else Sender (no reply-all). It sets `References` to the parent
+Message-ID only, not the parent's whole chain, and takes no attachments. If the
+original has no Message-ID, use `send_mail.json` with `TO`/`SUBJECT` instead.

@@ -8,15 +8,28 @@ export const REPLY_VAR_NAMES = [
     "REPLY_SUBJECT",
     "REPLY_MESSAGE_ID",
 ];
+/** First usable (non-blank) address in the list, trimmed. */
 function firstEmail(list) {
     if (!Array.isArray(list))
         return undefined;
-    const email = list[0]?.email;
-    return typeof email === "string" && email.length > 0 ? email : undefined;
+    for (const item of list) {
+        const email = item?.email;
+        if (typeof email === "string" && email.trim().length > 0) {
+            return email.trim();
+        }
+    }
+    return undefined;
 }
+const RE_PREFIX = /^\s*re\s*:/i;
+/**
+ * Same rule as the hosted MCP server: newlines collapse to one space, and a
+ * single `Re: ` is added unless the subject already starts with one.
+ */
 export function replySubject(subject) {
-    const s = typeof subject === "string" ? subject.trim() : "";
-    return /^re:/i.test(s) ? s : `Re: ${s}`.trimEnd();
+    const s = (typeof subject === "string" ? subject : "")
+        .replace(/[\r\n]+/g, " ")
+        .trim();
+    return RE_PREFIX.test(s) ? s : `Re: ${s}`.trimEnd();
 }
 export async function fetchReplyContext(post, accountId, mailId) {
     if (!mailId) {
@@ -30,7 +43,7 @@ export async function fetchReplyContext(post, accountId, mailId) {
                 {
                     accountId,
                     ids: [mailId],
-                    properties: ["from", "replyTo", "subject", "messageId"],
+                    properties: ["from", "replyTo", "sender", "subject", "messageId"],
                 },
                 "rg0",
             ]],
@@ -38,30 +51,37 @@ export async function fetchReplyContext(post, accountId, mailId) {
     if (!ok) {
         throw new Error(`Email/get for reply failed (HTTP ${status}): ${bodyText}`);
     }
-    let email;
+    let first;
     try {
         const parsed = JSON.parse(bodyText);
-        const first = parsed.methodResponses?.[0];
-        if (Array.isArray(first) && first[0] === "Email/get") {
-            email = first[1].list?.[0];
-        }
+        first = parsed.methodResponses?.[0];
     }
     catch {
         throw new Error("Email/get for reply returned invalid JSON.");
     }
+    if (Array.isArray(first) && first[0] === "error") {
+        throw new Error(`Email/get for reply failed: ${JSON.stringify(first[1])}`);
+    }
+    let email;
+    if (Array.isArray(first) && first[0] === "Email/get") {
+        email = first[1]
+            ?.list?.[0];
+    }
     if (!email) {
         throw new Error(`MAIL_ID ${mailId} not found; nothing to reply to.`);
     }
-    const to = firstEmail(email.replyTo) ?? firstEmail(email.from);
+    const to = firstEmail(email.replyTo) ?? firstEmail(email.from) ??
+        firstEmail(email.sender);
     if (!to) {
-        throw new Error(`Message ${mailId} has no From or Reply-To address.`);
+        throw new Error(`Message ${mailId} has no Reply-To, From or Sender address.`);
     }
     const ids = email.messageId;
     const messageId = Array.isArray(ids) && typeof ids[0] === "string"
         ? ids[0]
         : undefined;
     if (!messageId) {
-        throw new Error(`Message ${mailId} has no Message-ID to thread on.`);
+        throw new Error(`Message ${mailId} has no Message-ID to thread on; ` +
+            "use send_mail.json with TO/SUBJECT instead.");
     }
     return { to, subject: replySubject(email.subject), messageId };
 }

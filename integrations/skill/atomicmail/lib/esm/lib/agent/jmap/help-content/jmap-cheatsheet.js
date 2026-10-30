@@ -50,8 +50,9 @@ RFC 8621.
 - \`$ACCOUNT_ID\`, \`$INBOX\` (full mailbox **email** for \`From\` / envelope; from
   \`inboxId\`, appending \`@atomicmail.ai\` or \`ATOMIC_MAIL_INBOX_DOMAIN\` when
   needed), \`$INBOX_MAILBOX_ID\` (JMAP mailbox id — use for \`Email/query\` →
-  \`inMailbox\` and \`Email/set\` → \`mailboxIds\`), \`$UPLOAD_URL\`,
-  \`$DOWNLOAD_URL\` resolve from the session.
+  \`inMailbox\`), \`$SENT_MAILBOX_ID\` (JMAP mailbox id of Sent, falling back
+  to the inbox — use for \`Email/set\` → \`mailboxIds\` when sending),
+  \`$UPLOAD_URL\`, \`$DOWNLOAD_URL\` resolve from the session.
 - Pass \`$TO\`, \`$SUBJECT\`, \`$BODY\`, etc. via MCP \`vars\` or skill \`--vars\`
   (object of strings).
 
@@ -93,9 +94,10 @@ object (or use bundled presets, which include the right \`using\`).
 
 ## Send one email (draft + submit)
 
-Same pattern as bundled \`send_mail.json\`: \`Email/set\` includes
-\`mailboxIds\` with \`$INBOX_MAILBOX_ID\` as the mailbox id key, then
-\`EmailSubmission/set\` with \`envelope\`.
+Same pattern as bundled \`send_mail.json\`: \`Email/set\` creates the copy in
+\`$SENT_MAILBOX_ID\` with \`$draft\` + \`$seen\`, then \`EmailSubmission/set\`
+with \`envelope\` and \`onSuccessUpdateEmail\`, which clears \`$draft\` and sets
+\`$sent\` once the submission succeeds (otherwise the copy stays a draft).
 
 \`\`\`json
 {
@@ -109,18 +111,21 @@ Same pattern as bundled \`send_mail.json\`: \`Email/set\` includes
       "accountId": "$ACCOUNT_ID",
       "create": {
         "d1": {
-          "mailboxIds": {"$INBOX_MAILBOX_ID": true},
+          "mailboxIds": {"$SENT_MAILBOX_ID": true},
           "from": [{"email": "$INBOX"}],
           "to": [{"email": "$TO"}],
           "subject": "$SUBJECT",
           "textBody": [{"partId": "b", "type": "text/plain"}],
           "bodyValues": {"b": {"value": "$BODY"}},
-          "keywords": {"$draft": true}
+          "keywords": {"$draft": true, "$seen": true}
         }
       }
     }, "c0"],
     ["EmailSubmission/set", {
       "accountId": "$ACCOUNT_ID",
+      "onSuccessUpdateEmail": {
+        "#s1": {"keywords/$draft": null, "keywords/$sent": true}
+      },
       "create": {
         "s1": {
           "emailId": "#d1",
@@ -162,18 +167,22 @@ Minimal inline example (base64 for UTF-8 \`Hello\`; replace addresses):
       "accountId": "$ACCOUNT_ID",
       "create": {
         "m1": {
-          "mailboxIds": {"$INBOX_MAILBOX_ID": true},
+          "mailboxIds": {"$SENT_MAILBOX_ID": true},
           "from": [{"email": "$INBOX"}],
           "to": [{"email": "$TO"}],
           "subject": "With attachment",
           "bodyValues": {"body1": {"value": "See attachment."}},
           "textBody": [{"partId": "body1", "type": "text/plain"}],
-          "attachments": [{"blobId": "#b1", "type": "text/plain", "name": "note.txt"}]
+          "attachments": [{"blobId": "#b1", "type": "text/plain", "name": "note.txt"}],
+          "keywords": {"$draft": true, "$seen": true}
         }
       }
     }, "m0"],
     ["EmailSubmission/set", {
       "accountId": "$ACCOUNT_ID",
+      "onSuccessUpdateEmail": {
+        "#s1": {"keywords/$draft": null, "keywords/$sent": true}
+      },
       "create": {
         "s1": {
           "emailId": "#m1",

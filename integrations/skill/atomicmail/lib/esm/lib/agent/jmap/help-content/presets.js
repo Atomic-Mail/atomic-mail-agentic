@@ -17,7 +17,9 @@ presets that ship in both npm packages.
 - \`list_sent.json\` — latest 50 messages the agent sent (uses
   \`$SENT_MAILBOX_ID\`). The send presets file their copy in Sent and clear
   \`$draft\` on success, so sent mail no longer shows in the inbox listing.
-- \`reply.json\` — replies in-thread using \`$MAIL_ID\` and \`$BODY\`.
+- \`reply.json\` — replies in-thread using \`$MAIL_ID\` and \`$BODY\`. Replies
+  to one address only (first Reply-To, else From, else Sender), sets
+  \`References\` to the parent Message-ID only, and takes no attachments.
 - \`send_mail_attachment.json\` — \`Blob/upload\` + send; \`vars\`: \`TO\`,
   \`SUBJECT\`, \`BODY\`, \`ATTACHMENT_BASE64\`, \`ATTACHMENT_TYPE\`,
   \`ATTACHMENT_NAME\`. Fine for modest sizes; large files should use RFC 8620
@@ -39,14 +41,15 @@ keywords like \`$draft\` stay untouched).
   referenced).
 - \`$INBOX\` — inbox email address from credentials.
 - \`$INBOX_MAILBOX_ID\` — JMAP mailbox id for the inbox (extra \`Mailbox/query\`;
-  use for \`Email/query\` / \`Email/set\` where the API wants a mailbox id).
+  use for \`Email/query\` → \`inMailbox\`; sends use \`$SENT_MAILBOX_ID\`).
 - \`$SENT_MAILBOX_ID\` — JMAP mailbox id for Sent (\`role: "sent"\`); falls back
   to the inbox id on accounts without a Sent mailbox.
 - \`$UPLOAD_URL\` — RFC 8620 upload URL template from JMAP session.
 - \`$DOWNLOAD_URL\` — RFC 8620 download URL template from JMAP session.
 - Any other \`$FOO\` — must appear in MCP \`vars\` or skill \`--vars\` as
-  \`"FOO": "..."\` (string values only; JSON escaping in the preset body is your
-  responsibility).
+  \`"FOO": "..."\` (string values only; values are JSON-escaped automatically
+  inside string literals, so pass raw text and do not pre-escape; bare tokens
+  are inserted verbatim).
 - \`$ATTACHMENT_N_BLOB_ID\`, \`$ATTACHMENT_N_NAME\`, \`$ATTACHMENT_N_TYPE\`,
   \`$ATTACHMENT_N_SIZE\` (N = 0, 1, …) and \`$ATTACHMENT_COUNT\` — injected when
   you pass MCP \`attachments\` or skill \`--attachment\`; you can still override

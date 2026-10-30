@@ -5,6 +5,26 @@ Notable changes to Atomic Mail Agentic. Format loosely follows
 
 ## [Unreleased]
 
+## [0.3.32] - 2026-10-30
+
+### Added
+
+- **Webhooks.** Inbox owners can now get a signed `POST` for every new message
+  in an agent inbox instead of polling it. Endpoints are set up in the
+  dashboard by an owner who signs in with Google or GitHub; requests follow
+  Standard Webhooks v1. The new [Webhooks](https://docs.atomicmail.ai/webhooks)
+  page covers setup, signature verification (Node.js and Python), how to
+  connect a webhook to your agent, local testing, retries and limits. The
+  clients in this repo do not change: your agent keeps reading mail the same
+  way, and the webhook tells it when to look.
+- Cursor plugin manifest, so Atomic Mail Agentic can be listed in the Cursor
+  Marketplace.
+
+### Fixed
+
+- The skill launcher is now invoked through `bash`, so a lost executable bit
+  (for example after a zip download) no longer breaks the skill.
+
 ## [0.3.31] - 2026-09-27
 
 ### Security

@@ -39,6 +39,16 @@ assert_not_contains() {
   fi
 }
 
+# ClawHub and actions/upload-artifact strip unix modes, so the launcher can
+# land as 0644: every SKILL.md call site must go through `bash`.
+assert_no_bare_launcher() {
+  local path="$1"
+  if rg -q -P '(?<!bash )(\{baseDir\}|\$\{HERMES_SKILL_DIR\})/scripts/atomicmail' "${path}"; then
+    echo "Launcher invoked without bash in ${path}" >&2
+    exit 1
+  fi
+}
+
 sha256_of() {
   shasum -a 256 "$1" | awk '{print $1}'
 }
@@ -106,19 +116,22 @@ echo "==> Verifying SKILL frontmatter and launcher invocations"
 assert_contains "metadata:" "${BUNDLED_DIR}/SKILL.md"
 assert_contains "openclaw:" "${BUNDLED_DIR}/SKILL.md"
 assert_contains "hermes:" "${BUNDLED_DIR}/SKILL.md"
-assert_contains "\\{baseDir\\}/scripts/atomicmail" "${BUNDLED_DIR}/SKILL.md"
+assert_contains "bash \\{baseDir\\}/scripts/atomicmail" "${BUNDLED_DIR}/SKILL.md"
+assert_no_bare_launcher "${BUNDLED_DIR}/SKILL.md"
 assert_not_contains "npx --package" "${BUNDLED_DIR}/SKILL.md"
 assert_not_contains "\\(\\./jmap\\.md#" "${BUNDLED_DIR}/SKILL.md"
 
 assert_contains "metadata: \\{\\\"openclaw\\\"" "${CLAWHUB_DIR}/SKILL.md"
-assert_contains "\\{baseDir\\}/scripts/atomicmail" "${CLAWHUB_DIR}/SKILL.md"
+assert_contains "bash \\{baseDir\\}/scripts/atomicmail" "${CLAWHUB_DIR}/SKILL.md"
+assert_no_bare_launcher "${CLAWHUB_DIR}/SKILL.md"
 assert_not_contains "npx --package" "${CLAWHUB_DIR}/SKILL.md"
 assert_not_contains "\\(\\./jmap\\.md#" "${CLAWHUB_DIR}/SKILL.md"
 
 assert_contains "metadata:" "${HERMES_DIR}/SKILL.md"
 assert_contains "  hermes:" "${HERMES_DIR}/SKILL.md"
-assert_contains "\\$\\{HERMES_SKILL_DIR\\}/scripts/atomicmail" \
+assert_contains "bash \\$\\{HERMES_SKILL_DIR\\}/scripts/atomicmail" \
   "${HERMES_DIR}/SKILL.md"
+assert_no_bare_launcher "${HERMES_DIR}/SKILL.md"
 assert_contains "ATOMIC_MAIL_CREDENTIALS_DIR" "${HERMES_DIR}/scripts/atomicmail"
 assert_not_contains "npx --package" "${HERMES_DIR}/SKILL.md"
 assert_not_contains "\\(\\./jmap\\.md#" "${HERMES_DIR}/SKILL.md"

@@ -136,3 +136,20 @@ Deno.test("renderSkillMd replaces version on bundled re-render", async () => {
   assertStringIncludes(second, "version: 2.0.0");
   assert(!second.includes("version: 1.0.0"));
 });
+
+Deno.test("renderSkillMd never invokes the launcher without bash", async () => {
+  // ClawHub and actions/upload-artifact strip unix modes, so the launcher
+  // lands as 0644; every call site must go through `bash`.
+  const template = await readSkillTemplate(DEFAULT_SKILL_TEMPLATE_PATH);
+  for (const profile of ["bundled", "clawhub", "hermes"] as const) {
+    const result = renderSkillMd({ profile, version: TEST_VERSION, template });
+    const bare = result.split("\n").filter((line) =>
+      /(^|[^\w/])(\{baseDir\}|\$\{HERMES_SKILL_DIR\})\/scripts\/atomicmail/
+        .test(line) &&
+      !/bash (\{baseDir\}|\$\{HERMES_SKILL_DIR\})\/scripts\/atomicmail/.test(
+        line,
+      )
+    );
+    assertEquals(bare, [], `${profile} profile has bare launcher calls`);
+  }
+});

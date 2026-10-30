@@ -10,8 +10,8 @@
   },
   "cliInvocations": {
     "npm": "npx --package=@atomicmail/agent-skill-gh-pages atomicmail",
-    "bundledBody": "{baseDir}/scripts/atomicmail",
-    "hermesBlueprint": "${HERMES_SKILL_DIR}/scripts/atomicmail"
+    "bundledBody": "bash {baseDir}/scripts/atomicmail",
+    "hermesBlueprint": "bash ${HERMES_SKILL_DIR}/scripts/atomicmail"
   },
   "openclaw": {
     "requires": { "bins": ["node"] },

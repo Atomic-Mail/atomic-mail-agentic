@@ -228,6 +228,7 @@ export default defineConfig({
               { text: "Code examples", link: "/examples" },
             ],
           },
+          { text: "Webhooks", link: "/webhooks" },
         ],
       },
       {

@@ -27,7 +27,7 @@ when to look.
 | Secret             | `whsec_<base64 of 32 bytes>`, shown once on create and on rotate                                                                            |
 | Before first event | The endpoint must pass a signed challenge-echo verification (any 2xx on Zapier, Make, n8n Cloud, webhook.site and Pipedream)                |
 | Which mail fires   | Only mail received at or after the endpoint became active; nothing is replayed                                                              |
-| Delivery guarantee | At least once, unordered: deduplicate on `webhook-id`                                                                                       |
+| Delivery guarantee | At least once, unordered: deduplicate on `webhook-id` (keep processed ids for 7 days)                                                       |
 | Retries            | Timeouts, 5xx, 429 and network errors: 8 attempts over about 25 hours. 3xx and other 4xx: no retry. 410: the endpoint is turned off         |
 | Payload            | Ids and envelope metadata only (sender, size, time). No subject and no body: fetch the message by `message_id`. At most 8 KiB              |
 | Timeouts           | 5 s to connect (DNS, TCP, TLS), 15 s in total. Answer with any 2xx quickly and work afterwards                                              |
@@ -243,6 +243,8 @@ Rules that matter more than the language:
   constant time.
 - Reject timestamps more than 5 minutes away from your clock.
 - Return 2xx within 15 seconds. Queue the work and do it after you answer.
+- If the secret leaks, click **Rotate secret**. For 24 hours both secrets sign,
+  so you can switch your receiver over without dropping events.
 
 Both verification functions below were tested against real signed requests,
 including a dual-signed rotation request and the Standard Webhooks spec test
@@ -472,10 +474,6 @@ about 25 hours in all. After the 8th attempt the delivery is `failed`. Every
 attempt is signed again with a fresh `webhook-timestamp` and the same
 `webhook-id`.
 
-At most 2 requests are in flight at the same time per endpoint, per inbox and
-per owner; further events wait their turn, and owners take turns, so one busy
-receiver does not hold up anyone else.
-
 Every non-2xx attempt counts against the endpoint. When an endpoint reaches **10
 consecutive failed attempts and the first of them is at least 24 hours old**, it
 is turned off (`auto_failing`) and its queued deliveries are dropped. Turn it
@@ -484,13 +482,8 @@ the failure streak and **always runs verification again**; the endpoint is
 active only if that passes. Deliveries that were dropped are not resent
 automatically; use **Redeliver** in the delivery log.
 
-Before each attempt we also check that the endpoint is still turned on and
-active, that the inbox is active, attached to an owner, and its organization and
-domain are not suspended, and that the owner still has a Google or GitHub
-sign-in. Otherwise the delivery is `dropped` without contacting you. The inbox
-and owner checks are cached per inbox: a change that stops deliveries (a
-suspension, unlinking the last Google or GitHub sign-in) takes effect within 60
-seconds, and one that restores them within 5 seconds.
+Deliveries stop (logged as `dropped`) while the inbox is suspended or the owner
+has no Google or GitHub sign-in.
 
 ## Limits
 
@@ -498,43 +491,12 @@ seconds, and one that restores them within 5 seconds.
 | --------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
 | Endpoints per inbox                           | 3                                                                                                           |
 | Endpoints per owner, across all their inboxes | 10                                                                                                          |
-| Endpoints on one domain, platform-wide        | 50 (see below)                                                                                              |
 | Events per endpoint per hour                  | 300; the rest are logged as `dropped` with `hourly_cap`, without their content (they cannot be redelivered) |
-| Requests in flight                            | 2 per endpoint, 2 per inbox, 2 per owner                                                                    |
-| Deliveries to one domain, platform-wide       | 60 per minute (600 for an automation platform host); the rest wait for the next minute                      |
 | Payload size                                  | 8 KiB                                                                                                       |
-| URL length / description length               | 2048 / 200 characters                                                                                       |
-| Verify, Send test, Rotate secret, Redeliver   | 6 per minute per endpoint, together                                                                         |
-| Turning an endpoint on                        | 6 per minute per endpoint, separately                                                                       |
 
-The platform-wide cap counts endpoints per approximate registrable domain: the
-last two labels of the hostname, or the last three for names like `co.uk` and
-`com.au`. So `a.example.com` and `b.example.com` share one count. Two kinds of
-hosts count per exact hostname instead: shared hosting suffixes (for example
-`*.amazonaws.com`, `*.vercel.app`, `*.netlify.app`, `*.herokuapp.com`,
-`*.run.app`, `*.workers.dev`, `*.ngrok-free.app`, `*.supabase.co`,
-`*.github.io`), and the automation platforms listed under
-[Verification challenge](#verification-challenge), which are not capped at all.
-
-The delivery rate is counted the same way (approximate registrable domain, or
-the exact host for an automation platform) across **all** owners, so many
-accounts pointing at one receiver cannot flood it. Over the rate a delivery is
-not sent, does not use an attempt, and goes out in the next minute.
-
-**URL rules.** The shape of the URL is checked on create (422 with the reason)
-and again before every request: `https` on port 443; a public DNS hostname, not
-an IP address, not a single label and not a reserved or internal name (such as
-`localhost`, `.local`, `.internal`, `.lan`, `.test`, `.example`, `.onion`); not
-one of our own domains (`atomicmail.ai`, `atomicmail.io` and their subdomains);
-no `user:password@`.
-
-The addresses are checked by the verification request and before every delivery,
-not by the create validation: every A and AAAA record of the hostname must be a
-public address, the hostname needs an IPv4 (A) record (we deliver over IPv4
-only), and we connect to the exact address we checked. The TLS certificate must
-be valid for the hostname. A hostname that resolves to a private address is
-still created; it stays `pending_verification` with reason `blocked` and counts
-toward your caps until you delete it.
+**URL rules.** A public `https` URL on port 443 whose hostname has an IPv4 (A)
+record and a valid TLS certificate. IP addresses, internal names and private
+addresses are refused, and redirects are not followed.
 
 ### Fetching messages after an event
 
@@ -564,35 +526,6 @@ before the read limit. So:
   the ~25-hour retry window misses those events), keep a slow safety poll, every
   15 to 30 minutes.
 
-## Security notes
-
-- **No subject, no body.** The event carries ids and envelope metadata only.
-  Senders often put one-time codes or sign-in links in subjects ("483920 is your
-  verification code"), so the subject is left out on purpose. Fetch the rest of
-  the message with your own credentials, by `data.message_id`: JMAP `Email/get`
-  on `https://api.atomicmail.ai/jmap`, or the MCP `read_message` tool. Treat the
-  webhook as a hint that something arrived, not as the source of truth.
-- **Only a signed-in owner adds endpoints.** An agent's credentials cannot
-  create, change or read endpoints, so a compromised or prompt-injected agent
-  cannot start streaming its inbox's new-mail events to a URL of its choice.
-  Review the list in the dashboard now and then.
-- **What verification proves.** A passing check shows that the URL answered the
-  challenge (or, for the automation platforms, answered 2xx). It does not prove
-  that the receiver holds the secret or checks signatures.
-- **Idempotency.** `webhook-id` is the same for every attempt and redelivery of
-  one event, and for all endpoints of the same inbox. Keep processed ids for at
-  least 7 days (retries span about 25 hours; redelivery works for 7 days).
-- **No ordering.** Events can arrive in any order and more than once. Order by
-  `data.received_at` if you need to.
-- **Verify every request.** Check the signature and the timestamp before
-  trusting anything in the body. Do not allowlist our source IPs instead; we do
-  not publish them.
-- **Secrets.** Treat the secret like a password. If it leaks, rotate it: for 24
-  hours both secrets sign, so you can deploy the new one without dropping
-  events. Rotating again within those 24 hours retires the oldest secret.
-- **We ignore your response body**, except the verification echo, and read at
-  most 4 KiB of it.
-
 ## Known limitations (v1)
 
 - One event type, `message.received`. No bounce, sent or read events yet.
@@ -601,7 +534,4 @@ before the read limit. So:
   [What fires](#what-fires)).
 - Delivery is IPv4 only: a hostname with only AAAA records cannot be verified,
   and its deliveries fail with `no_ipv4_address`.
-- On the automation platforms, verification passes on any 2xx, so it proves less
-  there than the challenge echo does.
-- No agent API: an agent cannot manage its own endpoints (by design, see
-  [Security notes](#security-notes)).
+- Endpoints are managed only in the dashboard, not through the API.

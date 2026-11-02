@@ -19,20 +19,17 @@ const releasesFile = resolve(__dirname, "./releases.json");
 
 export interface Release { tag: string; version: string; date: string; url: string; prerelease: boolean; body: string }
 
-/** How many releases the docs show. Older ones stay in releases.json and CHANGELOG.md. */
-export const SHOW_LATEST = 2;
-
 /**
  * GitHub's auto-generated notes are "* <PR title> by @user in <PR url>" lines.
  * Keep the PR title verbatim (minus a conventional-commit prefix such as
  * "docs(readme): "), drop author handles and links, and skip housekeeping —
  * branch merges and chore/test/ci/build commits say nothing to a reader.
  */
-const HOUSEKEEPING = /^(develop|main)$|^(chore|test|tests|ci|build|style|refactor)(\(|:)/i;
+const HOUSEKEEPING = /^(develop|development|main)$|^(chore|test|tests|ci|build|style|refactor)(\(|:)/i;
 const GROUP_ORDER = ["Added", "Changed", "Fixed", "Docs"];
 function groupFor(type: string): string {
   switch (type.toLowerCase()) {
-    case "feat": case "feature": return "Added";
+    case "feat": case "feature": case "integration": return "Added";
     case "fix": case "hotfix": return "Fixed";
     case "docs": case "doc": return "Docs";
     default: return "Changed";
@@ -45,9 +42,12 @@ export function releaseItems(body: string): { group: string; text: string }[] {
     if (!m) continue;
     const title = m[1].trim();
     if (HOUSEKEEPING.test(title)) continue;
-    const pre = title.match(/^([a-z]+)(\([^)]*\))?:\s*/i);
+    // "feat(scope): …", or an early PR titled after its branch ("Feature/hermes skill")
+    const pre = title.match(/^([a-z]+)(\([^)]*\))?:\s*/i) ?? title.match(/^(feature|integration)\//i);
     const text = pre ? title.slice(pre[0].length) : title;
-    items.push({ group: groupFor(pre?.[1] ?? ""), text: text.charAt(0).toUpperCase() + text.slice(1) });
+    const item = { group: groupFor(pre?.[1] ?? ""), text: text.charAt(0).toUpperCase() + text.slice(1) };
+    // one branch merged in several PRs shows up once
+    if (!items.some((i) => i.text === item.text)) items.push(item);
   }
   return items;
 }
@@ -103,7 +103,7 @@ export function mergeReleases(entries: ChangelogEntry[], releases: Release[]): C
     if (r.prerelease || known.has(r.version)) continue;
     out.push({ version: r.version, date: r.date, groups: parseReleaseBody(r.body), source: "github", url: r.url });
   }
-  return out.sort(byVersionDesc).slice(0, SHOW_LATEST);
+  return out.sort(byVersionDesc);
 }
 
 function inline(md: string): string {

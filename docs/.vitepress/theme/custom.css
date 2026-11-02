@@ -2341,71 +2341,42 @@ html:not(.dark) .path-tabs__bar button.on:hover {
     color: var(--vp-c-text-2);
 }
 
-/* "Show N older releases": the rail runs on into a hollow dot */
-.changelog__more {
-    display: grid;
-    grid-template-columns: 148px 1fr;
-    gap: 0 32px;
-    position: relative;
-}
-
-.changelog__more::before {
-    /* the rail, down to the hollow dot */
-    content: "";
-    position: absolute;
-    left: 148px;
-    top: 0;
-    height: 16px;
-    width: 1px;
-    background: var(--vp-c-divider);
-}
-
-.changelog__more::after {
-    content: "";
-    position: absolute;
-    left: 145px;
-    top: 15px;
-    width: 7px;
-    height: 7px;
-    box-sizing: border-box;
-    border: 1px solid var(--vp-c-text-3);
-    border-radius: 50%;
-    background: var(--vp-c-bg);
-}
-
+/* "Show more": a plus sitting on the rail, label beside it */
 .changelog__more-btn {
-    grid-column: 2;
-    justify-self: start;
     display: inline-flex;
     align-items: center;
-    gap: 10px;
-    margin-left: 32px;
-    padding: 6px 12px;
-    border: 1px solid var(--vp-c-border);
-    border-radius: 8px;
+    gap: 12px;
+    margin-left: 137px; /* centres the 23px circle on the rail at 148px */
     font-size: 14px;
     font-weight: 500;
-    color: var(--vp-c-text-1);
-    white-space: nowrap;
-    transition: background-color 0.15s, border-color 0.15s;
+    color: var(--vp-c-text-2);
+    transition: color 0.15s;
 }
 
 .changelog__more-btn:hover {
-    border-color: var(--vp-c-text-3);
-    background: var(--vp-c-bg-soft);
+    color: var(--vp-c-text-1);
 }
 
-.changelog__more-range {
-    font-family: var(--vp-font-family-mono);
-    font-size: 12px;
-    font-weight: 400;
-    color: var(--vp-c-text-3);
+.changelog__more-plus {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 23px;
+    height: 23px;
+    border: 1px solid var(--vp-c-divider);
+    border-radius: 50%;
+    background: var(--vp-c-bg);
+    transition: border-color 0.15s, color 0.15s;
 }
 
-.changelog__more-btn svg {
-    width: 16px;
-    height: 16px;
-    color: var(--vp-c-text-3);
+.changelog__more-plus svg {
+    width: 14px;
+    height: 14px;
+}
+
+.changelog__more-btn:hover .changelog__more-plus {
+    border-color: var(--vp-c-brand-1);
+    color: var(--vp-c-brand-1);
 }
 
 /* release page */
@@ -2425,14 +2396,7 @@ html:not(.dark) .path-tabs__bar button.on:hover {
     .changelog__entry::before { left: 0; }
     .changelog__entry::after { left: -3px; }
     .vp-doc .changelog__card { margin-left: 0; }
-    .changelog__more {
-        grid-template-columns: 1fr;
-        padding-left: 20px;
-    }
-    .changelog__more::before { left: 0; }
-    .changelog__more::after { left: -3px; }
-    .changelog__more-btn { grid-column: 1; margin-left: 0; }
-    .changelog__more-range { display: none; }
+    .changelog__more-btn { margin-left: -11px; }
 }
 
 /* Less air under the header: page, outline and sidebar all start 16px higher
@@ -3525,3 +3489,4 @@ html[data-path^="/changelog/"] .VPSidebarItem.level-0:has(.link[href$="/changelo
 .vp-doc div[class*='language-'] pre code .line {
     overflow-wrap: anywhere;
 }
+

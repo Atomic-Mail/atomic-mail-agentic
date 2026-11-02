@@ -1,5 +1,29 @@
 [
   {
+    "tag": "v0.3.32",
+    "version": "0.3.32",
+    "date": "2026-10-30",
+    "url": "https://github.com/Atomic-Mail/atomic-mail-agentic/releases/tag/v0.3.32",
+    "prerelease": false,
+    "body": "## Added\n\n- **Webhooks.** Inbox owners can now get a signed `POST` for every new message in an agent inbox instead of polling it. Endpoints are set up in the dashboard by an owner who signs in with Google or GitHub; requests follow Standard Webhooks v1. The new [Webhooks](https://docs.atomicmail.ai/webhooks) page covers setup, signature verification (Node.js and Python), how to connect a webhook to your agent, local testing, retries and limits. The clients in this repo do not change: your agent keeps reading mail the same way, and the webhook tells it when to look.\n- Cursor plugin manifest, so Atomic Mail Agentic can be listed in the Cursor Marketplace.\n\n## Fixed\n\n- The skill launcher is now invoked through `bash`, so a lost executable bit (for example after a zip download) no longer breaks the skill.\n\n## What's Changed\n* fix(skill): invoke launcher via bash so a lost exec bit can't break it by @7supersayin in https://github.com/Atomic-Mail/atomic-mail-agentic/pull/85\n* feat: Cursor plugin manifest (Cursor Marketplace, Grok Bot) by @7supersayin in https://github.com/Atomic-Mail/atomic-mail-agentic/pull/87\n* docs: Webhooks page and 0.3.32 changelog by @7supersayin in https://github.com/Atomic-Mail/atomic-mail-agentic/pull/91\n* Release v0.3.32 by @7supersayin in https://github.com/Atomic-Mail/atomic-mail-agentic/pull/92\n\n**Full Changelog**: https://github.com/Atomic-Mail/atomic-mail-agentic/compare/v0.3.31...v0.3.32\n"
+  },
+  {
+    "tag": "v0.3.31",
+    "version": "0.3.31",
+    "date": "2026-09-27",
+    "url": "https://github.com/Atomic-Mail/atomic-mail-agentic/releases/tag/v0.3.31",
+    "prerelease": false,
+    "body": "## Security\n\n- **Python clients now JSON-escape `$VAR` values.** In `langchain-atomicmail` 0.3.30, `pydantic-ai-atomicmail` 0.3.30 and the Dify plugin, `$VAR` values were substituted into the JMAP JSON unescaped. `reply.json` fills `$REPLY_SUBJECT` from the inbound message, so a crafted subject could add method calls to a reply batch. Values are now escaped in string context, like the TypeScript runtime. **Upgrade Python and Dify installs to 0.3.31.** The TypeScript packages (npm, n8n, CLI, MCP) were not affected. If you pre-escaped values yourself (for example `\\n`), pass raw text instead.\n\n## Fixed\n\n- `reply.json` picks its recipient like the hosted MCP server: the first usable Reply-To address, else From, else Sender. It replies to that one address only. Line breaks in the subject collapse to a space, and an existing `Re:` is kept.\n- Send examples in `help` and the docs now file the sender's copy in Sent and clear `$draft` on success, like the bundled presets.\n- `list_sent.json` returns `keywords`.\n\n## What's Changed\n* fix: JSON-safe vars in Python, reply parity with hosted MCP, send examples file in Sent by @7supersayin in https://github.com/Atomic-Mail/atomic-mail-agentic/pull/80\n* docs(changelog): release notes for 0.3.31 by @7supersayin in https://github.com/Atomic-Mail/atomic-mail-agentic/pull/81\n\n**Full Changelog**: https://github.com/Atomic-Mail/atomic-mail-agentic/compare/v0.3.30...v0.3.31\n"
+  },
+  {
+    "tag": "v0.3.30",
+    "version": "0.3.30",
+    "date": "2026-09-27",
+    "url": "https://github.com/Atomic-Mail/atomic-mail-agentic/releases/tag/v0.3.30",
+    "prerelease": false,
+    "body": "## Fixed\r\n\r\n- **Sent mail no longer stays a draft in the inbox.** The send presets (`send_mail.json`, `send_mail_attachment.json`, `send_mail_blob_attachment.json`, `reply.json`) now file the sender's copy in **Sent** and mark it `$sent` once the message is submitted, instead of leaving it flagged `$draft` in the inbox. Accounts without a Sent mailbox keep using the inbox. (#74)\r\n- **`reply.json` sends again, in the same thread.** The server rejected it with `invalidProperties`, so no reply ever went out. It now replies to the original's Reply-To (else From), with `Re:` and `inReplyTo` set. Inputs are unchanged (`MAIL_ID`, `BODY`), so the n8n and Dify reply actions work too. (#75)\r\n\r\n## Changed\r\n\r\n- `list_inbox.json` shows only mail that arrived: the agent's own sent mail is no longer mixed in. Use `list_sent.json` to read it.\r\n\r\n## Added\r\n\r\n- `list_sent.json` preset: the latest 50 messages the agent sent.\r\n- `$SENT_MAILBOX_ID` placeholder for the Sent mailbox id.\r\n\r\n## Upgrade\r\n\r\n`npx --package=@atomicmail/agent-skill@0.3.30 atomicmail …`, or `@atomicmail/mcp@0.3.30`. The n8n node, the Dify plugin and the PyPI packages ship at 0.3.30 too.\r\n\r\n**Full Changelog**: https://github.com/Atomic-Mail/atomic-mail-agentic/compare/v0.3.29...v0.3.30"
+  },
+  {
     "tag": "v0.3.29",
     "version": "0.3.29",
     "date": "2026-09-23",

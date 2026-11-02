@@ -1619,6 +1619,7 @@ html:not(.dark) .vp-doc .custom-block :not(pre) > code {
 .page-actions__item:focus-visible,
 .changelog-menu__btn:focus-visible,
 .changelog-menu__more:focus-visible,
+.changelog__more-btn:focus-visible,
 .page-feedback__btns button:focus-visible,
 .doc-footer__links a:focus-visible,
 .link-rows__item:focus-visible,
@@ -2218,7 +2219,7 @@ html:not(.dark) .path-tabs__bar button.on:hover {
     background: var(--vp-c-divider);
 }
 
-.changelog__entry:last-child::before {
+.changelog__entry:last-of-type::before {
     display: none;
 }
 
@@ -2340,6 +2341,73 @@ html:not(.dark) .path-tabs__bar button.on:hover {
     color: var(--vp-c-text-2);
 }
 
+/* "Show N older releases": the rail runs on into a hollow dot */
+.changelog__more {
+    display: grid;
+    grid-template-columns: 148px 1fr;
+    gap: 0 32px;
+    position: relative;
+}
+
+.changelog__more::before {
+    /* the rail, down to the hollow dot */
+    content: "";
+    position: absolute;
+    left: 148px;
+    top: 0;
+    height: 16px;
+    width: 1px;
+    background: var(--vp-c-divider);
+}
+
+.changelog__more::after {
+    content: "";
+    position: absolute;
+    left: 145px;
+    top: 15px;
+    width: 7px;
+    height: 7px;
+    box-sizing: border-box;
+    border: 1px solid var(--vp-c-text-3);
+    border-radius: 50%;
+    background: var(--vp-c-bg);
+}
+
+.changelog__more-btn {
+    grid-column: 2;
+    justify-self: start;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    margin-left: 32px;
+    padding: 6px 12px;
+    border: 1px solid var(--vp-c-border);
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--vp-c-text-1);
+    white-space: nowrap;
+    transition: background-color 0.15s, border-color 0.15s;
+}
+
+.changelog__more-btn:hover {
+    border-color: var(--vp-c-text-3);
+    background: var(--vp-c-bg-soft);
+}
+
+.changelog__more-range {
+    font-family: var(--vp-font-family-mono);
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--vp-c-text-3);
+}
+
+.changelog__more-btn svg {
+    width: 16px;
+    height: 16px;
+    color: var(--vp-c-text-3);
+}
+
 /* release page */
 .vp-doc .release-date {
     margin: -6px 0 28px;
@@ -2357,6 +2425,14 @@ html:not(.dark) .path-tabs__bar button.on:hover {
     .changelog__entry::before { left: 0; }
     .changelog__entry::after { left: -3px; }
     .vp-doc .changelog__card { margin-left: 0; }
+    .changelog__more {
+        grid-template-columns: 1fr;
+        padding-left: 20px;
+    }
+    .changelog__more::before { left: 0; }
+    .changelog__more::after { left: -3px; }
+    .changelog__more-btn { grid-column: 1; margin-left: 0; }
+    .changelog__more-range { display: none; }
 }
 
 /* Less air under the header: page, outline and sidebar all start 16px higher

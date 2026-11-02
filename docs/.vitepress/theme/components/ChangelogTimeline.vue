@@ -1,11 +1,16 @@
 <script setup lang="ts">
+import { ref } from "vue";
 import { withBase } from "vitepress";
 import { data } from "../../changelog.data";
 
 /**
  * /changelog: one row per release on a rail. Each row reads like a summary
- * and links to that release's own page.
+ * and links to that release's own page. Only the newest SHOW_LATEST rows are
+ * open; the rest stay in the HTML (crawlers follow them) behind one button.
  */
+const SHOW_LATEST = 3;
+const expanded = ref(false);
+const older = data.length - SHOW_LATEST;
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 function fmt(date: string): string {
   const m = date.match(/^(\d{4})-(\d{2})-(\d{2})/);
@@ -26,7 +31,7 @@ function excerpt(e: (typeof data)[number]): string[] {
 
 <template>
   <div class="changelog">
-    <article v-for="e in data" :key="e.version" class="changelog__entry">
+    <article v-for="(e, i) in data" v-show="expanded || i < SHOW_LATEST" :key="e.version" class="changelog__entry">
       <div class="changelog__meta">
         <time :datetime="e.date">{{ fmt(e.date) }}</time>
       </div>
@@ -44,5 +49,12 @@ function excerpt(e: (typeof data)[number]): string[] {
         </span>
       </a>
     </article>
+    <div v-if="!expanded && older > 0" class="changelog__more">
+      <button type="button" class="changelog__more-btn" @click="expanded = true">
+        Show {{ older }} older {{ older === 1 ? "release" : "releases" }}
+        <span class="changelog__more-range">v{{ data[SHOW_LATEST].version }} – v{{ data[data.length - 1].version }}</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
+      </button>
+    </div>
   </div>
 </template>

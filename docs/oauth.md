@@ -225,9 +225,8 @@ token exchange on the client side.
 Authorization: Bearer <OAuth access token>
 ```
 
-Internally the API verifies the token's signature, issuer, and audience,
-re-verifies that the requested inbox is owned by the token's grant, and mints a
-capability token server-side for the mail store, good for about two minutes.
+The API verifies the token, checks that the requested inbox is owned by the
+token's grant, and issues a short-lived credential for that one request.
 Clients on this path never see, store or rotate a capability JWT. That is
 deliberate: a two-minute credential cannot survive on a stored
 integration-platform connection.
@@ -274,7 +273,6 @@ account the request authenticated as.
 The security consequence: an `accountId` in the request body cannot redirect
 the request to another account. The downstream
 credential is derived solely from the header-selected, ownership-checked inbox.
-The API proxy is deliberately JMAP-blind and never rewrites your body.
 
 ## Listing the inboxes a connection can use
 
@@ -290,7 +288,6 @@ curl https://auth.atomicmail.ai/api/v1/agents \
       "accountId": "1b9d6bcd-bbfd-4b2d-9b5d-ab8dfbbd4bed",
       "inboxId": "myagent",
       "status": "active",
-      "reputation": 0.5,
       "linkedAt": "2026-07-01T09:14:22.000Z",
       "activatedAt": "2026-07-01T09:20:03.000Z"
     }

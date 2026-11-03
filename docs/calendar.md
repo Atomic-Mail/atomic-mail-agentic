@@ -1,11 +1,12 @@
 ---
-title: Calendar invitations
+title: Calendar
 description: Let an agent schedule meetings by email — real Gmail, Outlook and Apple Mail invitations with Yes / No / Maybe, guests' answers back in the inbox, video links, all-day events, from the CLI, the local MCP server or the hosted MCP server.
 ---
 
-# Calendar invitations
+# Calendar
 
-An agent can schedule meetings from its own inbox. Guests get a standard
+Send meeting invitations from the inbox and read the answers. An agent can
+schedule meetings from its own inbox. Guests get a standard
 calendar invitation — the card with **Yes / No / Maybe** in Gmail, Outlook and
 Apple Mail — and their answers come back to the agent's inbox. There is no
 calendar to set up: invitations, updates, cancellations and answers are all
@@ -81,7 +82,7 @@ Nothing creates a meeting room for you. Guests see the link as the location
 
 - A real invitation in their mail client, with the date in their own time zone.
 - A short email around it: who invites them, When, Join, Guests, your
-  description. It ends with the inbox's usual signature, "Sent from Atomic Mail
+  description. From an `@atomicmail.ai` inbox it ends with the usual signature, "Sent from Atomic Mail
   Agentic". There are no custom templates or HTML.
 - Whether the event shows up in their calendar before they answer depends on
   their settings: Google can hold invitations from unknown senders, and Outlook

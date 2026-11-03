@@ -6,7 +6,7 @@ description: Install and run the @atomicmail/agent-skill CLI (register, read_inb
 
 The AgentSkill CLI gives shell agents `register`, commands for everyday mail
 (`read_inbox`, `read_message`, `search_messages`, `send_email`,
-`reply_to_message`, `list_agents`), `jmap_request`, `calendar` and `help`. It
+`reply_to_message`, `list_agents`), `jmap_request`, [`calendar`](/calendar) and `help`. It
 shares its runtime with `@atomicmail/mcp`, so both behave the same.
 
 ## For AI agents

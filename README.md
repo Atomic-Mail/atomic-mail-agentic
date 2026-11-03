@@ -28,7 +28,7 @@
 
 ---
 
-> Accounts are free, with a 100 MB storage quota, custom domain included, and rate limits sized for agent workloads.
+> Accounts are free, with a 100 MB storage quota, custom domain included, and [limits](https://docs.atomicmail.ai/limits) sized for agent workloads.
 
 ---
 
@@ -40,7 +40,7 @@ Access is gated by a novel **proof-of-work ([PoW](https://en.wikipedia.org/wiki/
 
 Atomic Mail provides a number of standard integration paths — MCP, AgentSkill, REST API, and more — which makes it highly available on any agent: [Claude Code](https://claude.com/product/claude-code), [Codex](https://developers.openai.com/codex), [GitHub Copilot](https://github.com/features/copilot), [Cursor](https://cursor.com), [Hermes](https://hermes-agent.nousresearch.com), [OpenClaw](https://openclaw.ai), [Pi](https://pi.dev), [Kilo Code](https://kilo.ai), and others. Whatever your workflow is, you can automate inbox management easily.
 
-This repository ships the client integrations: [MCP](https://modelcontextprotocol.io/), shell CLI, [ClawHub](https://clawhub.ai/), [Dify](https://dify.ai/) plugin and more, exposing those APIs through three core tools: `register`, `jmap_request`, and `help` (the TypeScript CLI and local MCP server add five [meeting-invitation](docs/calendar.md) tools). All the connectors in this repo are pretty thin and are mainly needed to abstract away the complexities of the PoW protocol.
+This repository ships the client integrations: [MCP](https://modelcontextprotocol.io/), shell CLI, [ClawHub](https://clawhub.ai/), [Dify](https://dify.ai/) plugin and more, exposing those APIs through three core tools: `register`, `jmap_request`, and `help` (the TypeScript CLI and local MCP server add five [calendar](docs/calendar.md) tools for meeting invitations). All the connectors in this repo are pretty thin and are mainly needed to abstract away the complexities of the PoW protocol.
 
 ## 🚀 Quick Install
 
@@ -130,7 +130,7 @@ Community projects built on top of Atomic Mail Agentic:
 ## ✨ Why Atomic Mail
 
 - **Agents finish without asking their users for anything**: PoW signup gives a real `@atomicmail.ai` inbox in ~30 seconds — no domain to verify, no credit card, no CAPTCHA walkthrough, no mail-server ops
-- **Messages that actually arrive**: continuously warming IP pool with relay overflow — deliverability matters when a human on the other side must read your mail
+- **Messages that actually arrive**: every message is signed (SPF, DKIM, DMARC) — deliverability matters when a human on the other side must read your mail
 - **JMAP — an API agents already know**: standard [RFC 8620/8621](https://www.rfc-editor.org/rfc/rfc8620.html), in LLM training data; batched method calls (query, fetch, draft, send) in one round trip — no vendor SDK to learn
 - **Get unstuck inside the integration**: errors ship plain-language hints; success responses suggest `_next` steps; `help` returns cheatsheets and worked examples — no web search required
 - **Bring your own domain**: agents run on `@atomicmail.ai` out of the box, or on a domain you verify in the [dashboard](https://dashboard.atomicmail.ai) — same client, same JMAP, domain-aligned `From`

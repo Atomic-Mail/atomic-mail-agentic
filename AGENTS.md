@@ -117,7 +117,7 @@ TypeScript style: 2-space indent, 80-column width (`ts/deno.json`).
 
 5. **`dry_run` + attachments:** Rejected in both TS and Python.
 
-6. **Calendar code is shared with the server.** `ts/src/lib/agent/calendar/{ical,invites,flows}.ts` (and `flows.test.ts`) are byte-for-byte copies of the hosted MCP server's calendar module — change both together. Invitations go out as `Blob/upload` + `Email/set` with `bodyStructure` + `EmailSubmission/set`; the server adds the `method=` Content-Type parameter on egress (JMAP cannot set it). Times without an offset need an IANA zone — never guess one.
+6. **Calendar code is shared with the server.** `ts/src/lib/agent/calendar/{ical,invites,flows}.ts` (and `flows.test.ts`) carry the same code as the hosted MCP server's calendar module (only comments differ: this public copy names no internal services) — change both together. Invitations go out as `Blob/upload` + `Email/set` with `bodyStructure` + `EmailSubmission/set`; the server adds the `method=` Content-Type parameter on egress (JMAP cannot set it). Times without an offset need an IANA zone — never guess one.
 
 ## Gotchas
 

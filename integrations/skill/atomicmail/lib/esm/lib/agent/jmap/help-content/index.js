@@ -2,6 +2,7 @@
 import { readNpmPackageReadme } from "../../../core/read-npm-package-readme.js";
 import { tryReadSharedJson, tryReadSharedText, } from "../../../core/shared-assets.js";
 import { helpTopicAuth } from "./auth.js";
+import { helpTopicCalendar } from "./calendar.js";
 import { helpTopicCron } from "./cron.js";
 import { helpTopicInstallation } from "./installation.js";
 import { helpTopicJmapCheatsheet } from "./jmap-cheatsheet.js";
@@ -19,6 +20,7 @@ const fallbackTopics = {
     jmap_cheatsheet: helpTopicJmapCheatsheet,
     tools: helpTopicTools,
     presets: helpTopicPresets,
+    calendar: helpTopicCalendar,
     cron: helpTopicCron,
     multi_account: helpTopicMultiAccount,
     troubleshooting: helpTopicTroubleshooting,

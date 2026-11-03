@@ -8,7 +8,7 @@ manage mail over JMAP (RFC 8620 + RFC 8621).
 
 ## Public surface (identical for MCP and AgentSkill)
 
-Three operations only:
+Core operations:
 
 1. **register** — Proof-of-work signup (or idempotent replay when the same
    username matches the inbox already on disk). Usernames are 5–21 characters
@@ -31,6 +31,11 @@ Three operations only:
    \`$ATTACHMENT_0_BLOB_ID\`, … are substituted into your JMAP JSON.
 3. **help** — This documentation (optional \`topic\` / \`--topic\`), or the
    published package README (\`topic\` / \`--topic\` \`readme\`).
+
+Meetings: the CLI \`calendar\` command and the MCP tools \`send_invite\`,
+\`update_invite\`, \`cancel_invite\`, \`list_invites\`, \`respond_to_invite\`
+send calendar invitations by email and read the answers — see the
+**calendar** topic.
 
 ## Typical workflow
 

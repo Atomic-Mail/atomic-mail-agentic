@@ -1,66 +1,48 @@
-// Help topic: troubleshooting (MCP help / AgentSkill help).
+// Help topic: troubleshooting (MCP help / AgentSkill help). Mirrors
+// shared/help/topics/troubleshooting.md (the runtime source); this is the fallback.
 
 export const helpTopicTroubleshooting = `\
 # Troubleshooting
 
-## Custom endpoint configuration issues
+## Setup
 
-Defaults are production endpoints. Set env vars only for custom deployments.
+- **No credentials yet:** run \`register\`, set \`ATOMIC_MAIL_API_KEY\`, or copy an
+  existing \`credentials.json\` into the credential directory.
+- **\`/api/v1/session returned 401\`:** the API key is wrong for this inbox, or
+  the inbox is suspended. If a key that used to work now fails, write to
+  support@atomicmail.ai.
+- **Capability JWT missing inboxId:** server/version mismatch — check
+  \`ATOMIC_MAIL_AUTH_URL\`.
+- **Custom endpoints:** the defaults are the production endpoints. Set the env
+  vars only for a custom deployment.
+- **Could not read ops file:** check the path; use an absolute path if unsure.
 
-## No API key / register first
+## Requests
 
-Run \`register\`, or set \`ATOMIC_MAIL_API_KEY\`, or copy an existing
-\`credentials.json\` into the credential directory.
+- **Wrong \`inMailbox\`:** use \`$INBOX_MAILBOX_ID\` (the mailbox id), not the inbox
+  address.
+- **Missing values for variables (\`$TO\`, …):** pass every custom placeholder in
+  MCP \`vars\` or \`--vars\` as a JSON object of strings. \`register\` must have
+  completed so \`$ACCOUNT_ID\` / \`$INBOX\` resolve.
+- **Blob/upload shape errors:** \`data\` must be an array of datasource objects.
+- **\`forbiddenFrom\`:** send as this inbox — use \`$INBOX\` as the \`from\` address.
 
-## auth-service /api/v1/session returned 401
+## Limits
 
-Invalid \`apiKey\` or wrong \`ATOMIC_MAIL_SCRYPT_SALT\` for this deployment.
+Details: https://docs.atomicmail.ai/limits
 
-## Capability JWT missing inboxId
+- **\`tooManyRecipients\`:** too many recipients in one message, or for today.
+  Split the message, or send the rest the next day (UTC).
+- **HTTP 429:** too many messages in a short time. Wait the number of seconds
+  in \`Retry-After\`, then retry.
+- **HTTP 413 on upload:** keep each file, and all attachments of one message,
+  under 1 MB.
+- **Mailbox full:** incoming mail is no longer delivered. Delete old messages.
 
-Server/version mismatch — verify \`ATOMIC_MAIL_AUTH_URL\`.
+## Hosted MCP server
 
-## Could not read ops file
-
-Check the path; use an absolute path if unsure.
-
-## Missing values for variables (\`$TO\`, etc.)
-
-Pass every custom placeholder in MCP \`vars\` or \`--vars\` as a JSON object of
-strings. Ensure \`register\` completed so \`$ACCOUNT_ID\` / \`$INBOX\` can resolve.
-
-## \`invalidArguments\` on \`Email/query\` / \`filter/inMailbox\`
-
-\`inMailbox\` must be a **mailbox id**, not your inbox email. Use the built-in
-\`$INBOX_MAILBOX_ID\` placeholder (or run \`Mailbox/get\` / \`Mailbox/query\` and
-paste the id into \`vars\`).
-
-## \`invalidProperties\` / \`notCreated\` on \`Blob/upload\`
-
-RFC 9404 requires \`data\` as an **array** of objects, each with **exactly one**
-of \`data:asText\`, \`data:asBase64\`, or a \`blobId\` slice. Typical mistakes:
-\`data\` as a raw string; \`data:asBase64\` on the upload object instead of
-inside an array element; mixing two forms in one object. See topic
-\`jmap_cheatsheet\` (\`Blob/upload\` shape) and preset \`send_mail_attachment.json\`.
-
-## RFC 8620 binary \`POST\` to \`uploadUrl\` returns 404
-
-The session lists an \`uploadUrl\` template, but your deployment must expose
-that HTTP resource. If \`POST\` returns 404, out-of-band upload is not wired
-on the server — use \`Blob/upload\` in JMAP instead, or fix the API gateway.
-
-## \`Blob/upload\` succeeds but \`size\` is 0 (or \`Email/set\` rejects the blob)
-
-The server accepted the method but did not persist octets (broken or
-incomplete \`Blob/upload\`). Verify with a tiny \`data: [{ "data:asBase64": "QQ==" }]\`
-payload; if \`size\`
-stays 0, fix the JMAP/blob implementation on the host before sending
-attachments.
-
-## Installed package vs other documentation
-
-The version you get from \`npx -y @atomicmail/mcp\` or
-\`npx --package=@atomicmail/agent-skill …\` may lag behind other published docs.
-If something disagrees, trust **your installed package**: run \`help\` and use
-the bundled presets that ship with that version. In MCP runtimes, \`help\` with
-topic \`readme\` returns package README.md.`;
+- **"The API key is invalid, or its inbox is not active":** API keys work on the
+  hosted server only for an inbox attached to an account. Link the inbox in the
+  dashboard, or connect with OAuth instead. A suspended inbox gets the same
+  answer.
+`;

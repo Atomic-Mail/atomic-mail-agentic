@@ -1,9 +1,9 @@
 #!/usr/bin/env node
-// Atomic Mail AgentSkill — register | jmap_request | help
+// Atomic Mail AgentSkill — register | jmap_request | calendar | help
 import "../_dnt.polyfills.js";
 import process from "node:process";
 import { parseArgs } from "node:util";
-import { AgentSession, DEFAULT_API_URL, DEFAULT_AUTH_URL, DEFAULT_JMAP_USING, DEFAULT_POW_SCRYPT_SALT_HEX, defaultFilesFromOutDir, expandCredentialDirInput, getHelp, parseUserVarsJson, parseUtm, persistLoginWithApiKey, readCredentials, readOpsFile, runJmapRequest, sharedError, } from "../lib/mod.js";
+import { AgentSession, CalendarError, calendarRunnerForSession, cancelInvite, DEFAULT_API_URL, DEFAULT_AUTH_URL, DEFAULT_JMAP_USING, DEFAULT_POW_SCRYPT_SALT_HEX, defaultFilesFromOutDir, expandCredentialDirInput, getHelp, listInvites, parseUserVarsJson, parseUtm, persistLoginWithApiKey, readCredentials, readOpsFile, respondToInvite, runJmapRequest, sendInvite, sharedError, updateInvite, } from "../lib/mod.js";
 import { resolveRegisterWatch, scheduleSetup } from "./register-watch.js";
 const USAGE = `Atomic Mail — AgentSkill
 
@@ -13,6 +13,7 @@ Usage:
 Commands:
   register       PoW signup or login with API key (writes credentials)
   jmap_request   Send a JMAP batch (inline --ops or --ops-file; optional --attachment)
+  calendar       Meeting invitations: send | update | cancel | list | respond
   help           Full documentation [--topic TOPIC] (topic readme = built-in stub)
 
 Examples:
@@ -22,6 +23,8 @@ Examples:
   atomicmail jmap_request --ops-file list_inbox.json
   atomicmail jmap_request --credentials-dir ./.atomic-mail --ops-file send.json --vars '{"TO":"a@b.com","SUBJECT":"Hi"}'
   atomicmail jmap_request --ops-file send_mail_blob_attachment.json --attachment ./notes.txt --vars '{"TO":"self@example.com","SUBJECT":"File","BODY":"See attach."}'
+  atomicmail calendar send --title "Demo" --start 2026-10-16T15:00 --time-zone Europe/Moscow --attendees anna@example.com
+  atomicmail calendar list
   atomicmail help --topic presets
   atomicmail help --topic readme
 
@@ -308,6 +311,197 @@ Options:
     }
     process.stdout.write(bodyText.endsWith("\n") ? bodyText : bodyText + "\n");
 }
+export const CALENDAR_HELP = `Usage: atomicmail calendar <send|update|cancel|list|respond> [OPTIONS]
+
+Meeting invitations by email. Guests get a standard invitation (Gmail, Outlook,
+Apple Mail) with Yes / No / Maybe; answers come back to this inbox. Confirm the
+date, time, time zone and guests with your operator before sending.
+
+  send      --title T --start S --attendees a@x.com,b@y.com
+            [--duration MIN | --end E] [--time-zone ZONE] [--all-day]
+            [--meeting-url URL] [--location L] [--description D]
+  update    --invite-id ID [--title T] [--start S] [--duration MIN | --end E]
+            [--time-zone ZONE] [--all-day | --no-all-day]
+            [--attendees FULL_NEW_LIST] [--meeting-url URL] [--location L]
+            [--description D]
+  cancel    --invite-id ID [--note N] [--time-zone ZONE]
+  list      [--invite-id ID] [--limit N]          (N messages per mailbox, default 50)
+  respond   --message-id ID --response accepted|declined|tentative [--note N]
+
+Times: ISO 8601 with an offset (2026-10-16T15:00:00+03:00), or a local time
+(2026-10-16T15:00) with --time-zone (IANA, e.g. Europe/Moscow). A local time
+without a zone is refused — ask which zone is meant.
+
+All-day: --all-day with --start 2026-11-10 and optional --end 2026-11-12 (the
+LAST day, inclusive; default one day). Not with --time-zone or --duration. On
+update, --all-day / --no-all-day switch the kind (pass --start too).
+
+Video call: --meeting-url https://… adds the link as a Join line (and as the
+location when --location is not given). On update, --meeting-url "" removes it;
+an empty --location or --description clears those too.
+
+Common options:
+  --credentials-dir DIR   Credential directory (default: ~/.atomicmail)
+  --help, -h              This message
+
+Output is JSON on stdout. See: atomicmail help --topic calendar
+`;
+async function sessionForCredentialDir(dir) {
+    const credentialDir = expandCredentialDirInput(dir);
+    const files = defaultFilesFromOutDir(credentialDir);
+    const creds = await readCredentials(files.credentialsFile);
+    return AgentSession.create({
+        authUrl: creds.authUrl,
+        apiUrl: creds.apiUrl,
+        scryptSalt: creds.scryptSalt,
+        apiKey: creds.apiKey,
+        inboxId: creds.inboxId,
+        credentialDir,
+        files,
+    });
+}
+async function cmdCalendar(argv) {
+    const sub = argv[0];
+    if (!sub || sub === "-h" || sub === "--help") {
+        process.stdout.write(CALENDAR_HELP);
+        process.exit(sub ? 0 : 2);
+    }
+    let parsed;
+    try {
+        parsed = parseArgs({
+            args: argv.slice(1),
+            options: {
+                "credentials-dir": { type: "string" },
+                title: { type: "string" },
+                start: { type: "string" },
+                end: { type: "string" },
+                duration: { type: "string" },
+                "time-zone": { type: "string" },
+                attendees: { type: "string", multiple: true },
+                location: { type: "string" },
+                description: { type: "string" },
+                "meeting-url": { type: "string" },
+                "all-day": { type: "boolean" },
+                "no-all-day": { type: "boolean" },
+                "invite-id": { type: "string" },
+                "message-id": { type: "string" },
+                response: { type: "string" },
+                note: { type: "string" },
+                limit: { type: "string" },
+                help: { type: "boolean", short: "h" },
+            },
+            strict: true,
+            allowPositionals: false,
+        });
+    }
+    catch (err) {
+        fail(err.message, 2);
+    }
+    if (parsed.values.help) {
+        process.stdout.write(CALENDAR_HELP);
+        process.exit(0);
+    }
+    const v = parsed.values;
+    const str = (k) => v[k];
+    const num = (k) => {
+        const raw = str(k);
+        if (raw === undefined)
+            return undefined;
+        const n = Number(raw);
+        if (!Number.isInteger(n) || n <= 0) {
+            fail(`--${k} must be a positive integer.`, 2);
+        }
+        return n;
+    };
+    const need = (k) => {
+        const value = str(k);
+        if (!value)
+            fail(`calendar ${sub} needs --${k}.`, 2);
+        return value;
+    };
+    const attendees = v.attendees;
+    const flags = parsed.values;
+    if (flags["all-day"] && flags["no-all-day"]) {
+        fail("Pass --all-day or --no-all-day, not both.", 2);
+    }
+    const allDay = flags["all-day"]
+        ? true
+        : flags["no-all-day"]
+            ? false
+            : undefined;
+    const session = await sessionForCredentialDir(str("credentials-dir"));
+    const runner = await calendarRunnerForSession(session);
+    let out;
+    try {
+        switch (sub) {
+            case "send":
+                out = await sendInvite(runner, {
+                    title: need("title"),
+                    start: need("start"),
+                    end: str("end"),
+                    durationMinutes: num("duration"),
+                    timeZone: str("time-zone"),
+                    attendees: attendees ?? fail("calendar send needs --attendees.", 2),
+                    allDay,
+                    location: str("location"),
+                    meetingUrl: str("meeting-url"),
+                    description: str("description"),
+                });
+                break;
+            case "update":
+                out = await updateInvite(runner, {
+                    inviteId: need("invite-id"),
+                    title: str("title"),
+                    start: str("start"),
+                    end: str("end"),
+                    durationMinutes: num("duration"),
+                    timeZone: str("time-zone"),
+                    attendees,
+                    allDay,
+                    location: str("location"),
+                    meetingUrl: str("meeting-url"),
+                    description: str("description"),
+                });
+                break;
+            case "cancel":
+                out = await cancelInvite(runner, {
+                    inviteId: need("invite-id"),
+                    note: str("note"),
+                    timeZone: str("time-zone"),
+                });
+                break;
+            case "list":
+                out = await listInvites(runner, {
+                    inviteId: str("invite-id"),
+                    limit: num("limit"),
+                });
+                break;
+            case "respond": {
+                const response = need("response");
+                if (!["accepted", "declined", "tentative"].includes(response)) {
+                    fail("--response must be accepted, declined or tentative.", 2);
+                }
+                out = await respondToInvite(runner, {
+                    messageId: need("message-id"),
+                    response: response,
+                    note: str("note"),
+                });
+                break;
+            }
+            default:
+                process.stderr.write(`Unknown calendar command: ${sub}\n\n`);
+                process.stdout.write(CALENDAR_HELP);
+                process.exit(2);
+        }
+    }
+    catch (err) {
+        if (err instanceof CalendarError) {
+            fail(`calendar ${sub}: ${err.message}`, 1);
+        }
+        throw err;
+    }
+    process.stdout.write(JSON.stringify(out, null, 2) + "\n");
+}
 async function cmdHelp(argv) {
     let parsed;
     try {
@@ -327,7 +521,7 @@ async function cmdHelp(argv) {
     if (parsed.values.help) {
         process.stdout.write(`Usage: atomicmail help [--topic TOPIC]
 
-Topics include: overview, installation, auth, jmap_cheatsheet, tools, presets, troubleshooting, readme.
+Topics include: overview, installation, auth, jmap_cheatsheet, tools, presets, calendar, cron, multi_account, troubleshooting, readme.
 Topic readme prints the built-in SKILL stub.
 `);
         process.exit(0);
@@ -348,6 +542,9 @@ async function main() {
             break;
         case "jmap_request":
             await cmdJmapRequest(rest);
+            break;
+        case "calendar":
+            await cmdCalendar(rest);
             break;
         case "help":
             await cmdHelp(rest);

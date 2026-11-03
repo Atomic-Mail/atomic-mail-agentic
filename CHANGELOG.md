@@ -3,16 +3,29 @@
 Notable changes to Atomic Mail Agentic. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/).
 
-## [Unreleased]
+## [0.3.33] - 2026-11-03
 
 ### Added
 
-- **Meeting invitations.** `atomicmail calendar send|update|cancel|list|respond`
-  and the stdio MCP tools `send_invite`, `update_invite`, `cancel_invite`,
-  `list_invites` and `respond_to_invite` (same as the hosted MCP server).
-  Guests get a standard invitation with Yes / No / Maybe in Gmail, Outlook and
-  Apple Mail; their answers, counter-proposals and invitations sent to the inbox
-  are read back from mail. New help topic `calendar`. TypeScript only for now.
+- **Meeting invitations.** Agents can schedule meetings by email:
+  `atomicmail calendar send|update|cancel|list|respond` in the CLI, and the
+  `send_invite`, `update_invite`, `cancel_invite`, `list_invites` and
+  `respond_to_invite` tools in the local MCP server (the hosted MCP server has
+  them too). Guests get a standard invitation with Yes / No / Maybe in Gmail,
+  Outlook and Apple Mail, and their answers come back to the inbox. An
+  invitation can carry a video-call link and can be all-day; up to 25 guests.
+  New help topic `calendar` and docs page
+  [Calendar invitations](https://docs.atomicmail.ai/calendar). TypeScript
+  packages only for now.
+
+### Changed
+
+- **Recipient limits.** One message can address up to 50 recipients (to + cc +
+  bcc; more on paid plans), and each inbox has a daily recipient limit. Over a
+  limit the send is refused with `tooManyRecipients`: split the message or try
+  the next day.
+- Mail from `@atomicmail.ai` inboxes now ends with "Sent from Atomic Mail
+  Agentic".
 
 ## [0.3.32] - 2026-10-30
 

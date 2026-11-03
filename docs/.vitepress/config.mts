@@ -229,6 +229,7 @@ export default defineConfig({
             ],
           },
           { text: "Webhooks", link: "/webhooks" },
+          { text: "Calendar invitations", link: "/calendar" },
         ],
       },
       {

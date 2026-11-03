@@ -1,7 +1,12 @@
 // The calendar flows against an in-memory mailbox that answers the JMAP
-// batches the flows send. Same file in both repos (server: mcp-server/test/).
+// batches the flows send. The hosted MCP server carries the same tests.
 
-import { assert, assertEquals, assertRejects } from "@std/assert";
+import {
+  assert,
+  assertEquals,
+  assertRejects,
+  assertStringIncludes,
+} from "@std/assert";
 import {
   CalendarError,
   type CalendarRunner,
@@ -11,7 +16,7 @@ import {
   sendInvite,
   updateInvite,
 } from "./flows.ts";
-import { CALENDAR_UID_HEADER } from "./invites.ts";
+import { buildRequestIcs, CALENDAR_UID_HEADER } from "./invites.ts";
 import { unfoldLines } from "./ical.ts";
 
 const ME = "calagenta@atomicmail.ai";
@@ -32,6 +37,8 @@ interface Stored {
 /** A tiny JMAP mailbox: enough of Email/query|get, Blob/upload|get, EmailSubmission. */
 function fakeMailbox(self = ME) {
   const store: Stored[] = [];
+  /** Make the next EmailSubmission/set fail like the mail server does on a refusal. */
+  const state = { failSubmission: false };
   let n = 0;
   const tick = () => new Date(Date.UTC(Y - 1, 9, 12, 10, 0, n++)).toISOString();
   const sub = (v: unknown, vars: Record<string, string>) =>
@@ -113,7 +120,15 @@ function fakeMailbox(self = ME) {
           store.push(msg);
           out.push([name, { created: { m1: { id: msg.id } } }, id]);
         } else if (name === "EmailSubmission/set") {
-          out.push([name, { created: { s1: { id: "S" } } }, id]);
+          out.push(
+            state.failSubmission
+              ? [name, {
+                notCreated: {
+                  s1: { type: "forbiddenToSend", description: "refused" },
+                },
+              }, id]
+              : [name, { created: { s1: { id: "S" } } }, id],
+          );
         }
       }
       return Promise.resolve({
@@ -138,7 +153,7 @@ function fakeMailbox(self = ME) {
     store.push(msg);
     return msg.id;
   };
-  return { runner, store, deliver };
+  return { runner, store, deliver, state };
 }
 
 const sentIcs = (m: { store: Stored[] }, i = -1) =>
@@ -309,4 +324,337 @@ Deno.test("flow: refusals carry a clear message and send nothing", async () => {
     "could not be read",
   );
   assertEquals(box.store.filter((s) => s.box === "sent").length, 1);
+});
+
+Deno.test("flow: meeting link + all-day round-trip; timed <-> all-day bumps SEQUENCE", async () => {
+  const LINK = "https://meet.google.com/abc-defg-hij";
+  const a = fakeMailbox("calagenta@atomicmail.ai");
+  const b = fakeMailbox("calagentb@atomicmail.ai");
+  const sent = await sendInvite(a.runner, {
+    title: "Offsite",
+    start: `${Y}-06-01`,
+    end: `${Y}-06-03`,
+    allDay: true,
+    meetingUrl: LINK,
+    description: "Bring laptops",
+    attendees: "calagentb@atomicmail.ai",
+  });
+  const id = sent.invite_id;
+  assertEquals(sent.all_day, true);
+  assertEquals(sent.meeting_url, LINK);
+  assertEquals(sent.start, `${Y}-06-01T00:00:00.000Z`);
+  assertEquals(sent.end, `${Y}-06-04T00:00:00.000Z`);
+  assertStringIncludes(sent.when, "(all day)");
+  let ics = sentIcs(a);
+  assert(ics.includes(`DTSTART;VALUE=DATE:${Y}0601`));
+  assert(ics.includes(`DTEND;VALUE=DATE:${Y}0604`));
+  assert(ics.includes("TRANSP:TRANSPARENT"));
+  assert(ics.includes(`URL:${LINK}`));
+  assert(ics.includes(`LOCATION:${LINK}`));
+
+  const o = (await listInvites(a.runner, {})).organized[0];
+  assertEquals(
+    [o.meeting_url, o.all_day, o.all_day_date, o.all_day_last_date],
+    [LINK, true, `${Y}-06-01`, `${Y}-06-03`],
+  );
+  // The guest's side parses our link and dates like any other invitation.
+  b.deliver("calagenta@atomicmail.ai", a.store[0].ics);
+  const r = (await listInvites(b.runner, {})).received[0];
+  assertEquals(
+    [r.meeting_url, r.all_day, r.all_day_date, r.all_day_last_date],
+    [LINK, true, `${Y}-06-01`, `${Y}-06-03`],
+  );
+
+  // A new link replaces the old one everywhere; the agenda stays the agenda.
+  const LINK2 = "https://zoom.us/j/123?pwd=x";
+  let upd = await updateInvite(a.runner, { inviteId: id, meetingUrl: LINK2 });
+  assertEquals([upd.version, upd.all_day, upd.meeting_url], [1, true, LINK2]);
+  ics = sentIcs(a);
+  assert(ics.includes(`URL:${LINK2}`));
+  assert(ics.includes(`LOCATION:${LINK2}`));
+  assert(ics.includes("DESCRIPTION:Bring laptops"));
+  assertEquals(ics.some((l) => l.includes(LINK)), false);
+
+  // all-day -> timed: a DTSTART change, so SEQUENCE+1; 30 minutes by default.
+  upd = await updateInvite(a.runner, {
+    inviteId: id,
+    allDay: false,
+    start: `${Y}-06-01T10:00:00Z`,
+  });
+  assertEquals([upd.version, upd.all_day], [2, undefined]);
+  assertEquals(upd.end, `${Y}-06-01T10:30:00.000Z`);
+  ics = sentIcs(a);
+  assert(ics.includes("SEQUENCE:2"));
+  assert(ics.includes(`DTSTART:${Y}0601T100000Z`));
+  assert(ics.includes("TRANSP:OPAQUE"));
+
+  // timed -> all-day.
+  upd = await updateInvite(a.runner, {
+    inviteId: id,
+    allDay: true,
+    start: `${Y}-06-05`,
+  });
+  assertEquals([upd.version, upd.all_day], [3, true]);
+  assertEquals(upd.end, `${Y}-06-06T00:00:00.000Z`);
+  ics = sentIcs(a);
+  assert(ics.includes("SEQUENCE:3"));
+  assert(ics.includes(`DTSTART;VALUE=DATE:${Y}0605`));
+  assert(ics.includes(`DTEND;VALUE=DATE:${Y}0606`));
+
+  // end is the last day; moving an all-day event keeps its length in days.
+  upd = await updateInvite(a.runner, { inviteId: id, end: `${Y}-06-06` });
+  assertEquals(upd.end, `${Y}-06-07T00:00:00.000Z`);
+  upd = await updateInvite(a.runner, { inviteId: id, start: `${Y}-06-10` });
+  assertEquals(upd.end, `${Y}-06-12T00:00:00.000Z`);
+  assertEquals(upd.version, 5);
+
+  // "" clears the link: no URL, CONFERENCE, LOCATION or Join line is left.
+  upd = await updateInvite(a.runner, { inviteId: id, meetingUrl: "" });
+  assertEquals(upd.meeting_url, undefined);
+  ics = sentIcs(a);
+  assertEquals(
+    ics.some((l) => /^(URL|CONFERENCE|LOCATION)[:;]/.test(l)),
+    false,
+  );
+  assert(ics.includes("DESCRIPTION:Bring laptops"));
+  const last = (await listInvites(a.runner, { inviteId: id })).organized[0];
+  assertEquals([last.version, last.meeting_url], [6, undefined]);
+  assertEquals([last.all_day_date, last.all_day_last_date], [
+    `${Y}-06-10`,
+    `${Y}-06-11`,
+  ]);
+});
+
+Deno.test("flow: all-day and meeting-link refusals are clear and send nothing", async () => {
+  const box = fakeMailbox();
+  const base = { title: "X", attendees: "anna@gmail.com" };
+  const refused = async (
+    p: Promise<unknown>,
+    msg: string,
+  ) => await assertRejects(() => p, CalendarError, msg);
+
+  await refused(
+    sendInvite(box.runner, {
+      ...base,
+      start: `${Y}-06-01`,
+      allDay: true,
+      timeZone: "Europe/Moscow",
+    }),
+    "time_zone does not apply",
+  );
+  await refused(
+    sendInvite(box.runner, {
+      ...base,
+      start: `${Y}-06-01`,
+      allDay: true,
+      durationMinutes: 60,
+    }),
+    "duration_minutes does not apply",
+  );
+  await refused(
+    sendInvite(box.runner, {
+      ...base,
+      start: `${Y}-06-01T10:00:00Z`,
+      allDay: true,
+    }),
+    "must be a date",
+  );
+  await refused(
+    sendInvite(box.runner, { ...base, start: `${Y}-06-01` }),
+    "all_day: true",
+  );
+  await refused(
+    sendInvite(box.runner, {
+      ...base,
+      start: `${Y}-06-01T10:00:00Z`,
+      meetingUrl: "http://zoom.us/j/1",
+    }),
+    "https://",
+  );
+
+  const timed = await sendInvite(box.runner, {
+    ...base,
+    start: `${Y}-06-01T10:00:00Z`,
+  });
+  await refused(
+    updateInvite(box.runner, { inviteId: timed.invite_id, allDay: true }),
+    "pass start as a date",
+  );
+  await refused(
+    updateInvite(box.runner, {
+      inviteId: timed.invite_id,
+      allDay: true,
+      start: `${Y}-06-02`,
+      timeZone: "Europe/Moscow",
+    }),
+    "time_zone does not apply",
+  );
+  const allDay = await sendInvite(box.runner, {
+    ...base,
+    start: `${Y}-06-01`,
+    allDay: true,
+  });
+  await refused(
+    updateInvite(box.runner, { inviteId: allDay.invite_id, allDay: false }),
+    "pass start",
+  );
+  await refused(
+    updateInvite(box.runner, {
+      inviteId: allDay.invite_id,
+      durationMinutes: 60,
+    }),
+    "duration_minutes does not apply",
+  );
+  await refused(
+    updateInvite(box.runner, {
+      inviteId: allDay.invite_id,
+      start: `${Y}-06-02T10:00:00Z`,
+    }),
+    "must be a date",
+  );
+  await refused(
+    updateInvite(box.runner, {
+      inviteId: allDay.invite_id,
+      meetingUrl: "https://zoom.us/j/1 x",
+    }),
+    "without spaces",
+  );
+  assertEquals(box.store.filter((s) => s.box === "sent").length, 2);
+});
+
+// --- edge cases ------------------------------------------------------------
+
+Deno.test("flow: a refused submission is reported, not shown as sent", async () => {
+  const { runner, state } = fakeMailbox();
+  state.failSubmission = true;
+  await assertRejects(
+    () =>
+      sendInvite(runner, {
+        title: "Sync",
+        start: `${Y}-03-10T15:00:00+03:00`,
+        attendees: ["anna@example.com"],
+      }),
+    Error,
+  );
+});
+
+Deno.test("flow: respond_to_invite refuses invites that don't list us or whose organizer didn't send them", async () => {
+  const { runner, deliver } = fakeMailbox();
+  const req = (organizer: string, attendees: string[]) =>
+    buildRequestIcs({
+      uid: crypto.randomUUID(),
+      sequence: 0,
+      title: "Planning",
+      start: new Date(Date.UTC(Y, 2, 10, 12)),
+      end: new Date(Date.UTC(Y, 2, 10, 13)),
+      organizer: { email: organizer },
+      attendees: attendees.map((email) => ({
+        email,
+        partstat: "NEEDS-ACTION" as const,
+      })),
+    });
+  const notListed = deliver(
+    "boss@example.com",
+    req("boss@example.com", ["anna@example.com"]),
+  );
+  await assertRejects(
+    () =>
+      respondToInvite(runner, { messageId: notListed, response: "accepted" }),
+    Error,
+    "does not list this inbox",
+  );
+  const forged = deliver(
+    "stranger@evil.example",
+    req("victim@example.com", [ME]),
+  );
+  await assertRejects(
+    () => respondToInvite(runner, { messageId: forged, response: "accepted" }),
+    Error,
+    "not answering",
+  );
+});
+
+Deno.test("flow: a REPLY from a stranger's domain does not change a guest's answer", async () => {
+  const { runner, store, deliver } = fakeMailbox();
+  const sent = await sendInvite(runner, {
+    title: "Sync",
+    start: `${Y}-03-10T15:00:00+03:00`,
+    attendees: ["anna@example.com"],
+  });
+  const ours = store.find((m) => m.uid === sent.invite_id)!;
+  const reply = (ours.ics ?? "")
+    .replace("METHOD:REQUEST", "METHOD:REPLY")
+    .replace(/PARTSTAT=NEEDS-ACTION/g, "PARTSTAT=ACCEPTED");
+  deliver("mallory@evil.example", reply);
+  const list = await listInvites(runner, {});
+  const anna = list.organized[0].attendees.find((a) =>
+    a.email === "anna@example.com"
+  );
+  assertEquals(anna?.response, "no_response");
+});
+
+Deno.test("flow: update and cancel keep showing the organizer's time zone", async () => {
+  const { runner, store } = fakeMailbox();
+  const sent = await sendInvite(runner, {
+    title: "Demo",
+    start: `${Y}-03-10T15:00`,
+    timeZone: "Europe/Moscow",
+    attendees: ["anna@example.com"],
+  });
+  assertStringIncludes(sent.when, "15:00 – 15:30 (Europe/Moscow)");
+  assertStringIncludes(
+    store.at(-1)!.ics ?? "",
+    "X-ATOMIC-TIMEZONE:Europe/Moscow",
+  );
+  const upd = await updateInvite(runner, {
+    inviteId: sent.invite_id,
+    description: "New agenda",
+  });
+  assertStringIncludes(upd.when, "15:00 – 15:30 (Europe/Moscow)");
+  const moved = await updateInvite(runner, {
+    inviteId: sent.invite_id,
+    start: `${Y}-03-10T16:00:00+03:00`,
+  });
+  assertStringIncludes(moved.when, "16:00 – 16:30 (+03:00)");
+  const cancelled = await cancelInvite(runner, { inviteId: sent.invite_id });
+  assertStringIncludes(cancelled.when, "(+03:00)");
+});
+
+Deno.test("flow: an unknown time_zone on update is refused, not shown as UTC", async () => {
+  const { runner, store } = fakeMailbox();
+  const sent = await sendInvite(runner, {
+    title: "Demo",
+    start: `${Y}-03-10T15:00`,
+    timeZone: "Europe/Moscow",
+    attendees: ["anna@example.com"],
+  });
+  const before = store.length;
+  for (const tz of ["Europe/NoSuchZone", ""]) {
+    await assertRejects(
+      () => updateInvite(runner, { inviteId: sent.invite_id, timeZone: tz }),
+      Error,
+      "Unknown time_zone",
+    );
+  }
+  assertEquals(store.length, before);
+});
+
+Deno.test("flow: time_zone UTC on update clears the remembered zone", async () => {
+  const { runner, store } = fakeMailbox();
+  const sent = await sendInvite(runner, {
+    title: "Demo",
+    start: `${Y}-03-10T15:00`,
+    timeZone: "Europe/Moscow",
+    attendees: ["anna@example.com"],
+  });
+  const upd = await updateInvite(runner, {
+    inviteId: sent.invite_id,
+    timeZone: "UTC",
+    description: "x",
+  });
+  assertStringIncludes(upd.when, "12:00 – 12:30 (UTC)");
+  assertEquals(
+    (store.at(-1)!.ics ?? "").includes("X-ATOMIC-TIMEZONE"),
+    false,
+  );
 });

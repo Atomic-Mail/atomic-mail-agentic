@@ -1,5 +1,5 @@
 // The five calendar operations as JMAP round trips, independent of how the
-// caller talks to JMAP. mcp-server runs them through its per-call session;
+// caller talks to JMAP. The hosted MCP server runs them through its own session;
 // the client CLI and stdio MCP through AgentSession. This file, ical.ts and
 // invites.ts are carried byte-for-byte by both repos — change them together.
 //
@@ -20,6 +20,7 @@ import {
   buildRequestIcs,
   buildScanOps,
   buildSentByUidOps,
+  checkAllDayStart,
   checkLength,
   checkStart,
   composeBody,
@@ -39,10 +40,13 @@ import {
   parseAttendees,
   parseBlobGetResponse,
   parseCalendar,
+  parseMeetingUrl,
   parseScanResponse,
+  parseUserDate,
   parseUserDateTime,
   type Person,
   primaryEvent,
+  resolveAllDayEnd,
   resolveEnd,
   type Response,
   RESPONSE_TO_PARTSTAT,
@@ -219,13 +223,75 @@ export interface InviteResult {
   invite_id: string;
   version: number;
   title: string;
+  /** ISO instants; for an all-day event UTC midnights, `end` exclusive. */
   start: string;
   end: string;
+  all_day?: true;
   when: string;
+  meeting_url?: string;
   attendees: string[];
   removed_attendees?: string[];
   message_id: string | null;
 }
+
+function inviteResult(
+  status: InviteResult["status"],
+  ev: OutgoingEvent,
+  when: string,
+  messageId: string | null,
+): InviteResult {
+  return {
+    status,
+    invite_id: ev.uid,
+    version: ev.sequence,
+    title: ev.title,
+    start: ev.start.toISOString(),
+    end: ev.end.toISOString(),
+    ...(ev.allDay ? { all_day: true as const } : {}),
+    when,
+    ...(ev.meetingUrl ? { meeting_url: ev.meetingUrl } : {}),
+    attendees: ev.attendees.map((a) => a.email),
+    message_id: messageId,
+  };
+}
+
+/** `meeting_url` as given: "" (or spaces) means none. */
+function meetingUrlInput(raw: string | undefined): string | undefined {
+  return raw?.trim() ? parseMeetingUrl(raw) : undefined;
+}
+
+/**
+ * The zone to remember on the event for later messages: the caller's
+ * time_zone, else the UTC offset written in start; none for all-day events
+ * or plain UTC.
+ */
+function zoneToKeep(
+  timeZone: string | undefined,
+  rawStart: string | undefined,
+  allDay: boolean | undefined,
+): string | undefined {
+  if (allDay) return undefined;
+  if (!timeZone && !rawStart) return undefined;
+  const zone = displayZone(timeZone, rawStart);
+  return zone === "UTC" ? undefined : zone;
+}
+
+/** The human date for an event, in the caller's zone unless it is all-day. */
+function whenOf(ev: OutgoingEvent, timeZone?: string, raw?: string): string {
+  return formatWhen(
+    ev.start,
+    ev.end,
+    displayZone(timeZone, raw),
+    Boolean(ev.allDay),
+  );
+}
+
+const ALL_DAY_NO_DURATION =
+  "duration_minutes does not apply to an all-day event; pass end as the " +
+  "last day (YYYY-MM-DD) instead.";
+const ALL_DAY_NO_ZONE =
+  "time_zone does not apply to an all-day event (its dates are the same in " +
+  "every zone); leave it out.";
 
 function guard<T>(fn: () => T): T {
   try {
@@ -241,13 +307,18 @@ function guard<T>(fn: () => T): T {
 
 export interface SendInviteInput {
   title: string;
+  /** Date-time; a date (YYYY-MM-DD) when `allDay`. */
   start: string;
+  /** Date-time; with `allDay`, the LAST day (inclusive), default `start`. */
   end?: string;
   durationMinutes?: number;
   timeZone?: string;
   attendees: string | string[];
   location?: string;
   description?: string;
+  /** https video-call link; "" means none. */
+  meetingUrl?: string;
+  allDay?: boolean;
 }
 
 /** Validate a send before any network call (throws CalendarError). */
@@ -261,14 +332,27 @@ export function prepareSend(input: SendInviteInput, self: string): {
     checkLength(title, MAX_TITLE_CHARS, "title");
     checkLength(input.location, MAX_LOCATION_CHARS, "location");
     checkLength(input.description, MAX_DESCRIPTION_CHARS, "description");
-    const start = parseUserDateTime(input.start, input.timeZone, "start");
-    checkStart(start);
-    const end = resolveEnd({
-      start,
-      end: input.end,
-      durationMinutes: input.durationMinutes,
-      timeZone: input.timeZone,
-    });
+    const meetingUrl = meetingUrlInput(input.meetingUrl);
+    let start: Date;
+    let end: Date;
+    if (input.allDay) {
+      if (input.durationMinutes !== undefined) {
+        throw new Error(ALL_DAY_NO_DURATION);
+      }
+      if (input.timeZone) throw new Error(ALL_DAY_NO_ZONE);
+      start = parseUserDate(input.start, "start");
+      checkAllDayStart(start);
+      end = resolveAllDayEnd(start, input.end);
+    } else {
+      start = parseUserDateTime(input.start, input.timeZone, "start");
+      checkStart(start);
+      end = resolveEnd({
+        start,
+        end: input.end,
+        durationMinutes: input.durationMinutes,
+        timeZone: input.timeZone,
+      });
+    }
     const guests = parseAttendees(asList(input.attendees)).filter((a) =>
       a.email !== self
     );
@@ -281,15 +365,23 @@ export function prepareSend(input: SendInviteInput, self: string): {
       title,
       description: input.description?.trim() || undefined,
       location: input.location?.trim() || undefined,
+      ...(meetingUrl ? { meetingUrl } : {}),
+      ...(input.allDay ? { allDay: true } : {}),
       start,
       end,
+      ...(zoneToKeep(input.timeZone, input.start, input.allDay)
+        ? {
+          displayTimeZone: zoneToKeep(
+            input.timeZone,
+            input.start,
+            input.allDay,
+          ),
+        }
+        : {}),
       organizer: { email: self },
       attendees: guests,
     };
-    return {
-      ev,
-      when: formatWhen(start, end, displayZone(input.timeZone, input.start)),
-    };
+    return { ev, when: whenOf(ev, input.timeZone, input.start) };
   });
 }
 
@@ -308,23 +400,14 @@ export async function sendInvite(
       when,
       location: ev.location,
       description: ev.description,
+      meetingUrl: ev.meetingUrl,
       organizer: ev.organizer,
       attendees: ev.attendees,
     }),
     ics: buildRequestIcs(ev),
     uid: ev.uid,
   });
-  return {
-    status: "sent",
-    invite_id: ev.uid,
-    version: 0,
-    title: ev.title,
-    start: ev.start.toISOString(),
-    end: ev.end.toISOString(),
-    when,
-    attendees: ev.attendees.map((a) => a.email),
-    message_id: messageId,
-  };
+  return inviteResult("sent", ev, when, messageId);
 }
 
 // ---------------------------------------------------------------------------
@@ -340,6 +423,72 @@ export interface UpdateInviteInput {
   attendees?: string | string[];
   location?: string;
   description?: string;
+  /** New link; "" removes it; omit to keep it. */
+  meetingUrl?: string;
+  /** true: make it all-day (needs `start` as a date unless it already is);
+   * false: give it times again (needs `start`); omit to keep the kind. */
+  allDay?: boolean;
+}
+
+/** New start/end for update_invite, switching timed ↔ all-day if asked. */
+function updatedTimes(
+  prev: OutgoingEvent,
+  input: UpdateInviteInput,
+): { start: Date; end: Date; allDay: boolean } {
+  const allDay = input.allDay ?? Boolean(prev.allDay);
+  const keptLength = (start: Date) =>
+    new Date(start.getTime() + (prev.end.getTime() - prev.start.getTime()));
+  if (allDay) {
+    if (input.durationMinutes !== undefined) {
+      throw new Error(ALL_DAY_NO_DURATION);
+    }
+    if (
+      input.timeZone &&
+      (input.allDay !== undefined || input.start || input.end)
+    ) throw new Error(ALL_DAY_NO_ZONE);
+    if (!prev.allDay && !input.start) {
+      throw new Error(
+        "to make this meeting all-day, pass start as a date (YYYY-MM-DD).",
+      );
+    }
+    if (input.start) {
+      const start = parseUserDate(input.start, "start");
+      checkAllDayStart(start);
+      const end = input.end || !prev.allDay
+        ? resolveAllDayEnd(start, input.end)
+        : keptLength(start);
+      return { start, end, allDay };
+    }
+    const end = input.end ? resolveAllDayEnd(prev.start, input.end) : prev.end;
+    return { start: prev.start, end, allDay };
+  }
+  if (prev.allDay && !input.start) {
+    throw new Error(
+      "to give this all-day event a time, pass start, e.g. " +
+        "2026-10-16T15:00:00+03:00 (length: duration_minutes, default 30).",
+    );
+  }
+  const newEnd = (start: Date) =>
+    resolveEnd({
+      start,
+      end: input.end,
+      durationMinutes: input.durationMinutes,
+      timeZone: input.timeZone,
+    });
+  if (input.start) {
+    const start = parseUserDateTime(input.start, input.timeZone, "start");
+    checkStart(start);
+    // Moving a timed meeting keeps its length; one that was all-day gets the
+    // send_invite default (30 minutes) unless end/duration say otherwise.
+    const end = input.end || input.durationMinutes || prev.allDay
+      ? newEnd(start)
+      : keptLength(start);
+    return { start, end, allDay };
+  }
+  const end = input.end || input.durationMinutes
+    ? newEnd(prev.start)
+    : prev.end;
+  return { start: prev.start, end, allDay };
 }
 
 export async function updateInvite(
@@ -355,32 +504,20 @@ export async function updateInvite(
   }
   const prev = loaded.ev;
   const next = guard(() => {
+    // A time_zone given on its own still decides how times are shown, so an
+    // unknown one is an error, not a silent fall back to UTC.
+    if (input.timeZone !== undefined && !isValidTimeZone(input.timeZone)) {
+      throw new Error(
+        `Unknown time_zone '${input.timeZone}'. Use an IANA name, e.g. Europe/Moscow.`,
+      );
+    }
     checkLength(input.title, MAX_TITLE_CHARS, "title");
     checkLength(input.location, MAX_LOCATION_CHARS, "location");
     checkLength(input.description, MAX_DESCRIPTION_CHARS, "description");
-    let start = prev.start;
-    let end = prev.end;
-    if (input.start) {
-      start = parseUserDateTime(input.start, input.timeZone, "start");
-      checkStart(start);
-      end = input.end || input.durationMinutes
-        ? resolveEnd({
-          start,
-          end: input.end,
-          durationMinutes: input.durationMinutes,
-          timeZone: input.timeZone,
-        })
-        : new Date(
-          start.getTime() + (prev.end.getTime() - prev.start.getTime()),
-        );
-    } else if (input.end || input.durationMinutes) {
-      end = resolveEnd({
-        start,
-        end: input.end,
-        durationMinutes: input.durationMinutes,
-        timeZone: input.timeZone,
-      });
-    }
+    const meetingUrl = input.meetingUrl !== undefined
+      ? meetingUrlInput(input.meetingUrl)
+      : prev.meetingUrl;
+    const { start, end, allDay } = updatedTimes(prev, input);
     let attendees = prev.attendees;
     if (input.attendees !== undefined) {
       attendees = parseAttendees(asList(input.attendees)).filter((a) =>
@@ -402,18 +539,27 @@ export async function updateInvite(
       location: input.location !== undefined
         ? input.location.trim() || undefined
         : prev.location,
+      meetingUrl,
+      allDay: allDay || undefined,
       start,
       end,
+      // A new time_zone or start decides the zone (UTC clears it); with
+      // neither, the one the meeting was created in stays.
+      displayTimeZone: allDay
+        ? undefined
+        : input.timeZone !== undefined || input.start !== undefined
+        ? zoneToKeep(input.timeZone, input.start, false)
+        : prev.displayTimeZone,
       attendees,
     };
     return ev;
   });
   const kept = new Set(next.attendees.map((a) => a.email));
   const removed = prev.attendees.filter((a) => !kept.has(a.email));
-  const when = formatWhen(
-    next.start,
-    next.end,
-    displayZone(input.timeZone, input.start),
+  const when = whenOf(
+    next,
+    input.timeZone ?? next.displayTimeZone,
+    input.start,
   );
   if (removed.length > 0) {
     // RFC 5546 §3.2.5: uninvited guests get a CANCEL listing only them, no STATUS.
@@ -446,6 +592,7 @@ export async function updateInvite(
       when,
       location: next.location,
       description: next.description,
+      meetingUrl: next.meetingUrl,
       organizer: next.organizer,
       attendees: next.attendees,
     }),
@@ -453,16 +600,8 @@ export async function updateInvite(
     uid: next.uid,
   });
   return {
-    status: "updated",
-    invite_id: next.uid,
-    version: next.sequence,
-    title: next.title,
-    start: next.start.toISOString(),
-    end: next.end.toISOString(),
-    when,
-    attendees: next.attendees.map((a) => a.email),
+    ...inviteResult("updated", next, when, messageId),
     removed_attendees: removed.map((a) => a.email),
-    message_id: messageId,
   };
 }
 
@@ -482,7 +621,14 @@ export async function cancelInvite(
     throw new CalendarError("this invitation is already cancelled.");
   }
   const ev: OutgoingEvent = { ...loaded.ev, sequence: loaded.ev.sequence + 1 };
-  const when = formatWhen(ev.start, ev.end, displayZone(input.timeZone));
+  // The zone only labels the times in the email, but an unknown one would
+  // silently show them in UTC: refuse it, as update_invite does.
+  if (input.timeZone !== undefined && !isValidTimeZone(input.timeZone)) {
+    throw new CalendarError(
+      `Unknown time_zone '${input.timeZone}'. Use an IANA name, e.g. Europe/Moscow.`,
+    );
+  }
+  const when = whenOf(ev, input.timeZone ?? ev.displayTimeZone);
   const note = input.note?.trim() || undefined;
   const messageId = await sendCalendarMessage(runner, {
     label: "cancel_invite",
@@ -498,17 +644,7 @@ export async function cancelInvite(
     ics: buildCancelIcs(ev, new Date(), note),
     uid: ev.uid,
   });
-  return {
-    status: "cancelled",
-    invite_id: ev.uid,
-    version: ev.sequence,
-    title: ev.title,
-    start: ev.start.toISOString(),
-    end: ev.end.toISOString(),
-    when,
-    attendees: ev.attendees.map((a) => a.email),
-    message_id: messageId,
-  };
+  return inviteResult("cancelled", ev, when, messageId);
 }
 
 // ---------------------------------------------------------------------------
@@ -597,8 +733,39 @@ export async function respondToInvite(
       "you organize this meeting; there is nothing to answer.",
     );
   }
-  const me: Person = invite.attendees.find((a) => a.email === runner.self) ??
-    { email: runner.self };
+  const listed = invite.attendees.find((a) => a.email === runner.self);
+  if (!listed) {
+    throw new CalendarError(
+      "this invitation does not list this inbox as a guest, so there is " +
+        "nothing to answer (a reply would speak for an address it wasn't sent to).",
+    );
+  }
+  // The organizer named inside the calendar is where the answer goes. Only
+  // trust it when the email came from that organizer (or from the delegate it
+  // names in SENT-BY): otherwise anyone could make us mail an arbitrary address.
+  // SENT-BY comes from the same untrusted calendar, so a delegate counts only
+  // inside the organizer's own domain: a stranger cannot name themselves the
+  // delegate of any address.
+  const sender = msg.from?.[0]?.email?.toLowerCase();
+  const sentBy = organizerSentBy(calendars.get(msg.calendarBlobId) ?? "");
+  // The domain of a well-formed `local@domain` only; anything else is null.
+  const domainOf = (a: string) => {
+    const at = a.indexOf("@");
+    return at > 0 && at === a.lastIndexOf("@") && at < a.length - 1
+      ? a.slice(at + 1)
+      : null;
+  };
+  const senderDomain = sender === undefined ? null : domainOf(sender);
+  const delegate = senderDomain !== null && sender === sentBy &&
+    senderDomain === domainOf(invite.organizer.email);
+  if (sender !== invite.organizer.email && !delegate) {
+    throw new CalendarError(
+      `the invitation names ${invite.organizer.email} as organizer but the ` +
+        `email came from ${sender ?? "an unknown sender"}; not answering. ` +
+        "Ask the user whether to reply by email instead.",
+    );
+  }
+  const me: Person = listed;
   const note = input.note?.trim() || undefined;
   const kind = input.response === "accepted"
     ? "reply-accepted"
@@ -644,4 +811,12 @@ export async function respondToInvite(
     title,
     message_id: messageId,
   };
+}
+
+/** The SENT-BY address on the ORGANIZER line (a delegate sending for them). */
+function organizerSentBy(ics: string): string | undefined {
+  const line = ics.replace(/\r?\n[ \t]/g, "").split(/\r?\n/)
+    .find((l) => /^ORGANIZER[;:]/i.test(l));
+  const m = line?.match(/;SENT-BY="?(?:mailto:)?([^";:]+)"?/i);
+  return m ? m[1].trim().toLowerCase() : undefined;
 }

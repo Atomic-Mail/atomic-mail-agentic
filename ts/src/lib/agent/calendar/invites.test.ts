@@ -12,6 +12,7 @@ import {
   buildRequestIcs,
   buildScanOps,
   CALENDAR_UID_HEADER,
+  checkAllDayStart,
   checkStart,
   composeBody,
   deriveInviteState,
@@ -19,16 +20,20 @@ import {
   formatWhen,
   messageSubject,
   type OutgoingEvent,
+  outgoingFromParsed,
   parseAttendees,
   parseCalendar,
+  parseMeetingUrl,
   parsePerson,
   parseScanResponse,
+  parseUserDate,
   parseUserDateTime,
   primaryEvent,
+  resolveAllDayEnd,
   resolveEnd,
   type ScannedMessage,
 } from "./invites.ts";
-import { unfoldLines } from "./ical.ts";
+import { escapeText, unfoldLines } from "./ical.ts";
 
 const ME = "calagenta@atomicmail.ai";
 const crlf = (lines: string[]) => lines.join("\r\n") + "\r\n";
@@ -463,6 +468,7 @@ Deno.test("buildScanOps / buildBlobGetOps: header query on Sent, inbox window, c
   const scan = JSON.parse(buildScanOps(50));
   assertEquals(scan.methodCalls[0][1].filter, {
     inMailbox: "$SENT_MAILBOX_ID",
+    notKeyword: "$draft", // a refused send's copy is not a version
     header: [CALENDAR_UID_HEADER],
   });
   assertEquals(scan.methodCalls[0][1].limit, 50);
@@ -796,4 +802,343 @@ Deno.test("formatWhen / messageSubject / composeBody", () => {
   assertStringIncludes(body.text, "Where: Room 1");
   assertStringIncludes(body.html, "Demo &lt;b&gt;");
   assertEquals(body.html.includes("<b>"), false);
+});
+
+// --- Meeting links -----------------------------------------------------------------
+
+/** Long, with characters TEXT values escape (, ;) and a query string. */
+const LINK = "https://zoom.us/j/81234567890?pwd=a1,b2;c3&uname=Anna&" +
+  "x=" + "y".repeat(160);
+
+Deno.test("parseMeetingUrl: one https link, length cap, no spaces/quotes/credentials", () => {
+  assertEquals(parseMeetingUrl(`  ${LINK} `), LINK);
+  assertEquals(
+    parseMeetingUrl("https://meet.google.com/abc-defg-hij"),
+    "https://meet.google.com/abc-defg-hij",
+  );
+  for (
+    const [bad, why] of [
+      ["http://zoom.us/j/1", "https://"],
+      ["zoom.us/j/1", "not a valid link"],
+      ["javascript:alert(1)", "https://"],
+      ["https://zoom.us/j/1 https://evil.example", "without spaces"],
+      ['https://zoom.us/j/1"onmouseover="x', "without spaces or quotes"],
+      ["https://zoom.us/j/1\r\nATTENDEE:mailto:x@y.io", "without spaces"],
+      ["https://google.com@evil.example/x", "user name or password"],
+      ["https://" + "a".repeat(2_000) + ".io", "longer than 2000"],
+    ]
+  ) {
+    assertThrows(() => parseMeetingUrl(bad), Error, why);
+  }
+});
+
+Deno.test("buildRequestIcs with a meeting link: URL + CONFERENCE, LOCATION fallback, agenda untouched, folded and escaped", () => {
+  const ics = buildRequestIcs(
+    ourEvent({ location: undefined, meetingUrl: LINK }),
+    NOW,
+  );
+  for (const l of ics.split("\r\n")) {
+    assert(new TextEncoder().encode(l).length <= 75, `too long: ${l}`);
+  }
+  const lines = unfoldLines(ics);
+  // URI values are not TEXT: the link goes in as is, only folded.
+  assert(lines.includes(`URL:${LINK}`));
+  assert(
+    lines.includes(`CONFERENCE;VALUE=URI;FEATURE=VIDEO;LABEL=Join:${LINK}`),
+  );
+  // LOCATION and DESCRIPTION are TEXT: , and ; are escaped there.
+  assert(lines.includes(`LOCATION:${escapeText(LINK)}`));
+  assertStringIncludes(escapeText(LINK), "\\,");
+  assertStringIncludes(escapeText(LINK), "\\;");
+  // The link is shown once (LOCATION/URL/CONFERENCE); DESCRIPTION is the agenda.
+  assert(
+    lines.includes(`DESCRIPTION:${escapeText("Agenda:\n- intro\n- демо")}`),
+  );
+
+  // Our own invitation reads back with the same link, agenda and no location.
+  const ev = primaryEvent(parseCalendar(ics)!)!;
+  assertEquals(ev.meetingUrl, LINK);
+  assertEquals(ev.meetingUrlGuessed, undefined);
+  assertEquals(ev.location, LINK);
+  const back = outgoingFromParsed(ev);
+  assertEquals(back.meetingUrl, LINK);
+  assertEquals(back.location, undefined);
+  assertEquals(back.description, "Agenda:\n- intro\n- демо");
+  // Rebuilding from what we read gives the same object.
+  assertEquals(buildRequestIcs(back, NOW), ics);
+
+  // An explicit place stays the LOCATION; no agenda means no DESCRIPTION.
+  const withRoom = unfoldLines(
+    buildRequestIcs(
+      ourEvent({
+        location: "Room 1",
+        description: undefined,
+        meetingUrl: LINK,
+      }),
+      NOW,
+    ),
+  );
+  assert(withRoom.includes("LOCATION:Room 1"));
+  assertEquals(withRoom.some((l) => l.startsWith("DESCRIPTION")), false);
+  const roomBack = outgoingFromParsed(
+    primaryEvent(parseCalendar(withRoom.join("\r\n"))!)!,
+  );
+  assertEquals(roomBack.location, "Room 1");
+  assertEquals(roomBack.description, undefined);
+});
+
+Deno.test("outgoingFromParsed: a link only in LOCATION text stays a location, not a meeting_url", () => {
+  const ev = primaryEvent(parseCalendar(buildRequestIcs(ourEvent(), NOW))!)!;
+  assertEquals(ev.meetingUrl, "https://meet.example.com/x");
+  assertEquals(ev.meetingUrlGuessed, true);
+  const back = outgoingFromParsed(ev);
+  assertEquals(back.meetingUrl, undefined);
+  assertEquals(back.location, "https://meet.example.com/x");
+  assertEquals(
+    unfoldLines(buildRequestIcs(back, NOW)).some((l) => l.startsWith("URL:")),
+    false,
+  );
+});
+
+Deno.test("composeBody: the meeting link is one Join row in text and HTML, escaped", () => {
+  const url = "https://meet.example.com/x?a=1&b=2";
+  const body = composeBody({
+    kind: "invite",
+    title: "Demo",
+    when: "Fri, Oct 16, 2026 15:00 – 15:30 (UTC)",
+    meetingUrl: url,
+    description: "Agenda",
+    organizer: { email: ME },
+  });
+  assertStringIncludes(body.text, `\nWhen: `);
+  assertStringIncludes(body.text, `\nJoin: ${url}\n`);
+  assertEquals(body.text.split(url).length - 1, 1, "the link appears once");
+  assertStringIncludes(
+    body.html,
+    `<a href="https://meet.example.com/x?a=1&amp;b=2"`,
+  );
+  assertEquals(body.html.includes("Join meeting"), false, "no button");
+  assertEquals(body.html.split("meet.example.com").length - 1, 2); // href + text
+  // The same link as LOCATION is not repeated as a Where row.
+  const sameWhere = composeBody({
+    kind: "invite",
+    title: "Demo",
+    when: "x",
+    location: url,
+    meetingUrl: url,
+    organizer: { email: ME },
+  });
+  assertEquals(sameWhere.text.includes("Where:"), false);
+  assertEquals(body.html.includes("a=1&b=2"), false);
+  // Without a link nothing changes.
+  const plain = composeBody({
+    kind: "cancel",
+    title: "Demo",
+    when: "x",
+    organizer: { email: ME },
+  });
+  assertEquals(plain.text.includes("Join"), false);
+  assertEquals(plain.html.includes("<a "), false);
+});
+
+// --- All-day events ------------------------------------------------------------------
+
+Deno.test("all-day input: dates only, end is the last day (exclusive DTEND), today counts", () => {
+  const start = parseUserDate("2026-11-10", "start");
+  assertEquals(start.toISOString(), "2026-11-10T00:00:00.000Z");
+  // Default one day; end names the LAST day, DTEND is the day after it.
+  assertEquals(
+    resolveAllDayEnd(start).toISOString(),
+    "2026-11-11T00:00:00.000Z",
+  );
+  assertEquals(
+    resolveAllDayEnd(start, "2026-11-12").toISOString(),
+    "2026-11-13T00:00:00.000Z",
+  );
+  assertEquals(
+    resolveAllDayEnd(start, "2026-11-10").toISOString(),
+    "2026-11-11T00:00:00.000Z",
+  );
+  assertThrows(() => resolveAllDayEnd(start, "2026-11-09"), Error, "before");
+  assertThrows(() => resolveAllDayEnd(start, "2026-12-11"), Error, "31 days");
+  assertThrows(
+    () => parseUserDate("2026-11-10T09:00", "start"),
+    Error,
+    "must be a date",
+  );
+  assertThrows(() => parseUserDate("2026-02-30", "end"), Error, "not a valid");
+  // A date without all_day points at all_day.
+  assertThrows(
+    () => parseUserDateTime("2026-11-10", "Europe/Moscow", "start"),
+    Error,
+    "all_day: true",
+  );
+  // Today is fine even late in the UTC day; two days back is not.
+  const now = new Date("2026-11-10T23:30:00Z");
+  checkAllDayStart(parseUserDate("2026-11-10", "start"), now);
+  checkAllDayStart(parseUserDate("2026-11-09", "start"), now);
+  assertThrows(
+    () => checkAllDayStart(parseUserDate("2026-11-08", "start"), now),
+    Error,
+    "in the past",
+  );
+  assertThrows(
+    () => checkAllDayStart(parseUserDate("2029-01-01", "start"), now),
+    Error,
+    "two years",
+  );
+});
+
+Deno.test("buildRequestIcs all-day: VALUE=DATE, exclusive DTEND, TRANSPARENT; round-trips", () => {
+  const ics = buildRequestIcs(
+    ourEvent({
+      allDay: true,
+      start: new Date("2026-11-10T00:00:00Z"),
+      end: new Date("2026-11-13T00:00:00Z"),
+    }),
+    NOW,
+  );
+  const lines = unfoldLines(ics);
+  assert(lines.includes("DTSTART;VALUE=DATE:20261110"));
+  assert(lines.includes("DTEND;VALUE=DATE:20261113"));
+  assert(lines.includes("TRANSP:TRANSPARENT"));
+  assertEquals(lines.some((l) => /^DT(START|END):/.test(l)), false);
+  assertEquals(lines.includes("TRANSP:OPAQUE"), false);
+  // A timed meeting stays OPAQUE.
+  assert(
+    unfoldLines(buildRequestIcs(ourEvent(), NOW)).includes("TRANSP:OPAQUE"),
+  );
+
+  const ev = primaryEvent(parseCalendar(ics)!)!;
+  assertEquals(ev.allDayDate, "2026-11-10");
+  assertEquals(ev.end?.toISOString(), "2026-11-13T00:00:00.000Z");
+  const back = outgoingFromParsed(ev);
+  assertEquals(back.allDay, true);
+  assertEquals(buildRequestIcs(back, NOW), ics);
+  // CANCEL describes the same all-day event.
+  assert(
+    unfoldLines(buildCancelIcs(back, NOW)).includes(
+      "DTSTART;VALUE=DATE:20261110",
+    ),
+  );
+});
+
+Deno.test("formatWhen all-day: one day, a range, the zone is ignored", () => {
+  const d = (s: string) => new Date(`${s}T00:00:00Z`);
+  assertEquals(
+    formatWhen(d("2026-11-10"), d("2026-11-11"), "UTC", true),
+    "Tue, Nov 10, 2026 (all day)",
+  );
+  assertEquals(
+    formatWhen(d("2026-11-10"), d("2026-11-13"), "America/Los_Angeles", true),
+    "Tue, Nov 10, 2026 – Thu, Nov 12, 2026 (all day)",
+  );
+  assertEquals(
+    messageSubject(
+      "invite",
+      "Offsite",
+      formatWhen(
+        d("2026-11-10"),
+        d("2026-11-11"),
+        "UTC",
+        true,
+      ),
+    ),
+    "Invitation: Offsite @ Tue, Nov 10, 2026 (all day)",
+  );
+});
+
+Deno.test("deriveInviteState: organized view shows meeting_url and the all-day dates", () => {
+  const allDay = buildRequestIcs(
+    ourEvent({
+      uid: "ad-1",
+      allDay: true,
+      location: undefined,
+      meetingUrl: LINK,
+      start: new Date("2026-11-10T00:00:00Z"),
+      end: new Date("2026-11-13T00:00:00Z"),
+    }),
+    NOW,
+  );
+  const timed = buildRequestIcs(ourEvent({ uid: "t-1" }), NOW);
+  const state = deriveInviteState(
+    [
+      sent("s1", "b1", "2026-10-12T10:00:00Z"),
+      sent("s2", "b2", "2026-10-12T10:01:00Z"),
+    ],
+    new Map([["b1", allDay], ["b2", timed]]),
+    ME,
+  );
+  const ad = state.organized.find((o) => o.invite_id === "ad-1")!;
+  assertEquals(ad.meeting_url, LINK);
+  assertEquals(ad.location, LINK);
+  assertEquals(ad.all_day, true);
+  assertEquals(ad.all_day_date, "2026-11-10");
+  assertEquals(ad.all_day_last_date, "2026-11-12");
+  assertEquals(ad.end, "2026-11-13T00:00:00.000Z");
+  const t = state.organized.find((o) => o.invite_id === "t-1")!;
+  assertEquals(t.all_day, undefined);
+  assertEquals(t.all_day_date, undefined);
+  // A link pasted into location is still reported as the meeting link.
+  assertEquals(t.meeting_url, "https://meet.example.com/x");
+});
+
+// --- edge cases ------------------------------------------------------------
+
+Deno.test("impossible calendar dates are refused, not rolled into the next month", () => {
+  assertThrows(
+    () => parseUserDateTime("2027-02-31T10:00", "Europe/Moscow", "start"),
+    Error,
+    "not a valid date",
+  );
+  assertThrows(
+    () => parseUserDateTime("2027-02-31T10:00:00+03:00", undefined, "start"),
+    Error,
+    "not a valid date",
+  );
+  assertThrows(() => parseUserDate("2027-04-31", "start"), Error);
+  assertEquals(
+    parseUserDateTime("2028-02-29T10:00:00Z", undefined, "start")
+      .toISOString(),
+    "2028-02-29T10:00:00.000Z",
+  );
+});
+
+Deno.test("subjects carry no control characters from an invitation's title", () => {
+  const s = messageSubject(
+    "reply-accepted",
+    "Sync\r\nBcc: victim@example.com",
+    "Tue",
+  );
+  assertEquals(/[\r\n]/.test(s), false);
+  assertStringIncludes(s, "Sync Bcc: victim@example.com");
+});
+
+Deno.test("deriveInviteState: another guest who knows the UID cannot cancel or replace a received invitation", () => {
+  const cancel = GOOGLE_REQUEST
+    .replace("METHOD:REQUEST", "METHOD:CANCEL")
+    .replace("SEQUENCE:0", "SEQUENCE:5")
+    .replace("STATUS:CONFIRMED", "STATUS:CANCELLED");
+  // Their own ORGANIZER, sent from their own address.
+  const ownOrganizer = cancel.replace(
+    /ORGANIZER[^\r\n]*/,
+    "ORGANIZER:mailto:mallory@example.com",
+  );
+  const calendars = new Map([
+    ["G", GOOGLE_REQUEST],
+    ["FORGED", cancel],
+    ["OWN", ownOrganizer],
+  ]);
+  const state = deriveInviteState(
+    [
+      inbox("g2", "FORGED", "mallory@example.com", "2026-10-13T10:15:05Z"),
+      inbox("g3", "OWN", "mallory@example.com", "2026-10-14T10:15:05Z"),
+      inbox("g1", "G", "egor@gmail.com", "2026-10-12T10:15:05Z"),
+    ],
+    calendars,
+    ME,
+  );
+  assertEquals(state.received.length, 1);
+  assertEquals(state.received[0].status, "scheduled");
+  assertEquals(state.received[0].message_id, "g1");
 });

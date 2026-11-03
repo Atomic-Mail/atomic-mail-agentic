@@ -3,7 +3,8 @@
 // dependencies, no I/O — the same file is carried by the client repo.
 //
 // Scope is what invitations need, not a general calendar library:
-//   - build: one VEVENT per VCALENDAR, times in UTC (no VTIMEZONE needed);
+//   - build: one VEVENT per VCALENDAR, times in UTC (no VTIMEZONE needed),
+//     all-day events as VALUE=DATE;
 //   - parse: tolerant of what Google, Outlook/Exchange and Apple send — folded
 //     lines, quoted parameters, TZID times (IANA names, Windows names, or a
 //     VTIMEZONE with yearly RRULEs), all-day dates, DURATION instead of DTEND.
@@ -223,6 +224,13 @@ export function formatUtc(date: Date): string {
   }Z`;
 }
 
+/** `20261016` — a VALUE=DATE value, from the UTC calendar date of `date`. */
+export function formatDate(date: Date): string {
+  return `${date.getUTCFullYear()}${pad2(date.getUTCMonth() + 1)}${
+    pad2(date.getUTCDate())
+  }`;
+}
+
 interface WallTime {
   y: number;
   mo: number; // 1-12
@@ -368,7 +376,8 @@ const WINDOWS_ZONES: Record<string, string> = {
 export function tzidToIana(tzid: string): string | null {
   const t = tzid.trim();
   if (isValidTimeZone(t)) return t;
-  if (WINDOWS_ZONES[t]) return WINDOWS_ZONES[t];
+  // Own keys only: `TZID=toString` must not reach Object.prototype.
+  if (Object.hasOwn(WINDOWS_ZONES, t)) return WINDOWS_ZONES[t];
   const m = t.match(/([A-Za-z_]+\/[A-Za-z_+\-]+(?:\/[A-Za-z_+\-]+)?)$/);
   if (m && isValidTimeZone(m[1])) return m[1];
   return null;
@@ -541,6 +550,14 @@ export interface ParsedTime {
  * Resolve a DTSTART/DTEND/RECURRENCE-ID property. `vtimezones` maps TZID →
  * VTIMEZONE component from the same object.
  */
+/** Does y-mo-d exist (no February 31 silently rolling into March)? */
+export function isRealDate(y: number, mo: number, d: number): boolean {
+  if (mo < 1 || mo > 12 || d < 1 || d > 31) return false;
+  const t = new Date(Date.UTC(y, mo - 1, d));
+  return t.getUTCFullYear() === y && t.getUTCMonth() === mo - 1 &&
+    t.getUTCDate() === d;
+}
+
 export function parseTimeProp(
   prop: IcalProperty,
   vtimezones: Map<string, IcalComponent>,
@@ -548,7 +565,14 @@ export function parseTimeProp(
   const value = prop.value.trim();
   const dateOnly = value.match(/^(\d{4})(\d{2})(\d{2})$/);
   if (prop.params.VALUE === "DATE" || dateOnly) {
-    if (!dateOnly) return { instant: null };
+    if (
+      !dateOnly ||
+      !isRealDate(
+        Number(dateOnly[1]),
+        Number(dateOnly[2]),
+        Number(dateOnly[3]),
+      )
+    ) return { instant: null };
     return {
       instant: new Date(
         Date.UTC(
@@ -561,7 +585,11 @@ export function parseTimeProp(
     };
   }
   const dt = parseBasicDateTime(value);
-  if (!dt) return { instant: null };
+  // Date.UTC would roll an impossible date or time over (Feb 31 → Mar 3).
+  if (
+    !dt || !isRealDate(dt.y, dt.mo, dt.d) || dt.h > 23 || dt.mi > 59 ||
+    dt.s > 60
+  ) return { instant: null };
   if (dt.utc) {
     return {
       instant: new Date(Date.UTC(dt.y, dt.mo - 1, dt.d, dt.h, dt.mi, dt.s)),
@@ -604,7 +632,10 @@ export function parseDurationMs(value: string): number | null {
   const [w, d, h, mi, s] = [m[2], m[3], m[4], m[5], m[6]].map((x) =>
     Number(x ?? "0")
   );
-  return sign * ((((w * 7 + d) * 24 + h) * 60 + mi) * 60 + s) * 1000;
+  const ms = sign * ((((w * 7 + d) * 24 + h) * 60 + mi) * 60 + s) * 1000;
+  // A huge DURATION from someone else's invitation must not become an
+  // Invalid Date that throws later; 8.64e15 ms is the Date range limit.
+  return Number.isFinite(ms) && Math.abs(ms) <= 8.64e15 ? ms : null;
 }
 
 /** Collect a VCALENDAR's VTIMEZONEs by TZID. */

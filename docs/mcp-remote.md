@@ -122,6 +122,8 @@ Grants carry `mail.read` and/or `mail.send`, and can be revoked at any time from
 | `search` / `fetch` | ChatGPT connector convention: `{ id, title, url }` results plus full-document fetch |
 | `run_preset` | Bundled JMAP flows by name (`list_inbox`, `list_sent`, `send_mail`, `reply`, attachment variants); supports `dry_run` |
 | `jmap_request` | Raw JMAP method-call batch (advanced; may be disabled by the operator — `run_preset` always works) |
+| `send_invite` / `update_invite` / `cancel_invite` | Meeting invitations by email with Yes / No / Maybe; see [Calendar invitations](/calendar) |
+| `list_invites` / `respond_to_invite` | Guests' answers and invitations you received; answer one |
 | `help` | Built-in docs (topics: `overview`, `tools`, `agents`, `auth`, `advanced`, `troubleshooting`) |
 
 `send_email`, `reply_to_message` and the send presets file the sender's copy in

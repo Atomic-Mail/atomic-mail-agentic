@@ -1,5 +1,5 @@
 // Binds the shared calendar flows (flows.ts — carried byte-for-byte from the
-// server's mcp-server/src/calendar/) to an AgentSession: JMAP batches go
+// hosted MCP server) to an AgentSession: JMAP batches go
 // through the same runJmapRequest path as jmap_request, and the agent's own
 // address resolves exactly like `$INBOX` does.
 

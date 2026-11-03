@@ -38,6 +38,26 @@ Deno.test("foldLine: physical lines <= 75 octets, UTF-8 never split, unfold rest
   assertEquals(unfoldLines(folded), [line]);
 });
 
+Deno.test("foldLine: 4-byte characters (emoji) are never split across lines", () => {
+  const line = "SUMMARY:" + "Встреча 🎉🚀 Atomic ".repeat(10);
+  const folded = foldLine(line);
+  const physical = folded.split("\r\n").filter((l) => l.length > 0);
+  for (const p of physical) {
+    assert(enc.encode(p).length <= 75, p);
+    // Each physical line survives a UTF-8 round trip on its own.
+    assertEquals(new TextDecoder().decode(enc.encode(p)), p);
+    assertEquals(/[\uD800-\uDBFF]$|^ ?[\uDC00-\uDFFF]/.test(p), false, p);
+  }
+  assertEquals(unfoldLines(folded), [line]);
+});
+
+Deno.test("tzidToIana ignores Object.prototype names; huge DURATION is not a date", () => {
+  assertEquals(tzidToIana("toString"), null);
+  assertEquals(tzidToIana("constructor"), null);
+  assertEquals(parseDurationMs("P99999999999999999999W"), null);
+  assertEquals(parseDurationMs("PT30M"), 30 * 60_000);
+});
+
 Deno.test("foldLine: a short line is left alone", () => {
   assertEquals(foldLine("VERSION:2.0"), "VERSION:2.0\r\n");
 });

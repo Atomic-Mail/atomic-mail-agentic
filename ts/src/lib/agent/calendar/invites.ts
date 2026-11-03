@@ -12,12 +12,14 @@ import {
   collectTimeZones,
   emailToMailto,
   escapeText,
+  formatDate,
   formatProperty,
   formatUtc,
   getProp,
   getProps,
   getText,
   type IcalComponent,
+  isRealDate,
   isValidTimeZone,
   mailtoToEmail,
   parseDurationMs,
@@ -26,6 +28,8 @@ import {
   unescapeText,
   zonedWallTimeToUtc,
 } from "./ical.ts";
+
+export { isRealDate };
 
 export const CALENDAR_UID_HEADER = "X-Atomic-Calendar-Uid";
 export const PRODID = "-//Atomic Mail//Agent Calendar 1.0//EN";
@@ -42,8 +46,12 @@ export const MAX_TITLE_CHARS = 200;
 export const MAX_DESCRIPTION_CHARS = 8_000;
 export const MAX_LOCATION_CHARS = 500;
 export const MAX_COMMENT_CHARS = 1_000;
+export const MAX_MEETING_URL_CHARS = 2_000;
+const DAY_MS = 24 * 60 * 60_000;
 /** Longest event we accept (31 days). */
-export const MAX_DURATION_MS = 31 * 24 * 60 * 60_000;
+export const MAX_DURATION_MS = 31 * DAY_MS;
+/** Leads DESCRIPTION when the event has a meeting link (Google does the same). */
+const JOIN_PREFIX = "Join: ";
 
 export type Method = "REQUEST" | "CANCEL" | "REPLY" | "COUNTER";
 export type PartStat =
@@ -72,15 +80,30 @@ export interface Attendee extends Person {
   comment?: string;
 }
 
-/** The event as we send it. Times are absolute instants. */
+/**
+ * The event as we send it. Times are absolute instants; for an all-day event
+ * they are UTC midnights of the first day and of the day after the last one
+ * (DTEND;VALUE=DATE is exclusive).
+ */
 export interface OutgoingEvent {
   uid: string;
   sequence: number;
   title: string;
+  /** The agenda as the caller gave it (DESCRIPTION carries nothing else). */
   description?: string;
+  /** As the caller gave it; LOCATION falls back to `meetingUrl` when unset. */
   location?: string;
+  /** Video-call link (https), sent as URL + CONFERENCE (RFC 7986). */
+  meetingUrl?: string;
+  allDay?: boolean;
   start: Date;
   end: Date;
+  /**
+   * The zone the organizer gave (IANA name or UTC offset). Times are written
+   * in UTC, so it travels as X-ATOMIC-TIMEZONE: an update or cancellation sent
+   * later shows "15:00 (Europe/Moscow)" again instead of "12:00 (UTC)".
+   */
+  displayTimeZone?: string;
   organizer: Person;
   attendees: Attendee[];
 }
@@ -90,6 +113,7 @@ export interface OutgoingEvent {
 // ---------------------------------------------------------------------------
 
 const OFFSET_RE = /(Z|[+-]\d{2}:?\d{2})$/i;
+const DATE_RE = /^(\d{4})-(\d{2})-(\d{2})$/;
 const LOCAL_RE =
   /^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2}))?(?:\.\d+)?$/;
 
@@ -107,14 +131,24 @@ export function parseUserDateTime(
   const v = value.trim();
   if (OFFSET_RE.test(v)) {
     const ms = Date.parse(v);
-    if (!Number.isFinite(ms) || !/^\d{4}-\d{2}-\d{2}T/.test(v)) {
+    const ymd = v.match(/^(\d{4})-(\d{2})-(\d{2})T/);
+    if (!Number.isFinite(ms) || !ymd) {
       throw new Error(
         `${field} must be ISO 8601, e.g. 2026-10-16T15:00:00+03:00.`,
       );
     }
+    if (!isRealDate(Number(ymd[1]), Number(ymd[2]), Number(ymd[3]))) {
+      throw new Error(`${field} is not a valid date and time.`);
+    }
     return new Date(ms);
   }
   const m = v.match(LOCAL_RE);
+  if (!m && DATE_RE.test(v)) {
+    throw new Error(
+      `${field} has no time. Add one (e.g. ${v}T15:00:00+03:00), or pass ` +
+        "all_day: true for an all-day event.",
+    );
+  }
   if (!m) {
     throw new Error(
       `${field} must be ISO 8601, e.g. 2026-10-16T15:00:00+03:00, or a local ` +
@@ -134,7 +168,7 @@ export function parseUserDateTime(
   const [y, mo, d, h, mi, s] = [m[1], m[2], m[3], m[4], m[5], m[6] ?? "0"].map(
     Number,
   );
-  if (mo < 1 || mo > 12 || d < 1 || d > 31 || h > 23 || mi > 59 || s > 59) {
+  if (!isRealDate(y, mo, d) || h > 23 || mi > 59 || s > 59) {
     throw new Error(`${field} is not a valid date and time.`);
   }
   return zonedWallTimeToUtc({ y, mo, d, h, mi, s }, timeZone);
@@ -172,6 +206,117 @@ export function resolveEnd(input: {
     throw new Error("An invitation can span at most 31 days.");
   }
   return end;
+}
+
+/** `YYYY-MM-DD` of the UTC calendar date of `d`. */
+export function isoDate(d: Date): string {
+  return d.toISOString().slice(0, 10);
+}
+
+/**
+ * An all-day date (`2026-10-16`) as the UTC midnight that starts it. All-day
+ * dates are the same in every zone (VALUE=DATE is floating), so no time zone.
+ */
+export function parseUserDate(value: string, field: string): Date {
+  const m = value.trim().match(DATE_RE);
+  if (!m) {
+    throw new Error(
+      `with all_day, ${field} must be a date like 2026-10-16 (no time).`,
+    );
+  }
+  const [y, mo, d] = [m[1], m[2], m[3]].map(Number);
+  const date = new Date(Date.UTC(y, mo - 1, d));
+  if (isoDate(date) !== m[0]) {
+    throw new Error(`${field} is not a valid date.`);
+  }
+  return date;
+}
+
+/**
+ * All-day starts: today counts, wherever the caller is (UTC today minus one
+ * day covers zones behind UTC), and at most two years ahead.
+ */
+export function checkAllDayStart(start: Date, now = new Date()): void {
+  const today = Date.UTC(
+    now.getUTCFullYear(),
+    now.getUTCMonth(),
+    now.getUTCDate(),
+  );
+  if (start.getTime() < today - DAY_MS) {
+    throw new Error(`start ${isoDate(start)} is in the past. Check the date.`);
+  }
+  if (start.getTime() > now.getTime() + MAX_START_AHEAD_MS) {
+    throw new Error("start is more than two years ahead.");
+  }
+}
+
+/**
+ * Exclusive end (DTEND;VALUE=DATE) of an all-day event from `lastDay`, the
+ * LAST day it covers, inclusive (`2026-10-16` → `20261017`). Default: one day.
+ */
+export function resolveAllDayEnd(start: Date, lastDay?: string): Date {
+  const end = lastDay
+    ? new Date(parseUserDate(lastDay, "end").getTime() + DAY_MS)
+    : new Date(start.getTime() + DAY_MS);
+  const span = end.getTime() - start.getTime();
+  if (span <= 0) {
+    throw new Error("end (the last day) must not be before start.");
+  }
+  if (span > MAX_DURATION_MS) {
+    throw new Error("An invitation can span at most 31 days.");
+  }
+  return end;
+}
+
+/**
+ * A meeting link as given: one https URL, no spaces, quotes or credentials
+ * (`https://google.com@evil.example` is a classic phishing disguise).
+ */
+export function parseMeetingUrl(raw: string): string {
+  const v = raw.trim();
+  if (v.length > MAX_MEETING_URL_CHARS) {
+    throw new Error(
+      `meeting_url is longer than ${MAX_MEETING_URL_CHARS} characters.`,
+    );
+  }
+  const unsafe = /[\s"<>\\`]/.test(v) ||
+    [...v].some((c) => c.charCodeAt(0) < 0x20 || c.charCodeAt(0) === 0x7f);
+  if (unsafe) {
+    throw new Error(
+      "meeting_url must be one https:// link without spaces or quotes.",
+    );
+  }
+  let url: URL;
+  try {
+    url = new URL(v);
+  } catch {
+    throw new Error(
+      "meeting_url is not a valid link, e.g. https://meet.google.com/abc-defg-hij.",
+    );
+  }
+  if (url.protocol !== "https:" || !url.hostname) {
+    throw new Error("meeting_url must start with https://.");
+  }
+  if (url.username || url.password) {
+    throw new Error("meeting_url must not contain a user name or password.");
+  }
+  return v;
+}
+
+/**
+ * The agenda without the "Join: <link>" line that invitations sent before
+ * 2026-11-03 carried in front of it (the link now lives only in LOCATION, URL
+ * and CONFERENCE, so the calendar shows it once).
+ */
+export function stripJoinLine(
+  description: string | undefined,
+  meetingUrl: string | undefined,
+): string | undefined {
+  if (!description || !meetingUrl) return description;
+  const join = `${JOIN_PREFIX}${meetingUrl}`;
+  if (description === join) return undefined;
+  if (!description.startsWith(`${join}\n`)) return description;
+  return description.slice(join.length).replace(/^\n+/, "") || undefined;
 }
 
 /** `Anna <anna@x.com>`, `"Anna B" <anna@x.com>` or `anna@x.com`. */
@@ -262,13 +407,37 @@ function eventCore(ev: OutgoingEvent, now: Date): string {
   s += formatProperty("UID", {}, ev.uid);
   s += `DTSTAMP:${formatUtc(now)}\r\n`;
   s += `SEQUENCE:${ev.sequence}\r\n`;
-  s += `DTSTART:${formatUtc(ev.start)}\r\n`;
-  s += `DTEND:${formatUtc(ev.end)}\r\n`;
-  s += formatProperty("SUMMARY", {}, escapeText(ev.title));
-  if (ev.description) {
-    s += formatProperty("DESCRIPTION", {}, escapeText(ev.description));
+  if (ev.allDay) {
+    s += `DTSTART;VALUE=DATE:${formatDate(ev.start)}\r\n`;
+    s += `DTEND;VALUE=DATE:${formatDate(ev.end)}\r\n`;
+  } else {
+    s += `DTSTART:${formatUtc(ev.start)}\r\n`;
+    s += `DTEND:${formatUtc(ev.end)}\r\n`;
   }
-  if (ev.location) s += formatProperty("LOCATION", {}, escapeText(ev.location));
+  s += formatProperty("SUMMARY", {}, escapeText(ev.title));
+  const description = ev.description;
+  if (description) {
+    s += formatProperty("DESCRIPTION", {}, escapeText(description));
+  }
+  const location = ev.location || ev.meetingUrl;
+  if (location) s += formatProperty("LOCATION", {}, escapeText(location));
+  if (ev.meetingUrl) {
+    // URI values are not TEXT: no escaping, only folding (parseMeetingUrl
+    // already refused spaces and control characters).
+    s += formatProperty("URL", {}, ev.meetingUrl);
+    s += formatProperty(
+      "CONFERENCE",
+      { VALUE: "URI", FEATURE: "VIDEO", LABEL: "Join" },
+      ev.meetingUrl,
+    );
+  }
+  if (ev.displayTimeZone && !ev.allDay) {
+    s += formatProperty(
+      "X-ATOMIC-TIMEZONE",
+      {},
+      escapeText(ev.displayTimeZone),
+    );
+  }
   s += organizerLine(ev.organizer);
   return s;
 }
@@ -280,7 +449,8 @@ export function buildRequestIcs(ev: OutgoingEvent, now = new Date()): string {
   s += eventCore(ev, now);
   for (const a of ev.attendees) s += attendeeLine(a, true);
   s += "STATUS:CONFIRMED\r\n";
-  s += "TRANSP:OPAQUE\r\n";
+  // All-day events do not block the day as busy (Google does the same).
+  s += ev.allDay ? "TRANSP:TRANSPARENT\r\n" : "TRANSP:OPAQUE\r\n";
   s += "END:VEVENT\r\nEND:VCALENDAR\r\n";
   return s;
 }
@@ -361,12 +531,16 @@ export interface ParsedEvent {
   location?: string;
   /** A meeting link when one is advertised (URL, Google Meet, Teams). */
   meetingUrl?: string;
+  /** True when that link was only spotted inside the LOCATION text. */
+  meetingUrlGuessed?: boolean;
   start: Date | null;
   end: Date | null;
   /** `YYYY-MM-DD` for all-day events. */
   allDayDate?: string;
   /** Time zone the organizer used, when known. */
   timeZone?: string;
+  /** Our own X-ATOMIC-TIMEZONE: the zone our organizer gave when sending. */
+  displayTimeZone?: string;
   /** True when local times had to be read as UTC (no usable zone data). */
   timeUncertain?: boolean;
   organizer: Person | null;
@@ -397,7 +571,9 @@ function unescapeCn(v: string): string {
   return v.replace(/^"|"$/g, "").trim();
 }
 
-function findMeetingUrl(ev: IcalComponent): string | undefined {
+function findMeetingUrl(
+  ev: IcalComponent,
+): { url: string; guessed?: boolean } | undefined {
   for (
     const name of [
       "X-GOOGLE-CONFERENCE",
@@ -407,14 +583,14 @@ function findMeetingUrl(ev: IcalComponent): string | undefined {
     ]
   ) {
     const v = getProp(ev, name)?.value.trim();
-    if (v && /^https:\/\//i.test(v)) return v;
+    if (v && /^https:\/\//i.test(v)) return { url: v };
   }
   for (const c of getProps(ev, "CONFERENCE")) {
-    if (/^https:\/\//i.test(c.value.trim())) return c.value.trim();
+    if (/^https:\/\//i.test(c.value.trim())) return { url: c.value.trim() };
   }
   const loc = getText(ev, "LOCATION");
   const m = loc?.match(/https:\/\/\S+/);
-  return m ? m[0] : undefined;
+  return m ? { url: m[0], guessed: true } : undefined;
 }
 
 /** Parse an iMIP calendar object. Returns null when it is not iCalendar. */
@@ -441,7 +617,11 @@ export function parseCalendar(text: string): ParsedCalendar | null {
     } else if (start?.instant) {
       const dur = getProp(ev, "DURATION");
       const ms = dur ? parseDurationMs(dur.value) : null;
-      if (ms !== null) end = new Date(start.instant.getTime() + ms);
+      const t = ms === null ? NaN : start.instant.getTime() + ms;
+      // Bounded on its own, a DURATION can still push start + ms past the
+      // Date range (8.64e15 ms): then there is no end, not an Invalid Date.
+      if (Math.abs(t) <= 8.64e15) end = new Date(t);
+      else if (ms !== null) end = null;
       else if (start.date) {
         end = new Date(start.instant.getTime() + 24 * 60 * 60_000);
       } else end = start.instant;
@@ -463,6 +643,7 @@ export function parseCalendar(text: string): ParsedCalendar | null {
       });
     }
     const seqRaw = Number(getProp(ev, "SEQUENCE")?.value ?? "0");
+    const link = findMeetingUrl(ev);
     events.push({
       uid,
       sequence: Number.isFinite(seqRaw) && seqRaw >= 0 ? Math.floor(seqRaw) : 0,
@@ -470,11 +651,15 @@ export function parseCalendar(text: string): ParsedCalendar | null {
       title: getText(ev, "SUMMARY"),
       description: getText(ev, "DESCRIPTION"),
       location: getText(ev, "LOCATION"),
-      meetingUrl: findMeetingUrl(ev),
+      meetingUrl: link?.url,
+      ...(link?.guessed ? { meetingUrlGuessed: true } : {}),
       start: start?.instant ?? null,
       end,
       allDayDate: start?.date,
       timeZone: start?.timeZone,
+      ...(displayTimeZoneOf(ev)
+        ? { displayTimeZone: displayTimeZoneOf(ev) }
+        : {}),
       timeUncertain: Boolean(start?.assumedUtc) || endUncertain || undefined,
       organizer: orgProp ? personFromProp(orgProp.value, orgProp.params) : null,
       attendees,
@@ -515,14 +700,19 @@ export type MessageKind =
   | "reply-declined"
   | "reply-tentative";
 
-/** `Thu Oct 16, 2026 15:00 – 15:30 (Europe/Moscow)` */
+/**
+ * `Thu, Oct 16, 2026 15:00 – 15:30 (Europe/Moscow)`; all-day (`end`
+ * exclusive): `Thu, Oct 16, 2026 (all day)` or
+ * `Thu, Oct 16, 2026 – Sat, Oct 18, 2026 (all day)`.
+ */
 export function formatWhen(
   start: Date,
   end: Date,
   timeZone = "UTC",
   allDay = false,
 ): string {
-  const tz = isValidTimeZone(timeZone) ? timeZone : "UTC";
+  // All-day dates are UTC midnights: read them in UTC, whatever the zone.
+  const tz = allDay ? "UTC" : isValidTimeZone(timeZone) ? timeZone : "UTC";
   const date = new Intl.DateTimeFormat("en-US", {
     timeZone: tz,
     weekday: "short",
@@ -530,7 +720,12 @@ export function formatWhen(
     day: "numeric",
     year: "numeric",
   });
-  if (allDay) return `${date.format(start)} (all day)`;
+  if (allDay) {
+    const last = new Date(Math.max(start.getTime(), end.getTime() - DAY_MS));
+    return isoDate(last) === isoDate(start)
+      ? `${date.format(start)} (all day)`
+      : `${date.format(start)} – ${date.format(last)} (all day)`;
+  }
   const time = new Intl.DateTimeFormat("en-GB", {
     timeZone: tz,
     hour: "2-digit",
@@ -561,7 +756,13 @@ export function messageSubject(
   title: string,
   when: string,
 ): string {
-  return `${SUBJECT_PREFIX[kind]}: ${title} @ ${when}`.slice(0, 250);
+  // The title may come from someone else's invitation: no control characters
+  // (CR/LF especially) in a header we send.
+  const clean = (x: string) => x.replace(/[\u0000-\u001f\u007f]+/g, " ");
+  return `${SUBJECT_PREFIX[kind]}: ${clean(title)} @ ${clean(when)}`.slice(
+    0,
+    250,
+  );
 }
 
 function escapeHtml(s: string): string {
@@ -584,6 +785,8 @@ export function composeBody(input: {
   when: string;
   location?: string;
   description?: string;
+  /** Shown as a "Join" row (a plain link) next to When / Guests. */
+  meetingUrl?: string;
   organizer: Person;
   attendees?: Person[];
   responder?: Person;
@@ -613,8 +816,12 @@ export function composeBody(input: {
       } ${verb} "${input.title}".`;
     }
   }
+  const url = input.meetingUrl;
   lines.push(["When", input.when]);
-  if (input.location) lines.push(["Where", input.location]);
+  if (url) lines.push(["Join", url]);
+  if (input.location && input.location !== url) {
+    lines.push(["Where", input.location]);
+  }
   if (input.attendees && input.attendees.length > 0) {
     lines.push(["Guests", input.attendees.map(who).join(", ")]);
   }
@@ -628,18 +835,28 @@ export function composeBody(input: {
     "",
   ].join("\n");
 
+  // The meeting link is one row next to When / Guests, shown as its own
+  // address so a reader sees where it goes (no button that looks like a
+  // Google Meet one).
   const rows = lines
-    .map(([k, v]) =>
-      `<tr><td style="padding:2px 12px 2px 0;color:#666;vertical-align:top">${
+    .map(([k, v]) => {
+      const value = k === "Join" && v === url
+        ? `<a href="${escapeHtml(v)}" style="word-break:break-all">${
+          escapeHtml(v)
+        }</a>`
+        : escapeHtml(v);
+      return `<tr><td style="padding:2px 12px 2px 0;color:#666;vertical-align:top">${
         escapeHtml(k)
-      }</td><td style="padding:2px 0">${escapeHtml(v)}</td></tr>`
-    )
+      }</td><td style="padding:2px 0">${value}</td></tr>`;
+    })
     .join("");
   const desc = input.description
     ? `<p style="white-space:pre-wrap">${escapeHtml(input.description)}</p>`
     : "";
-  const html =
-    `<div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.4">` +
+  // No font of our own: like a regular email, the body takes the reader's
+  // default font and size, so it matches the "Sent from …" signature that
+  // the platform appends after it.
+  const html = `<div>` +
     `<p>${
       escapeHtml(lead)
     }</p><table style="border-collapse:collapse">${rows}</table>${desc}</div>`;
@@ -667,7 +884,7 @@ const BLOB = "urn:ietf:params:jmap:blob";
  *     application/ics; name=invite.ics       <- the same object as a file
  *
  * JMAP cannot set the `method=` Content-Type parameter RFC 6047 asks for;
- * cyrus-adapter adds it on the way out from the object's METHOD line.
+ * the outbound mail path adds it from the object's METHOD line.
  *
  * Every user-controlled value travels through `vars` ($ICS, $SUBJECT, $TEXT,
  * $HTML, $UID, addresses, threading id) so it is substituted once and never
@@ -796,8 +1013,11 @@ const BODY_PROPS = [
  * calendar parts can be picked out. Optionally narrowed to one UID.
  */
 export function buildScanOps(limit: number, uid?: string): string {
+  // A send that was refused keeps its `$draft` copy in Sent (only a
+  // successful submission clears it): never read that as a sent version.
   const sentFilter: Record<string, unknown> = {
     inMailbox: "$SENT_MAILBOX_ID",
+    notKeyword: "$draft",
     header: uid ? [CALENDAR_UID_HEADER, "$UID"] : [CALENDAR_UID_HEADER],
   };
   return JSON.stringify({
@@ -840,6 +1060,7 @@ export function buildSentByUidOps(): string {
         accountId: "$ACCOUNT_ID",
         filter: {
           inMailbox: "$SENT_MAILBOX_ID",
+          notKeyword: "$draft", // a refused send is not a version
           header: [CALENDAR_UID_HEADER, "$UID"],
         },
         sort: [{ property: "sentAt", isAscending: false }],
@@ -1052,25 +1273,48 @@ export interface AttendeeView {
   answered_earlier_version?: boolean;
 }
 
-export interface OrganizedView {
+/**
+ * All-day fields, present only for all-day events: `all_day_date` is the first
+ * day and `all_day_last_date` the last one, inclusive (`end` stays exclusive).
+ */
+export interface AllDayView {
+  all_day?: true;
+  all_day_date?: string;
+  all_day_last_date?: string;
+}
+
+function allDayView(ev: ParsedEvent): AllDayView {
+  if (!ev.allDayDate) return {};
+  const last =
+    ev.end && ev.start && ev.end.getTime() - DAY_MS > ev.start.getTime()
+      ? isoDate(new Date(ev.end.getTime() - DAY_MS))
+      : ev.allDayDate;
+  return {
+    all_day: true,
+    all_day_date: ev.allDayDate,
+    all_day_last_date: last,
+  };
+}
+
+export interface OrganizedView extends AllDayView {
   invite_id: string;
   title: string;
   start: string | null;
   end: string | null;
   location?: string;
+  meeting_url?: string;
   status: "scheduled" | "cancelled";
   version: number;
   attendees: AttendeeView[];
   last_sent_message_id: string;
 }
 
-export interface ReceivedView {
+export interface ReceivedView extends AllDayView {
   invite_id: string;
   message_id: string;
   title: string;
   start: string | null;
   end: string | null;
-  all_day_date?: string;
   time_zone?: string;
   time_uncertain?: boolean;
   location?: string;
@@ -1097,17 +1341,30 @@ export interface Item {
   ev: ParsedEvent;
 }
 
-const iso = (d: Date | null | undefined) => (d ? d.toISOString() : null);
+const iso = (d: Date | null | undefined) =>
+  d && !Number.isNaN(d.getTime()) ? d.toISOString() : null;
 
 /**
- * Who answered: the ATTENDEE that matches the sender, else the first
- * attendee that is not us (Outlook/Google put only the responder in a REPLY).
+ * Who answered: the ATTENDEE that matches the sender. Outlook/Google put only
+ * the responder in a REPLY, and an Exchange alias may answer from another
+ * address of the same domain, so a single ATTENDEE on the sender's domain
+ * counts too. Anything else is ignored: a REPLY from a stranger must not mark
+ * one of our guests as accepted.
  */
 function responderOf(it: Item, self: string): string | undefined {
   const sender = it.msg.from?.[0]?.email?.toLowerCase();
+  if (!sender) return undefined;
   const others = it.ev.attendees.filter((a) => a.email !== self);
-  return (others.find((a) => a.email === sender) ?? others[0])?.email ??
-    sender;
+  const exact = others.find((a) => a.email === sender);
+  if (exact) return exact.email;
+  const domain = sender.slice(sender.lastIndexOf("@") + 1);
+  if (
+    others.length === 1 &&
+    others[0].email.slice(others[0].email.lastIndexOf("@") + 1) === domain
+  ) {
+    return others[0].email;
+  }
+  return undefined;
 }
 
 function timeOf(it: Item): number {
@@ -1129,6 +1386,9 @@ function isFullCancel(it: Item): boolean {
 
 function newer(a: Item, b: Item): boolean {
   if (a.ev.sequence !== b.ev.sequence) return a.ev.sequence > b.ev.sequence;
+  // An organizer that cancels without bumping SEQUENCE still cancelled: a
+  // whole-meeting cancellation wins over a REQUEST of the same version.
+  if (isFullCancel(a) !== isFullCancel(b)) return isFullCancel(a);
   if (a.method !== b.method) {
     if (a.method === "REQUEST" && b.method === "CANCEL") return true;
     if (a.method === "CANCEL" && b.method === "REQUEST") return false;
@@ -1234,7 +1494,9 @@ export function deriveInviteState(
       title: it.ev.title ?? "(no title)",
       start: iso(it.ev.start),
       end: iso(it.ev.end),
+      ...allDayView(it.ev),
       ...(it.ev.location ? { location: it.ev.location } : {}),
+      ...(it.ev.meetingUrl ? { meeting_url: it.ev.meetingUrl } : {}),
       status: isFullCancel(it) ? "cancelled" : "scheduled",
       version: it.ev.sequence,
       attendees,
@@ -1243,13 +1505,31 @@ export function deriveInviteState(
   }
 
   // --- Invitations others sent us: latest REQUEST/CANCEL per UID in inbox.
+  // Anyone who knows a UID (another guest) can mail an update for it, so the
+  // first message for a UID pins its organizer, and one sent from the
+  // organizer's own address is never replaced by one that is not.
+  const fromOrganizer = (it: Item) =>
+    it.msg.from?.[0]?.email?.toLowerCase() === it.ev.organizer?.email;
+  const inboxItems = items
+    .filter((it) => it.msg.box === "inbox")
+    .sort((a, b) =>
+      (a.msg.receivedAt ?? "").localeCompare(b.msg.receivedAt ?? "")
+    );
   const theirs = new Map<string, Item>();
-  for (const it of items) {
-    if (it.msg.box !== "inbox") continue;
+  for (const it of inboxItems) {
     if (it.method !== "REQUEST" && it.method !== "CANCEL") continue;
     if (!it.ev.organizer || it.ev.organizer.email === self) continue;
     const prev = theirs.get(it.ev.uid);
-    if (!prev || newer(it, prev)) theirs.set(it.ev.uid, it);
+    if (!prev) {
+      theirs.set(it.ev.uid, it);
+      continue;
+    }
+    if (it.ev.organizer.email !== prev.ev.organizer?.email) continue;
+    if (fromOrganizer(it) !== fromOrganizer(prev)) {
+      if (fromOrganizer(it)) theirs.set(it.ev.uid, it);
+      continue;
+    }
+    if (newer(it, prev)) theirs.set(it.ev.uid, it);
   }
   // Our answers: REPLYs we sent.
   const myReplies = new Map<string, Item>();
@@ -1277,7 +1557,7 @@ export function deriveInviteState(
       title: it.ev.title ?? "(no title)",
       start: iso(it.ev.start),
       end: iso(it.ev.end),
-      ...(it.ev.allDayDate ? { all_day_date: it.ev.allDayDate } : {}),
+      ...allDayView(it.ev),
       ...(it.ev.timeZone ? { time_zone: it.ev.timeZone } : {}),
       ...(it.ev.timeUncertain ? { time_uncertain: true } : {}),
       ...(it.ev.location ? { location: it.ev.location } : {}),
@@ -1299,18 +1579,33 @@ export function deriveInviteState(
 }
 
 /** Rebuild the event we last sent (for update/cancel) from its parsed object. */
+/** X-ATOMIC-TIMEZONE when it names a zone this runtime knows. */
+function displayTimeZoneOf(ev: IcalComponent): string | undefined {
+  const tz = getText(ev, "X-ATOMIC-TIMEZONE")?.trim();
+  return tz && isValidTimeZone(tz) ? tz : undefined;
+}
+
 export function outgoingFromParsed(ev: ParsedEvent): OutgoingEvent {
   if (!ev.start || !ev.end || !ev.organizer) {
     throw new Error("The stored invitation is incomplete; send a new one.");
   }
+  // Undo what eventCore adds for a link: the "Join:" line in DESCRIPTION and
+  // LOCATION filled with the link. A link only seen in LOCATION text is the
+  // caller's location, not a meeting_url.
+  const meetingUrl = ev.meetingUrlGuessed ? undefined : ev.meetingUrl;
   return {
     uid: ev.uid,
     sequence: ev.sequence,
     title: ev.title ?? "",
-    description: ev.description,
-    location: ev.location,
+    description: stripJoinLine(ev.description, meetingUrl),
+    location: meetingUrl && ev.location === meetingUrl
+      ? undefined
+      : ev.location,
+    ...(meetingUrl ? { meetingUrl } : {}),
+    ...(ev.allDayDate ? { allDay: true } : {}),
     start: ev.start,
     end: ev.end,
+    ...(ev.displayTimeZone ? { displayTimeZone: ev.displayTimeZone } : {}),
     organizer: ev.organizer,
     attendees: ev.attendees.map((a) => ({
       email: a.email,

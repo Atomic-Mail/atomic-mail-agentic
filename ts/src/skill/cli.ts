@@ -379,10 +379,11 @@ Apple Mail) with Yes / No / Maybe; answers come back to this inbox. Confirm the
 date, time, time zone and guests with your operator before sending.
 
   send      --title T --start S --attendees a@x.com,b@y.com
-            [--duration MIN | --end E] [--time-zone ZONE]
-            [--location L] [--description D]
+            [--duration MIN | --end E] [--time-zone ZONE] [--all-day]
+            [--meeting-url URL] [--location L] [--description D]
   update    --invite-id ID [--title T] [--start S] [--duration MIN | --end E]
-            [--time-zone ZONE] [--attendees FULL_NEW_LIST] [--location L]
+            [--time-zone ZONE] [--all-day | --no-all-day]
+            [--attendees FULL_NEW_LIST] [--meeting-url URL] [--location L]
             [--description D]
   cancel    --invite-id ID [--note N] [--time-zone ZONE]
   list      [--invite-id ID] [--limit N]          (N messages per mailbox, default 50)
@@ -391,6 +392,14 @@ date, time, time zone and guests with your operator before sending.
 Times: ISO 8601 with an offset (2026-10-16T15:00:00+03:00), or a local time
 (2026-10-16T15:00) with --time-zone (IANA, e.g. Europe/Moscow). A local time
 without a zone is refused — ask which zone is meant.
+
+All-day: --all-day with --start 2026-11-10 and optional --end 2026-11-12 (the
+LAST day, inclusive; default one day). Not with --time-zone or --duration. On
+update, --all-day / --no-all-day switch the kind (pass --start too).
+
+Video call: --meeting-url https://… adds the link as a Join line (and as the
+location when --location is not given). On update, --meeting-url "" removes it;
+an empty --location or --description clears those too.
 
 Common options:
   --credentials-dir DIR   Credential directory (default: ~/.atomicmail)
@@ -436,6 +445,9 @@ async function cmdCalendar(argv: string[]): Promise<void> {
         attendees: { type: "string", multiple: true },
         location: { type: "string" },
         description: { type: "string" },
+        "meeting-url": { type: "string" },
+        "all-day": { type: "boolean" },
+        "no-all-day": { type: "boolean" },
         "invite-id": { type: "string" },
         "message-id": { type: "string" },
         response: { type: "string" },
@@ -470,6 +482,15 @@ async function cmdCalendar(argv: string[]): Promise<void> {
     return value;
   };
   const attendees = v.attendees as string[] | undefined;
+  const flags = parsed.values as Record<string, unknown>;
+  if (flags["all-day"] && flags["no-all-day"]) {
+    fail("Pass --all-day or --no-all-day, not both.", 2);
+  }
+  const allDay = flags["all-day"]
+    ? true
+    : flags["no-all-day"]
+    ? false
+    : undefined;
 
   const session = await sessionForCredentialDir(str("credentials-dir"));
   const runner = await calendarRunnerForSession(session);
@@ -484,7 +505,9 @@ async function cmdCalendar(argv: string[]): Promise<void> {
           durationMinutes: num("duration"),
           timeZone: str("time-zone"),
           attendees: attendees ?? fail("calendar send needs --attendees.", 2),
+          allDay,
           location: str("location"),
+          meetingUrl: str("meeting-url"),
           description: str("description"),
         });
         break;
@@ -497,7 +520,9 @@ async function cmdCalendar(argv: string[]): Promise<void> {
           durationMinutes: num("duration"),
           timeZone: str("time-zone"),
           attendees,
+          allDay,
           location: str("location"),
+          meetingUrl: str("meeting-url"),
           description: str("description"),
         });
         break;

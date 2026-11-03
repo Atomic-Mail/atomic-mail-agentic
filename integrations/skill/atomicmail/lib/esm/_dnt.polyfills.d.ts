@@ -97,5 +97,15 @@ interface ImportMetaPonyfill extends ImportMetaPonyfillCommonjs, ImportMetaPonyf
 export declare let import_meta_ponyfill_commonjs: ImportMetaPonyfillCommonjs;
 export declare let import_meta_ponyfill_esmodule: ImportMetaPonyfillEsmodule;
 export declare let import_meta_ponyfill: ImportMetaPonyfill;
+declare global {
+    interface Object {
+        /**
+         * Determines whether an object has a property with the specified name.
+         * @param o An object.
+         * @param v A property name.
+         */
+        hasOwn(o: object, v: PropertyKey): boolean;
+    }
+}
 export {};
 //# sourceMappingURL=_dnt.polyfills.d.ts.map

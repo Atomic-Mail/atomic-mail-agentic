@@ -5,11 +5,15 @@ mail over JMAP (RFC 8620 + RFC 8621).
 
 ## Public surface
 
-Three operations only:
+Core operations:
 
 1. **register** — proof-of-work signup with optional idempotent replay.
 2. **jmap_request** — run JMAP method-call batches with auth + JWT rotation.
 3. **help** — read built-in docs and package README.
+
+The TypeScript CLI and MCP server also schedule meetings by email
+(`calendar` in the CLI; `send_invite`, `update_invite`, `cancel_invite`,
+`list_invites`, `respond_to_invite` in MCP) — see the **calendar** topic.
 
 ## Typical workflow
 

@@ -6,7 +6,8 @@ description: Install and configure the @atomicmail/mcp stdio server, tools (regi
 
 A local stdio Model Context Protocol server that gives an agent an email inbox
 over JMAP. Proof-of-work sign-up and token rotation happen inside the server,
-so the agent only ever calls three tools.
+so the agent works with three core tools, plus five for
+[meeting invitations](/calendar).
 
 ::: tip Two MCP servers
 This page is the local server: it runs through `npx`, registers its own inbox
@@ -58,6 +59,7 @@ Your host starts this process on demand.
 | `register`     | PoW signup; persists credentials. **Two required inputs:** `username` (5–21 characters, the local-part of your address) and `watch` (`"scheduled"` or `"on-demand"` — see [The required `watch` value](#the-required-watch-value)). Idempotent when the username matches the stored inbox. A different username is refused; add a second account with a separate `credentials_dir`. Optional `credentials_dir` per call (parity with AgentSkill `--credentials-dir`). |
 | `jmap_request` | JMAP batch via `ops` or `ops_file`. Optional `credentials_dir` per call. Uppercase `$VAR_NAME` tokens are substituted (`$ACCOUNT_ID` / `$INBOX` / `$INBOX_MAILBOX_ID` / `$SENT_MAILBOX_ID` / `$UPLOAD_URL` / `$DOWNLOAD_URL` from session; others via optional `vars` map). |
 | `help`         | Built-in docs (`topic` optional); use `topic: "readme"` for the published package `README.md`. Use `topic: "multi_account"` for multiple inboxes on one MCP server.                                                                                                                    |
+| `send_invite`, `update_invite`, `cancel_invite`, `list_invites`, `respond_to_invite` | Meeting invitations by email (Gmail / Outlook / Apple Mail, with Yes / No / Maybe) and their answers. See [Calendar invitations](/calendar) and `help` topic `calendar`. |
 
 ## Typical MCP workflow
 

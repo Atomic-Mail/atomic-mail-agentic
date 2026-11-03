@@ -6,6 +6,7 @@ import {
   tryReadSharedText,
 } from "../../../core/shared-assets.ts";
 import { helpTopicAuth } from "./auth.ts";
+import { helpTopicCalendar } from "./calendar.ts";
 import { helpTopicCron } from "./cron.ts";
 import { helpTopicInstallation } from "./installation.ts";
 import { helpTopicJmapCheatsheet } from "./jmap-cheatsheet.ts";
@@ -37,6 +38,7 @@ const fallbackTopics: Record<string, string> = {
   jmap_cheatsheet: helpTopicJmapCheatsheet,
   tools: helpTopicTools,
   presets: helpTopicPresets,
+  calendar: helpTopicCalendar,
   cron: helpTopicCron,
   multi_account: helpTopicMultiAccount,
   troubleshooting: helpTopicTroubleshooting,

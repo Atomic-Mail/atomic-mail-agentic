@@ -40,7 +40,7 @@ Access is gated by a novel **proof-of-work ([PoW](https://en.wikipedia.org/wiki/
 
 Atomic Mail provides a number of standard integration paths — MCP, AgentSkill, REST API, and more — which makes it highly available on any agent: [Claude Code](https://claude.com/product/claude-code), [Codex](https://developers.openai.com/codex), [GitHub Copilot](https://github.com/features/copilot), [Cursor](https://cursor.com), [Hermes](https://hermes-agent.nousresearch.com), [OpenClaw](https://openclaw.ai), [Pi](https://pi.dev), [Kilo Code](https://kilo.ai), and others. Whatever your workflow is, you can automate inbox management easily.
 
-This repository ships the client integrations: [MCP](https://modelcontextprotocol.io/), shell CLI, [ClawHub](https://clawhub.ai/), [Dify](https://dify.ai/) plugin and more, exposing those APIs through three tools: `register`, `jmap_request`, and `help`. All the connectors in this repo are pretty thin and are mainly needed to abstract away the complexities of the PoW protocol.
+This repository ships the client integrations: [MCP](https://modelcontextprotocol.io/), shell CLI, [ClawHub](https://clawhub.ai/), [Dify](https://dify.ai/) plugin and more, exposing those APIs through three core tools: `register`, `jmap_request`, and `help` (the TypeScript CLI and local MCP server add five [meeting-invitation](docs/calendar.md) tools). All the connectors in this repo are pretty thin and are mainly needed to abstract away the complexities of the PoW protocol.
 
 ## 🚀 Quick Install
 

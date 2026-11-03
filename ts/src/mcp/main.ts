@@ -1,4 +1,5 @@
-// AtomicMail MCP server — stdio, PoW auth, JMAP (register / jmap_request / help).
+// AtomicMail MCP server — stdio, PoW auth, JMAP (register / jmap_request /
+// calendar invitations / help).
 //
 // CONFIGURATION: credentials.json + session.jwt + capability.jwt in the
 // credential directory (default ~/.atomicmail/, override ATOMIC_MAIL_CREDENTIALS_DIR),
@@ -12,6 +13,7 @@ import { PostHog } from "posthog-node";
 
 import { AgentSession, resolveAgentConfigFromEnv } from "../lib/mod.ts";
 import type { McpSessionContext } from "./mcp-session-context.ts";
+import { registerCalendarTools } from "./tools/calendar.ts";
 import { registerHelpTool } from "./tools/help.ts";
 import { registerJmapTool } from "./tools/jmap.ts";
 import { registerRegisterTool } from "./tools/register.ts";
@@ -37,7 +39,11 @@ WORKFLOW
      $SENT_MAILBOX_ID from session; pass others in vars. Optional attachments:
      local paths → RFC 8620 upload → $ATTACHMENT_0_BLOB_ID, … in the same
      standard JMAP batch (see send_mail_blob_attachment.json).
-  4. Call help early and often — even when you think you know JMAP. Topics:
+  4. Meetings: send_invite, update_invite, cancel_invite, list_invites and
+     respond_to_invite schedule meetings by email (standard invitations with
+     Yes / No / Maybe in Gmail, Outlook, Apple). Confirm date, time, time zone
+     and guests with your operator first; see help topic "calendar".
+  5. Call help early and often — even when you think you know JMAP. Topics:
      presets (before non-trivial jmap_request), cron (after register),
      jmap_cheatsheet, troubleshooting, …; topic readme returns this package README.
      Prefer help over guessing; it matches this package version.
@@ -139,6 +145,7 @@ async function main(): Promise<void> {
 
   registerRegisterTool(server, mcpCtx);
   registerJmapTool(server, mcpCtx);
+  registerCalendarTools(server, mcpCtx);
   registerHelpTool(server);
 
   const cleanup = async () => {

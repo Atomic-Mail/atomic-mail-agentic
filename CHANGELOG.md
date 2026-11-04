@@ -3,6 +3,23 @@
 Notable changes to Atomic Mail Agentic. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/).
 
+## [Unreleased]
+
+### Added
+
+- **Everyday mail without JMAP.** The local MCP server and the CLI now have
+  `read_inbox`, `read_message`, `search_messages`, `send_email`,
+  `reply_to_message` and `list_agents`, with the same names and arguments as the
+  hosted MCP server. TypeScript packages only for now.
+- **HTML, From name and Reply-To.** `send_email` and `reply_to_message` take
+  `html_body`, `from_name` and `reply_to`, in the local MCP server, the CLI and
+  the hosted MCP server. With `html_body` alone, the plain-text part is derived
+  from it.
+- **More presets.** `search`, `get_thread`, `mark_read`, `label`, `move`,
+  `delete` (moves to Trash), `create_draft`, `forward`, `download_attachment` and
+  `list_mailboxes`. New placeholders `$DRAFTS_MAILBOX_ID` and
+  `$TRASH_MAILBOX_ID`. See help topic `presets`.
+
 ## [0.3.33] - 2026-11-03
 
 ### Added

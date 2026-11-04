@@ -35,8 +35,11 @@ and reports what arrived.
 
 ### Read and send
 
-`jmap_request` runs a JMAP batch, inline or from a preset file. Placeholders
-stand in for the values the session knows: `$ACCOUNT_ID`, `$INBOX`,
+`read_inbox`, `read_message`, `search_messages`, `send_email` and
+`reply_to_message` cover everyday mail and need no JMAP (CLI and MCP).
+
+For anything else, `jmap_request` runs a JMAP batch, inline or from a preset file.
+Placeholders stand in for the values the session knows: `$ACCOUNT_ID`, `$INBOX`,
 `$INBOX_MAILBOX_ID`, `$SENT_MAILBOX_ID`, `$UPLOAD_URL`, `$DOWNLOAD_URL`, plus
 anything you pass in `vars`.
 

@@ -58,6 +58,7 @@ for (
     "send_mail_attachment.json",
     "send_mail_blob_attachment.json",
     "reply.json",
+    "forward.json",
   ]
 ) {
   Deno.test(`${preset} files in Sent and clears $draft on success`, () => {

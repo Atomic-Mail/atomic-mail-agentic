@@ -9,7 +9,8 @@ One MCP server or CLI install can manage **several isolated inboxes** by using a
 
 ## MCP (per tool call)
 
-Pass optional \`credentials_dir\` on \`register\` and \`jmap_request\`:
+Pass optional \`credentials_dir\` on \`register\`, \`jmap_request\` and the mail
+tools:
 
 \`\`\`json
 { "username": "alice", "credentials_dir": "~/.atomicmail/alice" }

@@ -116,8 +116,8 @@ Grants carry `mail.read` and/or `mail.send`, and can be revoked at any time from
 | `read_inbox` | Most recent inbox messages (`agent_id?`, `limit` 1–50, default 25) |
 | `read_message` | One full message by `message_id` (headers + plain-text body) |
 | `search_messages` | Full-text mailbox search |
-| `send_email` | Send a plain-text email (`to`, `subject`, `body`; optional `cc`, `bcc`, base64 `attachments`) |
-| `reply_to_message` | Reply in-thread by `message_id` |
+| `send_email` | Send an email (`to`, `subject`, `body` and/or `html_body`; optional `cc`, `bcc`, `from_name`, `reply_to`, base64 `attachments`) |
+| `reply_to_message` | Reply in-thread by `message_id` (`body` and/or `html_body`; optional `from_name`, `reply_to`, base64 `attachments`) |
 | `list_agents` | The inboxes the signed-in account owns |
 | `search` / `fetch` | ChatGPT connector convention: `{ id, title, url }` results plus full-document fetch |
 | `run_preset` | Bundled JMAP flows by name (`list_inbox`, `list_sent`, `send_mail`, `reply`, attachment variants); supports `dry_run` |
@@ -129,6 +129,11 @@ Grants carry `mail.read` and/or `mail.send`, and can be revoked at any time from
 `send_email`, `reply_to_message` and the send presets file the sender's copy in
 the Sent mailbox and mark it `$sent` once submitted, so `read_inbox` lists
 received mail; use `run_preset` with `list_sent` to see what was sent.
+
+On `send_email` and `reply_to_message`, `html_body` alone gets a plain-text part
+derived from it, so nothing goes out HTML-only. `from_name` is the display name
+on From: the address is always the inbox's, so a name with `@`, `<` or `>` is
+refused. `reply_to` is where replies should go when not this inbox.
 
 `search_messages` is backed by a real full-text index, so `text`, `subject`, and
 `body` filters return matches rather than erroring.

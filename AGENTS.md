@@ -4,7 +4,7 @@ Guidance for AI coding agents working in this repository.
 
 ## What this repo is
 
-**Atomic Mail Agentic** ships MCP and CLI clients for [Atomic Mail](https://atomicmail.ai)—a hosted email inbox for AI agents. Everything built **in this repo** — the local stdio MCP server, the AgentSkill CLI, the LangChain tools, the Python parity layer — exposes three core operations: `register`, `jmap_request`, and `help`. The TypeScript CLI and stdio MCP add meeting invitations (`calendar` in the CLI; `send_invite`, `update_invite`, `cancel_invite`, `list_invites`, `respond_to_invite` in MCP), built on the same JMAP path; the Python layer does not have them yet.
+**Atomic Mail Agentic** ships MCP and CLI clients for [Atomic Mail](https://atomicmail.ai)—a hosted email inbox for AI agents. Everything built **in this repo** — the local stdio MCP server, the AgentSkill CLI, the LangChain tools, the Python parity layer — exposes three core operations: `register`, `jmap_request`, and `help`. The TypeScript CLI and stdio MCP add everyday mail with no JMAP (`read_inbox`, `read_message`, `search_messages`, `send_email`, `reply_to_message`, `list_agents`, same names in both, shaped after the hosted tools) and meeting invitations (`calendar` in the CLI; `send_invite`, `update_invite`, `cancel_invite`, `list_invites`, `respond_to_invite` in MCP), all built on the same JMAP path; the Python layer has neither yet.
 
 That is the *client* surface, not the product surface. The **hosted [remote MCP server](docs/mcp-remote.md)** at `mcp.atomicmail.ai` is a different artifact, built server-side, and exposes 11 tools (`read_inbox`, `read_message`, `search_messages`, `send_email`, `reply_to_message`, `list_agents`, `search`, `fetch`, `run_preset`, `jmap_request`, `help`), plus the five calendar tools (`send_invite`, `update_invite`, `cancel_invite`, `list_invites`, `respond_to_invite`). Do not "fix" a doc that mentions those tools by trimming it back to three.
 
@@ -50,7 +50,8 @@ one, the server side has to move in the same release — flag it.
 | `$INBOX` resolution + `ATOMIC_MAIL_INBOX_DOMAIN` | The account's real address as the server returns it. Custom domains mean `$INBOX` is **not** always `<user>@atomicmail.ai`; do not reconstruct it from the username. |
 | OAuth `resource` values in `docs/oauth.md` / `docs/mcp-remote.md` | RFC 8707 audience binding — the strings must be **byte-identical** to what the authorization server issues tokens for. A trailing slash breaks the flow. |
 | Remote-MCP tool surface in `docs/mcp-remote.md` | Implemented entirely server-side. Nothing in this repo can add, rename, or remove one of those 11 tools; this doc can only fall out of date. |
-| `shared/presets/*.json` send semantics (mailbox, keywords, `onSuccessUpdateEmail`) and session placeholders | The hosted remote MCP server keeps its own hand-ported copy for `run_preset`, `send_email` and `reply_to_message`; nothing syncs them. Change where sent mail is filed, the reply rules, or which placeholders exist → flag the server side in the same release. |
+| `shared/presets/*.json` send semantics (mailbox, keywords, `onSuccessUpdateEmail`) and session placeholders | The hosted remote MCP server keeps its own hand-ported copy for `run_preset`, `send_email` and `reply_to_message`; nothing syncs them. Change where sent mail is filed, the reply rules, or which placeholders exist → flag the server side in the same release. The hosted `run_preset` has only the six send and list presets; the others in `shared/presets/` are client-only. |
+| `ts/src/lib/agent/mail/compose.ts` (`html_body`, `from_name`, `reply_to`) and the send and reply builders in `mail/envelopes.ts` | The hosted server carries `compose.ts` byte-for-byte and the same builders. Change both together; the hosted `send_email` / `reply_to_message` must accept an option before a doc or client release promises it there. |
 
 Not coupled, despite looking like it: `watch` on `register` is a **wrapper-only**
 precondition. It is enforced by the MCP tool and CLI schemas and never reaches
@@ -113,11 +114,13 @@ TypeScript style: 2-space indent, 80-column width (`ts/deno.json`).
 
 3. **`register` idempotency:** Same username is OK; a different username is refused. The documented answer is a separate `credentials_dir`. `forced` still exists but was **deliberately demoted** — removed from `--help` and from the MCP tool descriptions, with its danger spelled out only in the refusal error, because advertising a ready-made replace flag is what let agents destroy another account's credentials without pausing. Do not re-add it to a description, a usage string, or a doc as a normal option.
 
-4. **`jmap_request`:** Exactly one of `ops` or `ops_file`. Custom vars match `^[A-Z][A-Z0-9_]*$`. Session vars: `$ACCOUNT_ID`, `$INBOX`, `$INBOX_MAILBOX_ID`, `$SENT_MAILBOX_ID`.
+4. **`jmap_request`:** Exactly one of `ops` or `ops_file`. Custom vars match `^[A-Z][A-Z0-9_]*$`. Session vars: `$ACCOUNT_ID`, `$INBOX`, `$INBOX_MAILBOX_ID`, `$SENT_MAILBOX_ID`, `$DRAFTS_MAILBOX_ID`, `$TRASH_MAILBOX_ID`.
 
 5. **`dry_run` + attachments:** Rejected in both TS and Python.
 
 6. **Calendar code is shared with the server.** `ts/src/lib/agent/calendar/{ical,invites,flows}.ts` (and `flows.test.ts`) carry the same code as the hosted MCP server's calendar module (only comments differ: this public copy names no internal services) — change both together. Invitations go out as `Blob/upload` + `Email/set` with `bodyStructure` + `EmailSubmission/set`; the server adds the `method=` Content-Type parameter on egress (JMAP cannot set it). Times without an offset need an IANA zone — never guess one.
+
+7. **Friendly tools and caller text:** Recipients, subjects, bodies, display names and everything taken from a received message reach the JMAP batch through `vars`, never the template (`lib/agent/mail/envelopes.ts`). `read_message` wraps bodies in an untrusted-content delimiter; do not drop it. `delete.json` moves to Trash on purpose: do not make a preset destroy mail. A stored draft is not submitted by any preset on purpose (`create_draft.json`).
 
 ## Gotchas
 

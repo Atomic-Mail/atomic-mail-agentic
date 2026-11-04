@@ -101,24 +101,18 @@ POST /api/v1/capability   -> capability JWT   (2 minutes, JMAP bearer)
 <PathTabs>
 <template #agentskill>
 
-Presets ship with the CLI. `send_mail.json` takes `TO`, `SUBJECT` and `BODY`.
-
 ```bash
-npx --package=@atomicmail/agent-skill atomicmail jmap_request \
-  --ops-file send_mail.json \
-  --vars '{"TO":"alice@example.com","SUBJECT":"Hello","BODY":"Hi there"}'
+npx --package=@atomicmail/agent-skill atomicmail send_email \
+  --to alice@example.com --subject "Hello" --body "Hi there"
 ```
 
 </template>
 <template #mcp>
 
-Call `jmap_request` with the same preset.
+Call `send_email`.
 
 ```json
-{
-  "ops_file": "send_mail.json",
-  "vars": { "TO": "alice@example.com", "SUBJECT": "Hello", "BODY": "Hi there" }
-}
+{ "to": "alice@example.com", "subject": "Hello", "body": "Hi there" }
 ```
 
 </template>

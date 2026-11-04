@@ -53,6 +53,7 @@ RFC 8621.
   needed), \`$INBOX_MAILBOX_ID\` (JMAP mailbox id — use for \`Email/query\` →
   \`inMailbox\`), \`$SENT_MAILBOX_ID\` (JMAP mailbox id of Sent, falling back
   to the inbox — use for \`Email/set\` → \`mailboxIds\` when sending),
+  \`$DRAFTS_MAILBOX_ID\`, \`$TRASH_MAILBOX_ID\` (stdio MCP server and CLI),
   \`$UPLOAD_URL\`, \`$DOWNLOAD_URL\` resolve from the session.
 - Pass \`$TO\`, \`$SUBJECT\`, \`$BODY\`, etc. via MCP \`vars\` or skill \`--vars\`
   (object of strings).
@@ -140,6 +141,11 @@ with \`envelope\` and \`onSuccessUpdateEmail\`, which clears \`$draft\` and sets
   ]
 }
 \`\`\`
+
+HTML, From name and Reply-To go on the same create: \`"htmlBody": [{"partId": "h",
+"type": "text/html"}]\` next to \`textBody\` with \`"h"\` in \`bodyValues\`;
+\`"from": [{"email": "$INBOX", "name": "$FROM_NAME"}]\`; \`"replyTo": [{"email":
+"$HELP"}]\`.
 
 ## Attachment in one batch (\`Blob/upload\` + send)
 
@@ -237,4 +243,6 @@ Reverse lookup: which mail objects reference a blob. Parameters \`typeNames\`,
 ## Tips
 
 - Back-references (\`#b1\`, \`#m1\`, \`#draft\`) chain calls in one batch.
+- Result references (\`"#ids": {"resultOf": …}\`) work on read methods only; the
+  server refuses them on \`Email/set\` and other writes.
 - Save reusable JSON as preset files and pass \`ops_file\`.`;

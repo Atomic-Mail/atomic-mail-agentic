@@ -34,6 +34,11 @@ Core operations:
 3. **help** — This documentation (optional \`topic\` / \`--topic\`), or the
    published package README (\`topic\` / \`--topic\` \`readme\`).
 
+Everyday mail, no JMAP needed: the CLI commands and MCP tools \`read_inbox\`,
+\`read_message\`, \`search_messages\`, \`send_email\` (plain text and/or HTML, From
+name, Reply-To, attachments), \`reply_to_message\`, \`list_agents\` — see the
+**tools** topic.
+
 Meetings: the CLI \`calendar\` command and the MCP tools \`send_invite\`,
 \`update_invite\`, \`cancel_invite\`, \`list_invites\`, \`respond_to_invite\`
 send calendar invitations by email and read the answers — see the
@@ -45,8 +50,9 @@ send calendar invitations by email and read the answers — see the
 2. After register, the operator's \`watch\` value decides who reads the inbox (see **cron**
    topic — native scheduler if available; otherwise ask your operator or remind
    manual fetch). Do not cron \`atomicmail jmap_request\` alone.
-3. \`jmap_request\` with JMAP method calls (presets may use \`$VAR_NAME\`; pass
-   custom values in \`vars\` / \`--vars\`).
+3. Read and send with the everyday tools; for anything else, \`jmap_request\`
+   with JMAP method calls (presets may use \`$VAR_NAME\`; pass custom values in
+   \`vars\` / \`--vars\`).
 4. Call \`help\` early and often — before guessing JMAP or preset details, not
    only when stuck. Prefer \`help\` over general JMAP knowledge; topics match
    this package version.

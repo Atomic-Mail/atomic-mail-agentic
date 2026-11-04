@@ -135,8 +135,10 @@ Deno.test("buildHermesSkill produces Hermes skill layout", async () => {
 
     // Soft structural guard against the Hermes skill bundle bloating. Raised
     // 50 -> 60 as the skill legitimately grew (watch-schedule, register-watch,
-    // UTM helpers); still low enough to catch runaway growth.
-    const SCANNED_FILE_LIMIT = 60;
+    // UTM helpers), then 60 -> 80 (everyday mail tools, ten more presets); still
+    // low enough to catch runaway growth. Hermes itself only reports more than
+    // 50 files as a medium finding, which does not block an install.
+    const SCANNED_FILE_LIMIT = 80;
     const scannedFileCount = await countScannedSkillFiles(outDir);
     assert(
       scannedFileCount <= SCANNED_FILE_LIMIT,

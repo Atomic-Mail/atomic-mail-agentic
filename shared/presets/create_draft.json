@@ -1,0 +1,48 @@
+{
+  "using": [
+    "urn:ietf:params:jmap:core",
+    "urn:ietf:params:jmap:mail"
+  ],
+  "methodCalls": [
+    [
+      "Email/set",
+      {
+        "accountId": "$ACCOUNT_ID",
+        "create": {
+          "d1": {
+            "mailboxIds": {
+              "$DRAFTS_MAILBOX_ID": true
+            },
+            "from": [
+              {
+                "email": "$INBOX"
+              }
+            ],
+            "to": [
+              {
+                "email": "$TO"
+              }
+            ],
+            "subject": "$SUBJECT",
+            "textBody": [
+              {
+                "partId": "b",
+                "type": "text/plain"
+              }
+            ],
+            "bodyValues": {
+              "b": {
+                "value": "$BODY"
+              }
+            },
+            "keywords": {
+              "$draft": true,
+              "$seen": true
+            }
+          }
+        }
+      },
+      "c0"
+    ]
+  ]
+}

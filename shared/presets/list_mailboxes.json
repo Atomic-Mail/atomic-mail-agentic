@@ -1,0 +1,23 @@
+{
+  "using": [
+    "urn:ietf:params:jmap:core",
+    "urn:ietf:params:jmap:mail"
+  ],
+  "methodCalls": [
+    [
+      "Mailbox/get",
+      {
+        "accountId": "$ACCOUNT_ID",
+        "ids": null,
+        "properties": [
+          "id",
+          "name",
+          "role",
+          "totalEmails",
+          "unreadEmails"
+        ]
+      },
+      "m0"
+    ]
+  ]
+}

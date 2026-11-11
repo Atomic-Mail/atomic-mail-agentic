@@ -1,11 +1,11 @@
 ---
-description: Install and run the @atomicmail/agent-skill CLI (register, jmap_request, help) for shell-capable agents and automation.
+description: Install and run the @atomicmail/agent-skill CLI (register, jmap_request, calendar, help) for shell-capable agents and automation.
 ---
 
 # Install AgentSkill
 
-The AgentSkill CLI gives shell agents three commands: `register`,
-`jmap_request` and `help`. It shares its runtime with `@atomicmail/mcp`, so
+The AgentSkill CLI gives shell agents four commands: `register`,
+`jmap_request`, [`calendar`](/calendar) and `help`. It shares its runtime with `@atomicmail/mcp`, so
 both behave the same.
 
 ## For AI agents

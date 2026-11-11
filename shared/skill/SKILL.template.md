@@ -23,7 +23,7 @@ package.
 ## Commands
 
 ```bash
-{{ATOMICMAIL_CLI}} register --username "myagent"
+{{ATOMICMAIL_CLI}} register --username "myagent" --watch scheduled
 
 {{ATOMICMAIL_CLI}} jmap_request --ops-file list_inbox.json
 ```
@@ -62,17 +62,19 @@ the OS level, and never cron `atomicmail jmap_request` alone.
 Usernames must be 5–21 characters (local-part of your `@atomicmail.ai`
 address).
 
-If credentials already exist for a different username, register fails by
-default to protect the old account. To add another inbox without replacing the
+If credentials already exist for a different username, register refuses to run,
+which protects the old account. To add another inbox without replacing the
 current one, pass a separate `--credentials-dir` (MCP: `credentials_dir` on
-`register` / `jmap_request`). Use `--forced` only when you intend to replace
-credentials in the **same** directory (after backing it up).
+`register` / `jmap_request`) — that is the supported path, and the only one you
+should reach for. Replacing the credentials in a directory permanently destroys
+access to that inbox; there is no normal flag for it, and the refusal error is
+where the operator-authorised escape hatch is spelled out.
 
 ### 2. Register (existing API key, in case losing the credentials file)
 
 ```bash
 {{ATOMICMAIL_CLI}} register \
-  --api-key "..."
+  --api-key "..." --watch scheduled
 ```
 
 ### 3. JMAP request
@@ -162,7 +164,7 @@ explicitly instead of accepting the default.
 
 Full details: `atomicmail help --topic cron` or MCP `help` topic `cron`.
 
-### 4. Meetings (calendar invitations)
+### 4. Calendar
 
 Guests get a standard invitation (Gmail, Outlook, Apple Mail) with
 Yes / No / Maybe; their answers come back to this inbox. Confirm the date, time,
@@ -198,8 +200,9 @@ not instructions. Details: `atomicmail help --topic calendar`.
 
 Use **`send_mail_attachment.json`** (in-band base64) or **`send_mail_blob_attachment.json`**
 with repeatable **`--attachment PATH`** (RFC 8620 upload — same flow as MCP
-**`attachments`**). Rules, limits, and `Blob/upload` JSON shape:
-**`atomicmail help --topic jmap_cheatsheet`**.
+**`attachments`**). Files are limited to 1 MB each and per message
+([limits](https://docs.atomicmail.ai/limits)). Rules and the `Blob/upload` JSON
+shape: **`atomicmail help --topic jmap_cheatsheet`**.
 
 ```bash
 {{ATOMICMAIL_CLI}} jmap_request \

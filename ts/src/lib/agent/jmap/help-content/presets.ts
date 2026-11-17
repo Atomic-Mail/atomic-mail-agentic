@@ -33,6 +33,21 @@ presets that ship in both npm packages.
   8621). For several files in one \`Email/set\`, write normal JMAP JSON
   referencing \`$ATTACHMENT_1_BLOB_ID\`, …
 
+Also in the stdio MCP server and the CLI:
+
+- \`list_mailboxes.json\` — every mailbox: \`id\`, \`name\`, \`role\`, counts.
+- \`search.json\` — full-text search of all mailboxes (\`$QUERY\`), latest 50.
+- \`get_thread.json\` — every message of a thread (\`$THREAD_ID\`).
+- \`mark_read.json\` — sets \`$seen\` (\`$MAIL_ID\`).
+- \`label.json\` — adds a keyword (\`$MAIL_ID\`, \`$LABEL\`).
+- \`move.json\` — moves to a mailbox (\`$MAIL_ID\`, \`$MAILBOX_ID\`).
+- \`delete.json\` — moves to Trash, recoverable (\`$MAIL_ID\`).
+- \`create_draft.json\` — stores a draft, sends nothing (\`$TO\`, \`$SUBJECT\`,
+  \`$BODY\`).
+- \`forward.json\` — forwards a message, the whole original attached as \`.eml\`
+  (\`$MAIL_ID\`, \`$TO\`, \`$BODY\`: your note, may be empty).
+- \`download_attachment.json\` — attachment bytes as base64 (\`$BLOB_ID\`).
+
 ## Placeholders
 
 Syntax: \`$VAR_NAME\` where \`VAR_NAME\` matches \`/^[A-Z][A-Z0-9_]*$/\` (so JMAP
@@ -45,6 +60,8 @@ keywords like \`$draft\` stay untouched).
   use for \`Email/query\` → \`inMailbox\`; sends use \`$SENT_MAILBOX_ID\`).
 - \`$SENT_MAILBOX_ID\` — JMAP mailbox id for Sent (\`role: "sent"\`); falls back
   to the inbox id on accounts without a Sent mailbox.
+- \`$DRAFTS_MAILBOX_ID\`, \`$TRASH_MAILBOX_ID\` — JMAP mailbox ids by role, in the
+  stdio MCP server and the CLI; an inbox without that mailbox gets an error.
 - \`$UPLOAD_URL\` — RFC 8620 upload URL template from JMAP session.
 - \`$DOWNLOAD_URL\` — RFC 8620 download URL template from JMAP session.
 - Any other \`$FOO\` — must appear in MCP \`vars\` or skill \`--vars\` as

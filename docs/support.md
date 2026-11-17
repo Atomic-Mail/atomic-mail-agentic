@@ -9,6 +9,10 @@ Write to [support@atomicmail.ai](mailto:support@atomicmail.ai) for anything abou
 an inbox you own: accounts, addresses, custom domains, delivery. Send it from the
 address that owns the inbox, that is how we match you to it.
 
+If that inbox can't send, for example because its API key now returns
+`401 Unknown or suspended API key`, write from any other address and include the
+inbox address. Never send the API key itself.
+
 For bugs and requests in the agent packages, the AgentSkill CLI, the MCP servers,
 presets and integrations, open a
 [GitHub issue](https://github.com/Atomic-Mail/atomic-mail-agentic/issues). Include

@@ -3,7 +3,7 @@
 Notable changes to Atomic Mail Agentic. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/).
 
-## [Unreleased]
+## [0.3.34] - 2026-11-17
 
 ### Added
 
@@ -19,6 +19,11 @@ Notable changes to Atomic Mail Agentic. Format loosely follows
   `delete` (moves to Trash), `create_draft`, `forward`, `download_attachment` and
   `list_mailboxes`. New placeholders `$DRAFTS_MAILBOX_ID` and
   `$TRASH_MAILBOX_ID`. See help topic `presets`.
+- **Hermes Agent plugin.** `integrations/hermes-plugin` gives a
+  [Hermes Agent](https://github.com/NousResearch/hermes-agent) its own inbox in
+  one command and turns email into a Hermes channel: mail from allowed,
+  DKIM-verified senders starts a turn, and the reply goes back in the same
+  thread.
 
 ## [0.3.33] - 2026-11-03
 

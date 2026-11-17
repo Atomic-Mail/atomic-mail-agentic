@@ -133,7 +133,8 @@ received mail; use `run_preset` with `list_sent` to see what was sent.
 On `send_email` and `reply_to_message`, `html_body` alone gets a plain-text part
 derived from it, so nothing goes out HTML-only. `from_name` is the display name
 on From: the address is always the inbox's, so a name with `@`, `<` or `>` is
-refused. `reply_to` is where replies should go when not this inbox.
+refused. `reply_to` is where replies should go when not this inbox, never a
+recipient's own address (outbound spam filtering blocks that).
 
 `search_messages` is backed by a real full-text index, so `text`, `subject`, and
 `body` filters return matches rather than erroring.

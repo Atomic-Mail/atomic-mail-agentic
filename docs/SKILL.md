@@ -85,7 +85,7 @@ where the operator-authorised escape hatch is spelled out.
 
 ```bash
 npx --package=@atomicmail/agent-skill atomicmail register \
-  --api-key "..."
+  --api-key "..." --watch scheduled
 ```
 
 ### 3. Everyday mail
@@ -203,7 +203,7 @@ explicitly instead of accepting the default.
 
 Full details: `atomicmail help --topic cron` or MCP `help` topic `cron`.
 
-### 5. Meetings (calendar invitations)
+### 5. Calendar
 
 Guests get a standard invitation (Gmail, Outlook, Apple Mail) with
 Yes / No / Maybe; their answers come back to this inbox. Confirm the date, time,
@@ -239,8 +239,9 @@ npx --package=@atomicmail/agent-skill atomicmail help --topic jmap_cheatsheet
 
 Use **`send_mail_attachment.json`** (in-band base64) or **`send_mail_blob_attachment.json`**
 with repeatable **`--attachment PATH`** (RFC 8620 upload — same flow as MCP
-**`attachments`**). Rules, limits, and `Blob/upload` JSON shape:
-**`atomicmail help --topic jmap_cheatsheet`**.
+**`attachments`**). Files are limited to 1 MB each and per message
+([limits](https://docs.atomicmail.ai/limits)). Rules and the `Blob/upload` JSON
+shape: **`atomicmail help --topic jmap_cheatsheet`**.
 
 ```bash
 npx --package=@atomicmail/agent-skill atomicmail jmap_request \

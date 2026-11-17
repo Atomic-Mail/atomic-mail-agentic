@@ -2,7 +2,7 @@
 // shared/help/topics/calendar.md (the runtime source); this is the fallback.
 
 export const helpTopicCalendar = `\
-# Meetings: calendar invitations
+# Calendar
 
 This inbox can schedule meetings by email. Guests get a standard calendar
 invitation (Gmail, Outlook, Apple Mail) with Yes / No / Maybe buttons, and their
@@ -67,7 +67,7 @@ server. The Python packages do not have it yet.
 - Every update increases the version. Outlook then asks guests to answer again;
   \`list_invites\` marks earlier answers with \`answered_earlier_version\`.
 - The email around the invitation is fixed (title, When, Join, Guests, your
-  description) and ends with the inbox's usual signature, "Sent from Atomic Mail
+  description); from an \`@atomicmail.ai\` inbox it ends with the usual signature, "Sent from Atomic Mail
   Agentic", like any other mail it sends. There is no custom template or HTML.
 
 ## Reading answers
@@ -103,4 +103,5 @@ It looks at the latest \`limit\` messages in Sent and in Inbox (default 50, at m
 ## Not supported yet
 
 Recurring meetings, free/busy lookups and creating video-call links (pass an
-existing link as \`meeting_url\`).`;
+existing link as \`meeting_url\`).
+`;

@@ -186,6 +186,7 @@ export default defineConfig({
         items: [
           { text: "Overview", link: "/overview" },
           { text: "Quickstart", link: "/" },
+          { text: "Limits", link: "/limits" },
           { text: "Agent flow", link: "/getting-started" },
           {
             text: "Authentication",
@@ -229,7 +230,7 @@ export default defineConfig({
             ],
           },
           { text: "Webhooks", link: "/webhooks" },
-          { text: "Calendar invitations", link: "/calendar" },
+          { text: "Calendar", link: "/calendar" },
         ],
       },
       {

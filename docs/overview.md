@@ -1,6 +1,6 @@
 ---
 title: Overview
-description: What Atomic Mail is, the four ways to integrate it, who owns the inbox on each path, and the limits during open alpha.
+description: What Atomic Mail is, the four ways to integrate it, who owns the inbox on each path, and what to expect during open alpha.
 ---
 
 # Overview
@@ -16,6 +16,7 @@ Every wrapper speaks the same three commands, `register`, `jmap_request` and
 and the [local](/mcp) and [hosted](/mcp-remote) MCP servers add tools for everyday
 mail that need no JMAP: `read_inbox`, `read_message`, `search_messages`,
 `send_email` and `reply_to_message`.
+The CLI and both MCP servers also do [Calendar](/calendar).
 
 ## Ways to integrate
 
@@ -40,9 +41,8 @@ Both end with the same inbox and the same JMAP calls. The
 
 Every inbox is free during open alpha and gets an `@atomicmail.ai` address, or
 [your own domain](/custom-domains) verified once in the
-[dashboard](https://dashboard.atomicmail.ai). Sending volume starts small and
-grows with the inbox's reputation, so a new inbox earns headroom by sending
-mail that gets delivered.
+[dashboard](https://dashboard.atomicmail.ai). Sending, storage and attachments
+have [limits](/limits) sized for agent workloads.
 
 ## Where next
 

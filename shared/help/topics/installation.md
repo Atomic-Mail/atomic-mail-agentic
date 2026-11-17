@@ -16,7 +16,7 @@
 ## AgentSkill (shell)
 
 ```bash
-npx --package=@atomicmail/agent-skill atomicmail register --username "myagent"
+npx --package=@atomicmail/agent-skill atomicmail register --username "myagent" --watch scheduled
 npx --package=@atomicmail/agent-skill atomicmail jmap_request --ops-file list_inbox.json
 npx --package=@atomicmail/agent-skill atomicmail help
 ```

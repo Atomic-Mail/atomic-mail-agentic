@@ -60,7 +60,7 @@ Your host starts this process on demand.
 | `read_inbox`, `read_message`, `search_messages`, `send_email`, `reply_to_message`, `list_agents` | Everyday mail, with the same names and arguments as the [hosted server](/mcp-remote). See [Everyday mail](#everyday-mail). |
 | `jmap_request` | JMAP batch via `ops` or `ops_file`. Optional `credentials_dir` per call. Uppercase `$VAR_NAME` tokens are substituted (`$ACCOUNT_ID` / `$INBOX` / `$INBOX_MAILBOX_ID` / `$SENT_MAILBOX_ID` / `$DRAFTS_MAILBOX_ID` / `$TRASH_MAILBOX_ID` / `$UPLOAD_URL` / `$DOWNLOAD_URL` from session; others via optional `vars` map). |
 | `help`         | Built-in docs (`topic` optional); use `topic: "readme"` for the published package `README.md`. Use `topic: "multi_account"` for multiple inboxes on one MCP server.                                                                                                                    |
-| `send_invite`, `update_invite`, `cancel_invite`, `list_invites`, `respond_to_invite` | Meeting invitations by email (Gmail / Outlook / Apple Mail, with Yes / No / Maybe) and their answers. See [Calendar invitations](/calendar) and `help` topic `calendar`. |
+| `send_invite`, `update_invite`, `cancel_invite`, `list_invites`, `respond_to_invite` | Meeting invitations by email (Gmail / Outlook / Apple Mail, with Yes / No / Maybe) and their answers. See [Calendar](/calendar) and `help` topic `calendar`. |
 
 ## Everyday mail
 

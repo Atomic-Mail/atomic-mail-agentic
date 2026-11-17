@@ -18,19 +18,19 @@ when to look.
 
 ## At a glance
 
-| What               | Value                                                                                                                                       |
-| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| Event              | `message.received` (one per new message in the inbox)                                                                                       |
-| Who can use it     | Active inboxes attached to an owner who signs in with **Google or GitHub** (not anonymous inboxes, not password-only owners)                 |
-| Transport          | `POST` with a JSON body, `https` on port 443, over IPv4, redirects never followed                                                           |
-| Signature          | `webhook-id`, `webhook-timestamp`, `webhook-signature` (`v1,<base64 HMAC-SHA256>`)                                                          |
-| Secret             | `whsec_<base64 of 32 bytes>`, shown once on create and on rotate                                                                            |
-| Before first event | The endpoint must pass a signed challenge-echo verification (any 2xx on Zapier, Make, n8n Cloud, webhook.site and Pipedream)                |
-| Which mail fires   | Only mail received at or after the endpoint became active; nothing is replayed                                                              |
-| Delivery guarantee | At least once, unordered: deduplicate on `webhook-id` (keep processed ids for 7 days)                                                       |
-| Retries            | Timeouts, 5xx, 429 and network errors: 8 attempts over about 25 hours. 3xx and other 4xx: no retry. 410: the endpoint is turned off         |
-| Payload            | Ids and envelope metadata only (sender, size, time). No subject and no body: fetch the message by `message_id`. At most 8 KiB              |
-| Timeouts           | 5 s to connect (DNS, TCP, TLS), 15 s in total. Answer with any 2xx quickly and work afterwards                                              |
+| What               | Value                                                                                                                               |
+| ------------------ | ----------------------------------------------------------------------------------------------------------------------------------- |
+| Event              | `message.received` (one per new message in the inbox)                                                                               |
+| Who can use it     | Active inboxes attached to an owner who signs in with **Google or GitHub** (not anonymous inboxes, not password-only owners)        |
+| Transport          | `POST` with a JSON body, `https` on port 443, over IPv4, redirects never followed                                                   |
+| Signature          | `webhook-id`, `webhook-timestamp`, `webhook-signature` (`v1,<base64 HMAC-SHA256>`)                                                  |
+| Secret             | `whsec_<base64 of 32 bytes>`, shown once on create and on rotate                                                                    |
+| Before first event | The endpoint must pass a signed challenge-echo verification (any 2xx on Zapier, Make, n8n Cloud, webhook.site and Pipedream)        |
+| Which mail fires   | Only mail received at or after the endpoint became active; nothing is replayed                                                      |
+| Delivery guarantee | At least once, unordered: deduplicate on `webhook-id` (keep processed ids for 7 days)                                               |
+| Retries            | Timeouts, 5xx, 429 and network errors: 8 attempts over about 25 hours. 3xx and other 4xx: no retry. 410: the endpoint is turned off |
+| Payload            | Ids and envelope metadata only (sender, size, time). No subject and no body: fetch the message by `message_id`. At most 8 KiB       |
+| Timeouts           | 5 s to connect (DNS, TCP, TLS), 15 s in total. Answer with any 2xx quickly and work afterwards                                      |
 
 ## Set up an endpoint
 
@@ -60,10 +60,10 @@ message by `data.message_id` and hands it to the agent.
   message with JMAP `Email/get` on `https://api.atomicmail.ai/jmap` or the MCP
   `read_message` tool, and run the agent on it. The agent reacts within seconds
   instead of on its next poll.
-- **No-code platforms** (Zapier, Make, n8n): create a trigger of the
-  **Webhook / Catch hook** kind, paste the URL it gives you into **Add
-  endpoint**, and build the rest of the flow there. Verification passes on these
-  platforms automatically.
+- **No-code platforms** (Zapier, Make, n8n): create a trigger of the **Webhook /
+  Catch hook** kind, paste the URL it gives you into **Add endpoint**, and build
+  the rest of the flow there. Verification passes on these platforms
+  automatically.
 - **Agent on a laptop** (Claude Desktop, Cursor, OpenClaw and similar): a
   webhook cannot reach it, because a laptop has no public address. Keep the
   scheduled check you chose with `watch` when you registered the inbox (see
@@ -95,8 +95,7 @@ The signature is HMAC-SHA256, keyed with the base64-decoded part of your
 
 ### `message.received`
 
-An example body (pretty-printed here; the
-wire form has no whitespace):
+An example body (pretty-printed here; the wire form has no whitespace):
 
 ```json
 {
@@ -125,19 +124,19 @@ webhook-timestamp: 1791203698
 webhook-signature: v1,r5Y/KWGOAhgeaogNPIyMCp6Dhx1aJnmIRh9kLKzI5Ns=
 ```
 
-| Field                    | Meaning                                                                                               |
-| ------------------------ | ----------------------------------------------------------------------------------------------------- |
-| `type`                   | `message.received`                                                                                    |
-| `timestamp`              | When the event was created (ISO 8601). Not the attempt time: that is `webhook-timestamp`              |
-| `data.inbox`             | The inbox address                                                                                     |
-| `data.account_id`        | The Atomic Mail inbox id (as shown in the dashboard), **not** the JMAP `accountId` |
-| `data.message_id`        | JMAP `Email` id. Use it to fetch the message                                                          |
-| `data.thread_id`         | JMAP thread id, or `null`                                                                             |
-| `data.rfc822_message_id` | The `Message-ID` header without angle brackets, or `null`                                             |
-| `data.from`              | Up to 5 senders, `{name, email}`; `name` is `null` when absent and cut to 100 characters              |
-| `data.received_at`       | When the mail store received it (ISO 8601, whole seconds), or `null`                                  |
-| `data.size`              | Message size in bytes                                                                                 |
-| `data.has_attachment`    | `true` when the store flags an attachment                                                             |
+| Field                    | Meaning                                                                                  |
+| ------------------------ | ---------------------------------------------------------------------------------------- |
+| `type`                   | `message.received`                                                                       |
+| `timestamp`              | When the event was created (ISO 8601). Not the attempt time: that is `webhook-timestamp` |
+| `data.inbox`             | The inbox address                                                                        |
+| `data.account_id`        | The Atomic Mail inbox id (as shown in the dashboard), **not** the JMAP `accountId`       |
+| `data.message_id`        | JMAP `Email` id. Use it to fetch the message                                             |
+| `data.thread_id`         | JMAP thread id, or `null`                                                                |
+| `data.rfc822_message_id` | The `Message-ID` header without angle brackets, or `null`                                |
+| `data.from`              | Up to 5 senders, `{name, email}`; `name` is `null` when absent and cut to 100 characters |
+| `data.received_at`       | When the mail store received it (ISO 8601, whole seconds), or `null`                     |
+| `data.size`              | Message size in bytes                                                                    |
+| `data.has_attachment`    | `true` when the store flags an attachment                                                |
 
 The body is capped at 8 KiB. An oversized body is shrunk in this order until it
 fits: one sender only, senders emptied, `rfc822_message_id` set to `null`. The
@@ -193,10 +192,10 @@ When verification runs:
 - **When you press Verify.** Re-checking an endpoint that is already verified is
   sticky: a failure is recorded in `verification.failure_reason` and
   `last_attempt_at`, but the endpoint stays verified and deliveries continue.
-- **Whenever a turned-off endpoint is turned back on** (the dashboard toggle), whatever turned it off (you,
-  `auto_failing` or `gone_410`). Verification is not sticky across a disable:
-  the endpoint becomes active only if this check passes. If it fails, the
-  endpoint stays on but `pending_verification`, with
+- **Whenever a turned-off endpoint is turned back on** (the dashboard toggle),
+  whatever turned it off (you, `auto_failing` or `gone_410`). Verification is
+  not sticky across a disable: the endpoint becomes active only if this check
+  passes. If it fails, the endpoint stays on but `pending_verification`, with
   `verification.state:
   "failed"` and the reason, and nothing is sent until a
   later **Verify** passes.
@@ -204,8 +203,8 @@ When verification runs:
 **Recommended receiver flow:**
 
 1. Create the endpoint and store the returned `secret` in your receiver.
-2. Click **Verify** in the dashboard. When it passes, the endpoint is
-   `active` and events for new mail start.
+2. Click **Verify** in the dashboard. When it passes, the endpoint is `active`
+   and events for new mail start.
 
 A strict receiver fails the check inside the create call (usually reason
 `http_status` from a 401, or `challenge_failed`): that is expected, the endpoint
@@ -477,10 +476,10 @@ attempt is signed again with a fresh `webhook-timestamp` and the same
 Every non-2xx attempt counts against the endpoint. When an endpoint reaches **10
 consecutive failed attempts and the first of them is at least 24 hours old**, it
 is turned off (`auto_failing`) and its queued deliveries are dropped. Turn it
-back on with the dashboard toggle: this resets
-the failure streak and **always runs verification again**; the endpoint is
-active only if that passes. Deliveries that were dropped are not resent
-automatically; use **Redeliver** in the delivery log.
+back on with the dashboard toggle: this resets the failure streak and **always
+runs verification again**; the endpoint is active only if that passes.
+Deliveries that were dropped are not resent automatically; use **Redeliver** in
+the delivery log.
 
 Deliveries stop (logged as `dropped`) while the inbox is suspended or the owner
 has no Google or GitHub sign-in.
@@ -492,6 +491,7 @@ has no Google or GitHub sign-in.
 | Endpoints per inbox                           | 3                                                                                                           |
 | Endpoints per owner, across all their inboxes | 10                                                                                                          |
 | Events per endpoint per hour                  | 300; the rest are logged as `dropped` with `hourly_cap`, without their content (they cannot be redelivered) |
+| Events per owner per hour, all endpoints      | 1000; over that, events are dropped the same way                                                            |
 | Payload size                                  | 8 KiB                                                                                                       |
 
 **URL rules.** A public `https` URL on port 443 whose hostname has an IPv4 (A)
@@ -506,7 +506,7 @@ an event does count, exactly like polling:
 
 | Limit                                    | Value                                                                                                                                                                                                         |
 | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| JMAP reads                               | 120 requests per 2 minutes per inbox (every webhook inbox has an owner, so the verified tier applies). One `Email/get` with many ids is one request                                                           |
+| JMAP reads                               | 120 requests per 2 minutes per inbox (webhooks need an owner signed in with Google or GitHub, so the verified tier applies). One `Email/get` with many ids is one request                                     |
 | Capability tokens (each lives 2 minutes) | Session (CLI and REST): 2 per 2 minutes per session. Inbox API key on the hosted MCP server: 10 per 2 minutes per key. OAuth (MCP, integrations): 5 per 2 minutes per grant and inbox, 5000 per day per owner |
 
 A handler that mints a fresh token for every event hits the token limit long

@@ -182,3 +182,31 @@ Deno.test("htmlToPlainText: stays linear on adversarial bodies", () => {
   // Each pass above is a few ms when linear; quadratic would take hours.
   assert(performance.now() - start < 10_000);
 });
+
+Deno.test("htmlToPlainText: stays linear on a body of links", () => {
+  const n = 200_000;
+  const start = performance.now();
+  const text = htmlToPlainText('<a href="http://x">y</a>'.repeat(n));
+  // A fraction of a second when linear, about a minute when quadratic.
+  assert(performance.now() - start < 5_000);
+  assert(text === "y (http://x)".repeat(n));
+});
+
+Deno.test("htmlToPlainText: link text is what the link wraps", () => {
+  const a = '<a href="https://x.example/a">';
+  const b = '<a href="https://x.example/b">';
+  assertEquals(
+    htmlToPlainText(`before ${a}one</a> mid ${b} two </a> after`),
+    "before one (https://x.example/a) mid two (https://x.example/b) after",
+  );
+  assertEquals(
+    htmlToPlainText(`${a}one${b}two</a>`),
+    "onetwo (https://x.example/b)",
+  );
+  assertEquals(htmlToPlainText(`x ${a}</a> y`), "x https://x.example/a y");
+  assertEquals(
+    htmlToPlainText(`${a}<b>one</b></a></a>`),
+    "one (https://x.example/a)",
+  );
+  assertEquals(htmlToPlainText(`<a>one</a> ${a}two`), "one two");
+});

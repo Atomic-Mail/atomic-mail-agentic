@@ -253,10 +253,13 @@ const HREF_RE = /\shref\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/i;
  * quadratic on a body full of `<`.
  */
 export function htmlToPlainText(html: string): string {
+  // `out` is the text since the last <a>, so `</a>` can read the link text
+  // without flattening all the output so far: on a body of links that was
+  // quadratic.
+  let head = "";
   let out = "";
   let i = 0;
   let href: string | undefined;
-  let linkStart = 0;
   while (i < html.length) {
     const lt = html.indexOf("<", i);
     if (lt === -1) {
@@ -307,15 +310,16 @@ export function htmlToPlainText(html: string): string {
         const m = HREF_RE.exec(tag);
         const url = m ? (m[1] ?? m[2] ?? m[3] ?? "").trim() : "";
         href = /^(https?:|mailto:)/i.test(url) ? url : undefined;
-        linkStart = out.length;
+        head += out;
+        out = "";
       } else if (href !== undefined) {
-        const text = out.slice(linkStart).trim();
+        const text = out.trim();
         if (text !== href) out += text ? ` (${href})` : href;
         href = undefined;
       }
     }
   }
-  return out
+  return (head + out)
     .replace(/&(#\d+|#[xX][0-9a-fA-F]+|[a-zA-Z][a-zA-Z0-9]*);/g, decodeEntity)
     .replace(/\r\n?/g, "\n")
     .split("\n")

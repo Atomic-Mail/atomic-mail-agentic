@@ -1,0 +1,22 @@
+{
+  "using": [
+    "urn:ietf:params:jmap:core",
+    "urn:ietf:params:jmap:mail"
+  ],
+  "methodCalls": [
+    [
+      "Email/set",
+      {
+        "accountId": "$ACCOUNT_ID",
+        "update": {
+          "$MAIL_ID": {
+            "mailboxIds": {
+              "$MAILBOX_ID": true
+            }
+          }
+        }
+      },
+      "u0"
+    ]
+  ]
+}

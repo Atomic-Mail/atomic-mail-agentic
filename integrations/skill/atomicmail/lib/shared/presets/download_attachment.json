@@ -1,0 +1,22 @@
+{
+  "using": [
+    "urn:ietf:params:jmap:core",
+    "urn:ietf:params:jmap:blob"
+  ],
+  "methodCalls": [
+    [
+      "Blob/get",
+      {
+        "accountId": "$ACCOUNT_ID",
+        "ids": [
+          "$BLOB_ID"
+        ],
+        "properties": [
+          "data:asBase64",
+          "size"
+        ]
+      },
+      "b0"
+    ]
+  ]
+}

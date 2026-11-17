@@ -3,7 +3,7 @@ import { type JmapAttachmentInput } from "./agent-jmap-blob-upload.js";
 export type { JmapAttachmentInput } from "./agent-jmap-blob-upload.js";
 export type { JmapBlobUploadLimits } from "./agent-jmap-blob-limits.js";
 export declare const DEFAULT_JMAP_USING: readonly ["urn:ietf:params:jmap:core", "urn:ietf:params:jmap:mail"];
-export declare const BUNDLED_OPS_PRESET_NAMES: readonly ["list_inbox.json", "list_sent.json", "reply.json", "send_mail.json", "send_mail_attachment.json", "send_mail_blob_attachment.json"];
+export declare const BUNDLED_OPS_PRESET_NAMES: readonly ["create_draft.json", "delete.json", "download_attachment.json", "forward.json", "get_thread.json", "label.json", "list_inbox.json", "list_mailboxes.json", "list_sent.json", "mark_read.json", "move.json", "reply.json", "search.json", "send_mail.json", "send_mail_attachment.json", "send_mail_blob_attachment.json"];
 export declare const JMAP_MAIL_URN: "urn:ietf:params:jmap:mail";
 /** RFC 9404 blob extension URN (Blob/upload, Blob/get, Blob/lookup). */
 export declare const JMAP_BLOB_URN: "urn:ietf:params:jmap:blob";
@@ -92,6 +92,11 @@ export declare function fetchInboxMailboxId(port: JmapSessionPort): Promise<stri
  * send never fails over where its copy is kept.
  */
 export declare function fetchSentMailboxId(port: JmapSessionPort): Promise<string>;
+/**
+ * Resolves `$DRAFTS_MAILBOX_ID` / `$TRASH_MAILBOX_ID`. No fallback: a draft or a
+ * deleted message filed in the inbox would read as newly received mail.
+ */
+export declare function fetchRoleMailboxId(port: JmapSessionPort, role: "drafts" | "trash"): Promise<string>;
 export declare function postJmap(jmapPostUrl: string, capabilityJwt: string, envelope: JmapEnvelope): Promise<{
     ok: boolean;
     status: number;

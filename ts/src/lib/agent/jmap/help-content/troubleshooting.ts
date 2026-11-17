@@ -57,6 +57,25 @@ payload; if \`size\`
 stays 0, fix the JMAP/blob implementation on the host before sending
 attachments.
 
+## \`from_name is a display name only\`
+
+Remove the address from it; the address on From is always this inbox's.
+
+## \`cannot act as agent_id\`
+
+One credential directory holds one inbox. Omit \`agent_id\`, or pass that inbox's
+\`credentials_dir\` / \`--credentials-dir\`.
+
+## \`no mailbox with role\`
+
+That inbox has no Drafts or Trash mailbox. See \`list_mailboxes.json\`; pick another
+mailbox with \`move.json\`.
+
+## \`notUpdated\` with \`notFound\` from a preset
+
+The id is wrong or the message is gone. Ids come from \`read_inbox\`,
+\`search_messages\` or a preset listing.
+
 ## Installed package vs other documentation
 
 The version you get from \`npx -y @atomicmail/mcp\` or

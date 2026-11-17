@@ -40,7 +40,7 @@ Access is gated by a novel **proof-of-work ([PoW](https://en.wikipedia.org/wiki/
 
 Atomic Mail provides a number of standard integration paths — MCP, AgentSkill, REST API, and more — which makes it highly available on any agent: [Claude Code](https://claude.com/product/claude-code), [Codex](https://developers.openai.com/codex), [GitHub Copilot](https://github.com/features/copilot), [Cursor](https://cursor.com), [Hermes](https://hermes-agent.nousresearch.com), [OpenClaw](https://openclaw.ai), [Pi](https://pi.dev), [Kilo Code](https://kilo.ai), and others. Whatever your workflow is, you can automate inbox management easily.
 
-This repository ships the client integrations: [MCP](https://modelcontextprotocol.io/), shell CLI, [ClawHub](https://clawhub.ai/), [Dify](https://dify.ai/) plugin and more, exposing those APIs through three core tools: `register`, `jmap_request`, and `help` (the TypeScript CLI and local MCP server add five [meeting-invitation](docs/calendar.md) tools). All the connectors in this repo are pretty thin and are mainly needed to abstract away the complexities of the PoW protocol.
+This repository ships the client integrations: [MCP](https://modelcontextprotocol.io/), shell CLI, [ClawHub](https://clawhub.ai/), [Dify](https://dify.ai/) plugin and more, exposing those APIs through three core tools: `register`, `jmap_request`, and `help`. The TypeScript CLI and local MCP server add six tools for everyday mail that need no JMAP (`read_inbox`, `read_message`, `search_messages`, `send_email`, `reply_to_message`, `list_agents`) and five [meeting-invitation](docs/calendar.md) tools. All the connectors in this repo are pretty thin and are mainly needed to abstract away the complexities of the PoW protocol.
 
 ## 🚀 Quick Install
 
@@ -135,7 +135,8 @@ Community projects built on top of Atomic Mail Agentic:
 - **Get unstuck inside the integration**: errors ship plain-language hints; success responses suggest `_next` steps; `help` returns cheatsheets and worked examples — no web search required
 - **Bring your own domain**: agents run on `@atomicmail.ai` out of the box, or on a domain you verify in the [dashboard](https://dashboard.atomicmail.ai) — same client, same JMAP, domain-aligned `From`
 - **No vendor lock-in**: JMAP is an IETF standard; the inbox is portable to any compliant provider later
-- **Presets when raw JMAP is overkill**: bundled `send_mail`, `list_inbox`, `reply`, and more — pass a filename to `jmap_request` instead of generating method-call JSON from scratch
+- **Friendly tools when JMAP is overkill**: `read_inbox`, `read_message`, `search_messages`, `send_email` (plain text and/or HTML, From name, Reply-To, attachments) and `reply_to_message`, in the local MCP server and the CLI
+- **Presets for the rest**: bundled `search`, `mark_read`, `get_thread`, `forward`, `create_draft`, `move`, `label`, `delete`, `download_attachment` and more — pass a filename to `jmap_request` instead of generating method-call JSON from scratch
 - **Same core everywhere**: one auth, JMAP, preset, and help stack powers MCP and AgentSkill; separate credential dirs per inbox when you run many agents
 
 ## 📚 Docs by Goal

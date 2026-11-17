@@ -8,9 +8,13 @@ import { readCredentials } from "../session/agent-credentials-store.ts";
 import { assertAttachmentBytesWithinBlobLimit } from "./agent-jmap-blob-limits.ts";
 import type { JmapSessionPort } from "./agent-jmap.ts";
 
-/** One local file to upload before `$ATTACHMENT_*` substitution in ops JSON. */
+/**
+ * One file to upload before `$ATTACHMENT_*` substitution in ops JSON: a local
+ * `path`, or inline `dataBase64` (which then needs a `filename`).
+ */
 export interface JmapAttachmentInput {
-  path: string;
+  path?: string;
+  dataBase64?: string;
   filename?: string;
   contentType?: string;
 }
@@ -77,6 +81,41 @@ export async function postBinaryBlobUpload(
   return { blobId: j.blobId, size: typeof j.size === "number" ? j.size : 0 };
 }
 
+function decodeBase64(data: string, filename: string): Uint8Array {
+  let binary: string;
+  try {
+    binary = atob(data.replace(/\s+/g, ""));
+  } catch {
+    throw new Error(
+      `Attachment '${filename}': data_base64 is not valid base64.`,
+    );
+  }
+  return Uint8Array.from(binary, (c) => c.charCodeAt(0));
+}
+
+async function readAttachment(
+  a: JmapAttachmentInput,
+  pathBase: string,
+): Promise<{ bytes: Uint8Array; filename: string }> {
+  if ((a.path === undefined) === (a.dataBase64 === undefined)) {
+    throw new Error(
+      "Each attachment needs exactly one of path or data_base64.",
+    );
+  }
+  if (a.path === undefined) {
+    if (!a.filename) {
+      throw new Error("An attachment with data_base64 needs a filename.");
+    }
+    return {
+      bytes: decodeBase64(a.dataBase64!, a.filename),
+      filename: a.filename,
+    };
+  }
+  const abs = isAbsolute(a.path) ? a.path : resolve(pathBase, a.path);
+  const buf = await readFile(abs);
+  return { bytes: buf as Uint8Array, filename: a.filename ?? basename(abs) };
+}
+
 /**
  * Reads each file, POSTs bytes to the JMAP session `uploadUrl`, and returns
  * placeholder values for use in standard JMAP ops (same batch as
@@ -113,10 +152,7 @@ export async function buildVarsFromAttachmentFiles(
 
   for (let i = 0; i < attachments.length; i++) {
     const a = attachments[i]!;
-    const abs = isAbsolute(a.path) ? a.path : resolve(pathBase, a.path);
-    const buf = await readFile(abs);
-    const bytes = buf as Uint8Array;
-    const filename = a.filename ?? basename(abs);
+    const { bytes, filename } = await readAttachment(a, pathBase);
     const contentType = a.contentType ?? guessMimeTypeFromFilename(filename);
     prepared.push({ bytes, filename, contentType });
   }

@@ -18,6 +18,10 @@ import {
 } from "./agent-jmap-blob-upload.ts";
 import { ensureTextCharsetOnEmailSetBlobParts } from "./agent-jmap-email-charset.ts";
 import { substituteVars } from "./agent-vars.ts";
+import {
+  fetchForwardContext,
+  forwardContextResolvers,
+} from "./forward-context.ts";
 import { fetchReplyContext, replyContextResolvers } from "./reply-context.ts";
 
 export type { JmapAttachmentInput } from "./agent-jmap-blob-upload.ts";
@@ -36,9 +40,19 @@ const sharedHints = tryReadSharedJson<{ jmap_next_hints: string[] }>(
   "messages/hints.json",
 );
 export const BUNDLED_OPS_PRESET_NAMES = [
+  "create_draft.json",
+  "delete.json",
+  "download_attachment.json",
+  "forward.json",
+  "get_thread.json",
+  "label.json",
   "list_inbox.json",
+  "list_mailboxes.json",
   "list_sent.json",
+  "mark_read.json",
+  "move.json",
   "reply.json",
+  "search.json",
   "send_mail.json",
   "send_mail_attachment.json",
   "send_mail_blob_attachment.json",
@@ -375,8 +389,22 @@ export async function runJmapRequest(
       },
       INBOX_MAILBOX_ID: () => fetchInboxMailboxId(input.session),
       SENT_MAILBOX_ID: () => fetchSentMailboxId(input.session),
+      DRAFTS_MAILBOX_ID: () => fetchRoleMailboxId(input.session, "drafts"),
+      TRASH_MAILBOX_ID: () => fetchRoleMailboxId(input.session, "trash"),
       ...replyContextResolvers(async () =>
         fetchReplyContext(
+          async (envelope) =>
+            postJmap(
+              await input.session.getJmapPostUrl(),
+              await input.session.getCapabilityToken(),
+              envelope,
+            ),
+          await input.session.getPrimaryMailAccountId(),
+          mergedVars.MAIL_ID,
+        )
+      ),
+      ...forwardContextResolvers(async () =>
+        fetchForwardContext(
           async (envelope) =>
             postJmap(
               await input.session.getJmapPostUrl(),
@@ -525,6 +553,23 @@ export async function fetchSentMailboxId(
 ): Promise<string> {
   return (await fetchMailboxIdByRole(port, "sent")) ??
     await fetchInboxMailboxId(port);
+}
+
+/**
+ * Resolves `$DRAFTS_MAILBOX_ID` / `$TRASH_MAILBOX_ID`. No fallback: a draft or a
+ * deleted message filed in the inbox would read as newly received mail.
+ */
+export async function fetchRoleMailboxId(
+  port: JmapSessionPort,
+  role: "drafts" | "trash",
+): Promise<string> {
+  const id = await fetchMailboxIdByRole(port, role);
+  if (!id) {
+    throw new Error(
+      `This inbox has no mailbox with role "${role}". See list_mailboxes.json.`,
+    );
+  }
+  return id;
 }
 
 function collectBlobUploadAccountIds(envelope: JmapEnvelope): string[] {

@@ -1,0 +1,46 @@
+{
+  "using": [
+    "urn:ietf:params:jmap:core",
+    "urn:ietf:params:jmap:mail"
+  ],
+  "methodCalls": [
+    [
+      "Thread/get",
+      {
+        "accountId": "$ACCOUNT_ID",
+        "ids": [
+          "$THREAD_ID"
+        ]
+      },
+      "t0"
+    ],
+    [
+      "Email/get",
+      {
+        "accountId": "$ACCOUNT_ID",
+        "#ids": {
+          "resultOf": "t0",
+          "name": "Thread/get",
+          "path": "/list/*/emailIds"
+        },
+        "properties": [
+          "id",
+          "threadId",
+          "receivedAt",
+          "from",
+          "to",
+          "cc",
+          "subject",
+          "preview",
+          "keywords",
+          "textBody",
+          "bodyValues",
+          "attachments"
+        ],
+        "fetchTextBodyValues": true,
+        "maxBodyValueBytes": 65536
+      },
+      "g0"
+    ]
+  ]
+}

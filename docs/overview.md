@@ -12,7 +12,10 @@ connect an existing inbox with [OAuth 2.0](/oauth). Both paths are compared on t
 [Authentication](/authentication) page.
 
 Every wrapper speaks the same three commands, `register`, `jmap_request` and
-`help`, so the docs for one path apply to the others.
+`help`, so the docs for one path apply to the others. The [CLI](/skill-install)
+and the [local](/mcp) and [hosted](/mcp-remote) MCP servers add tools for everyday
+mail that need no JMAP: `read_inbox`, `read_message`, `search_messages`,
+`send_email` and `reply_to_message`.
 
 ## Ways to integrate
 

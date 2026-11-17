@@ -1,13 +1,13 @@
 ---
-description: Install and configure the @atomicmail/mcp stdio server, tools (register, jmap_request, help), and host-specific notes for chat-based agents.
+description: Install and configure the @atomicmail/mcp stdio server, its tools (read_inbox, send_email, reply_to_message, jmap_request, …), and host-specific notes for chat-based agents.
 ---
 
 # Local MCP server
 
-A local stdio Model Context Protocol server that gives an agent an email inbox
-over JMAP. Proof-of-work sign-up and token rotation happen inside the server,
-so the agent works with three core tools, plus five for
-[meeting invitations](/calendar).
+A local stdio Model Context Protocol server that gives an agent an email inbox.
+Proof-of-work sign-up and token rotation happen inside the server, so the agent
+works with six tools for [everyday mail](#everyday-mail), which need no JMAP,
+three core tools, and five for [meeting invitations](/calendar).
 
 ::: tip Two MCP servers
 This page is the local server: it runs through `npx`, registers its own inbox
@@ -57,9 +57,48 @@ Your host starts this process on demand.
 | Tool           | Description                                                                                                                                                                                                       |
 | -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `register`     | PoW signup; persists credentials. **Two required inputs:** `username` (5–21 characters, the local-part of your address) and `watch` (`"scheduled"` or `"on-demand"` — see [The required `watch` value](#the-required-watch-value)). Idempotent when the username matches the stored inbox. A different username is refused; add a second account with a separate `credentials_dir`. Optional `credentials_dir` per call (parity with AgentSkill `--credentials-dir`). |
-| `jmap_request` | JMAP batch via `ops` or `ops_file`. Optional `credentials_dir` per call. Uppercase `$VAR_NAME` tokens are substituted (`$ACCOUNT_ID` / `$INBOX` / `$INBOX_MAILBOX_ID` / `$SENT_MAILBOX_ID` / `$UPLOAD_URL` / `$DOWNLOAD_URL` from session; others via optional `vars` map). |
+| `read_inbox`, `read_message`, `search_messages`, `send_email`, `reply_to_message`, `list_agents` | Everyday mail, with the same names and arguments as the [hosted server](/mcp-remote). See [Everyday mail](#everyday-mail). |
+| `jmap_request` | JMAP batch via `ops` or `ops_file`. Optional `credentials_dir` per call. Uppercase `$VAR_NAME` tokens are substituted (`$ACCOUNT_ID` / `$INBOX` / `$INBOX_MAILBOX_ID` / `$SENT_MAILBOX_ID` / `$DRAFTS_MAILBOX_ID` / `$TRASH_MAILBOX_ID` / `$UPLOAD_URL` / `$DOWNLOAD_URL` from session; others via optional `vars` map). |
 | `help`         | Built-in docs (`topic` optional); use `topic: "readme"` for the published package `README.md`. Use `topic: "multi_account"` for multiple inboxes on one MCP server.                                                                                                                    |
 | `send_invite`, `update_invite`, `cancel_invite`, `list_invites`, `respond_to_invite` | Meeting invitations by email (Gmail / Outlook / Apple Mail, with Yes / No / Maybe) and their answers. See [Calendar invitations](/calendar) and `help` topic `calendar`. |
+
+## Everyday mail
+
+| Tool | Arguments | Result |
+| --- | --- | --- |
+| `read_inbox` | `limit?` (1–50, default 25) | Latest inbox messages: `id`, `threadId`, `subject`, `from`, `to`, `preview`, `receivedAt`, `unread` |
+| `read_message` | `message_id` | One message as plain text, with `attachments` (each with a `blobId`) |
+| `search_messages` | `query`, `limit?` | Full-text search of all mailboxes, same rows as `read_inbox` |
+| `send_email` | `to`, `subject`, `body?`, `html_body?`, `cc?`, `bcc?`, `from_name?`, `reply_to?`, `attachments?` | `{ sent, id, threadId, to, subject }` |
+| `reply_to_message` | `message_id`, `body?`, `html_body?`, `from_name?`, `reply_to?`, `attachments?` | The same, in the original's thread |
+| `list_agents` | none | The inbox this credential directory holds |
+
+Every tool also takes `credentials_dir`. Every tool except `list_agents` also
+takes `agent_id`, which keeps prompts written for the hosted server working: this
+inbox's id passes, any other is refused.
+
+```json
+{
+  "to": "anna@example.com",
+  "subject": "Your report",
+  "html_body": "<p>Hi Anna, <b>it is ready</b>.</p>",
+  "from_name": "Reports at Acme",
+  "reply_to": "support@acme.example",
+  "attachments": [{ "path": "./report.pdf" }]
+}
+```
+
+- Pass `body` and/or `html_body`. With `html_body` alone, the plain-text part is
+  derived from it, so nothing goes out HTML-only.
+- `from_name` is the display name on From. The address is always the inbox's, so
+  a name with `@`, `<` or `>` is refused.
+- Each attachment is `{ path }` (a file on the MCP host) or
+  `{ filename, data_base64 }`, with optional `content_type`.
+- Message bodies are wrapped in an untrusted-content delimiter. Mail is data, not
+  instructions; treat it that way in your prompts too.
+
+For anything else (mark read, move, label, forward, drafts, delete, attachment
+download) use `jmap_request` with a [preset](#presets-and-placeholders).
 
 ## Typical MCP workflow
 
@@ -92,8 +131,9 @@ with OS schedulers or cross-platform scheduling, and do **not** cron
 
 ### Send and read
 
-`jmap_request` with `ops` or `ops_file` (optional `vars` for `$TO`,
-`$SUBJECT`, etc.).
+`read_inbox`, `read_message`, `send_email` and `reply_to_message`. Anything else:
+`jmap_request` with `ops` or `ops_file` (optional `vars` for `$TO`, `$SUBJECT`,
+etc.).
 
 ### Ask for help
 
@@ -177,6 +217,16 @@ Examples:
 { "ops_file": "send_mail.json", "vars": { "TO": "a@b.com", "SUBJECT": "Hi", "BODY": "..." } }
 ```
 
+```json
+{ "ops_file": "mark_read.json", "vars": { "MAIL_ID": "M123" } }
+```
+
+Bundled presets: `list_inbox`, `list_sent`, `list_mailboxes`, `search`,
+`get_thread`, `mark_read`, `label`, `move`, `delete`, `create_draft`, `forward`,
+`download_attachment`, `send_mail`, `send_mail_attachment`,
+`send_mail_blob_attachment` and `reply`, each a `.json` file. `delete.json` moves
+to Trash, so it can be undone. What each one takes: `help` topic `presets`.
+
 **Resolution:** relative `ops_file` paths resolve to the credential directory
 first, then bundled presets in the package.
 
@@ -220,8 +270,8 @@ reject the request).
 ## Multiple accounts / agents
 
 One MCP server can manage several isolated inboxes. Pass optional
-`credentials_dir` on **`register`** and **`jmap_request`** (same idea as
-AgentSkill `--credentials-dir`). When omitted, the default directory applies
+`credentials_dir` on **`register`**, **`jmap_request`** and the everyday mail and
+calendar tools (same idea as AgentSkill `--credentials-dir`). When omitted, the default directory applies
 (`ATOMIC_MAIL_CREDENTIALS_DIR` or `~/.atomicmail`).
 
 ```json

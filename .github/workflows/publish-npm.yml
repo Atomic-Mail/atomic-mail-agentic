@@ -106,14 +106,26 @@ jobs:
       - name: Publish to MCP Registry
         run: |
           mcp-publisher login github-oidc
-          if ! OUTPUT=$(mcp-publisher publish 2>&1); then
-            echo "$OUTPUT"
-            if echo "$OUTPUT" | grep -qi "already\|conflict\|duplicate\|exists"; then
-              echo "MCP Registry: version already published, skipping."
-            else
-              echo "MCP Registry publish failed."
-              exit 1
+          # The registry checks the npm package itself, and npm can take a
+          # minute to serve a version published moments ago: "…exists, but
+          # version 'x' was not found". That is a retry, not a duplicate
+          # (matching it as "exists" silently skipped 0.3.28–0.3.33).
+          for attempt in 1 2 3 4 5 6 7 8 9 10; do
+            if OUTPUT=$(mcp-publisher publish 2>&1); then
+              echo "$OUTPUT"
+              exit 0
             fi
-          else
             echo "$OUTPUT"
-          fi
+            if echo "$OUTPUT" | grep -qi "was not found"; then
+              echo "MCP Registry: npm does not serve this version yet (attempt $attempt/10), retrying in 30 s."
+              sleep 30
+              continue
+            fi
+            if echo "$OUTPUT" | grep -qi "duplicate\|already published\|already exists"; then
+              echo "MCP Registry: version already published, skipping."
+              exit 0
+            fi
+            break
+          done
+          echo "MCP Registry publish failed."
+          exit 1

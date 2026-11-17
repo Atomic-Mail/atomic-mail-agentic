@@ -41,7 +41,8 @@ inbox with `credentials_dir` (MCP) or `--credentials-dir` (CLI); see
   HTML-only.
 - `from_name` is the display name on From. The address is always this inbox's, so
   a name with `@`, `<` or `>` is refused; at most 100 characters.
-- `reply_to` is where replies should go when not this inbox.
+- `reply_to` is where replies should go when not this inbox. Never set it to a
+  recipient's own address: outbound spam filtering blocks that message.
 - `to`, `cc`, `bcc` and `reply_to` take one address or several, as a list or
   comma-separated: `anna@example.com` or `"Doe, Anna" <anna@example.com>`.
 - `attachments` (MCP) is a list of `{ path }` (a file on the MCP host) or

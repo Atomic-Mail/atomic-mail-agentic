@@ -56,7 +56,8 @@ Sending:
   --body-file PATH       Read the plain-text body from a file
   --html-body-file PATH  Read the HTML body from a file
   --from-name NAME       Display name on the From header (the address is always this inbox)
-  --reply-to ADDR        Where replies should go, when not this inbox
+  --reply-to ADDR        Where replies should go, when not this inbox (never
+                         a recipient's own address: spam filtering blocks it)
   --to, --cc, --bcc, --reply-to ADDR
                          Repeatable or comma-separated; anna@x.com or "Anna B <anna@x.com>"
   --attachment PATH      Repeatable; local file to attach

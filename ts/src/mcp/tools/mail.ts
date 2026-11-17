@@ -62,7 +62,8 @@ const composeArgs = {
       "always this inbox's.",
   ),
   reply_to: recipients.optional().describe(
-    "Address(es) replies should go to, when not this inbox.",
+    "Address(es) replies should go to, when not this inbox. Never a " +
+      "recipient's own address: outbound spam filtering blocks that.",
   ),
   attachments: z.array(z.object({
     path: z.string().optional().describe(

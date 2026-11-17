@@ -1,7 +1,11 @@
 import type { JmapSessionPort } from "./agent-jmap.js";
-/** One local file to upload before `$ATTACHMENT_*` substitution in ops JSON. */
+/**
+ * One file to upload before `$ATTACHMENT_*` substitution in ops JSON: a local
+ * `path`, or inline `dataBase64` (which then needs a `filename`).
+ */
 export interface JmapAttachmentInput {
-    path: string;
+    path?: string;
+    dataBase64?: string;
     filename?: string;
     contentType?: string;
 }

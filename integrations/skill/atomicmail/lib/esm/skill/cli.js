@@ -1,9 +1,10 @@
 #!/usr/bin/env node
-// Atomic Mail AgentSkill — register | jmap_request | calendar | help
+// Atomic Mail AgentSkill — register | everyday mail | jmap_request | calendar | help
 import "../_dnt.polyfills.js";
 import process from "node:process";
 import { parseArgs } from "node:util";
-import { AgentSession, CalendarError, calendarRunnerForSession, cancelInvite, DEFAULT_API_URL, DEFAULT_AUTH_URL, DEFAULT_JMAP_USING, DEFAULT_POW_SCRYPT_SALT_HEX, defaultFilesFromOutDir, expandCredentialDirInput, getHelp, listInvites, parseUserVarsJson, parseUtm, persistLoginWithApiKey, readCredentials, readOpsFile, respondToInvite, runJmapRequest, sendInvite, sharedError, updateInvite, } from "../lib/mod.js";
+import { AgentSession, CalendarError, calendarRunnerForSession, cancelInvite, DEFAULT_API_URL, DEFAULT_AUTH_URL, DEFAULT_JMAP_USING, DEFAULT_POW_SCRYPT_SALT_HEX, defaultFilesFromOutDir, expandCredentialDirInput, getHelp, listInvites, MailError, parseUserVarsJson, parseUtm, persistLoginWithApiKey, readCredentials, readOpsFile, respondToInvite, runJmapRequest, sendInvite, sharedError, updateInvite, } from "../lib/mod.js";
+import { CliUsageError, isMailCommand, runMailCommand, } from "./mail-commands.js";
 import { resolveRegisterWatch, scheduleSetup } from "./register-watch.js";
 const USAGE = `Atomic Mail — AgentSkill
 
@@ -11,15 +12,26 @@ Usage:
   atomicmail <command> [options]
 
 Commands:
-  register       PoW signup or login with API key (writes credentials)
-  jmap_request   Send a JMAP batch (inline --ops or --ops-file; optional --attachment)
-  calendar       Meeting invitations: send | update | cancel | list | respond
-  help           Full documentation [--topic TOPIC] (topic readme = built-in stub)
+  register          PoW signup or login with API key (writes credentials)
+  read_inbox        Latest inbox messages
+  read_message      One message as plain text
+  search_messages   Full-text search
+  send_email        Send plain text and/or HTML, with From name, Reply-To, attachments
+  reply_to_message  Reply in-thread
+  list_agents       The inbox these credentials hold
+  jmap_request      Send a JMAP batch (inline --ops or --ops-file; optional --attachment)
+  calendar          Meeting invitations: send | update | cancel | list | respond
+  help              Full documentation [--topic TOPIC] (topic readme = built-in stub)
 
 Examples:
   atomicmail register --username alice
   atomicmail register --username alice --utm "utm_source=blog&utm_campaign=launch"
   atomicmail register --api-key UUID
+  atomicmail read_inbox --limit 10
+  atomicmail read_message --message-id M123
+  atomicmail send_email --to a@b.com --subject Hi --body "Hello" --from-name "Alice" --reply-to me@b.com
+  atomicmail send_email --to a@b.com --subject Hi --html-body-file ./mail.html --attachment ./notes.txt
+  atomicmail reply_to_message --message-id M123 --body "Thanks!"
   atomicmail jmap_request --ops-file list_inbox.json
   atomicmail jmap_request --credentials-dir ./.atomic-mail --ops-file send.json --vars '{"TO":"a@b.com","SUBJECT":"Hi"}'
   atomicmail jmap_request --ops-file send_mail_blob_attachment.json --attachment ./notes.txt --vars '{"TO":"self@example.com","SUBJECT":"File","BODY":"See attach."}'
@@ -502,6 +514,19 @@ async function cmdCalendar(argv) {
     }
     process.stdout.write(JSON.stringify(out, null, 2) + "\n");
 }
+async function cmdMail(cmd, argv) {
+    try {
+        const out = await runMailCommand(cmd, argv, sessionForCredentialDir);
+        process.stdout.write(out.endsWith("\n") ? out : out + "\n");
+    }
+    catch (err) {
+        if (err instanceof CliUsageError)
+            fail(err.message, 2);
+        if (err instanceof MailError)
+            fail(err.message, 1);
+        throw err;
+    }
+}
 async function cmdHelp(argv) {
     let parsed;
     try {
@@ -550,6 +575,10 @@ async function main() {
             await cmdHelp(rest);
             break;
         default:
+            if (isMailCommand(cmd)) {
+                await cmdMail(cmd, rest);
+                break;
+            }
             process.stderr.write(`Unknown command: ${cmd}\n\n`);
             process.stdout.write(USAGE);
             process.exit(2);

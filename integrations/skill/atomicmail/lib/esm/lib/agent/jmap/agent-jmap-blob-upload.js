@@ -53,6 +53,33 @@ export async function postBinaryBlobUpload(uploadUrlExpanded, capabilityJwt, byt
     }
     return { blobId: j.blobId, size: typeof j.size === "number" ? j.size : 0 };
 }
+function decodeBase64(data, filename) {
+    let binary;
+    try {
+        binary = atob(data.replace(/\s+/g, ""));
+    }
+    catch {
+        throw new Error(`Attachment '${filename}': data_base64 is not valid base64.`);
+    }
+    return Uint8Array.from(binary, (c) => c.charCodeAt(0));
+}
+async function readAttachment(a, pathBase) {
+    if ((a.path === undefined) === (a.dataBase64 === undefined)) {
+        throw new Error("Each attachment needs exactly one of path or data_base64.");
+    }
+    if (a.path === undefined) {
+        if (!a.filename) {
+            throw new Error("An attachment with data_base64 needs a filename.");
+        }
+        return {
+            bytes: decodeBase64(a.dataBase64, a.filename),
+            filename: a.filename,
+        };
+    }
+    const abs = isAbsolute(a.path) ? a.path : resolve(pathBase, a.path);
+    const buf = await readFile(abs);
+    return { bytes: buf, filename: a.filename ?? basename(abs) };
+}
 /**
  * Reads each file, POSTs bytes to the JMAP session `uploadUrl`, and returns
  * placeholder values for use in standard JMAP ops (same batch as
@@ -79,10 +106,7 @@ export async function buildVarsFromAttachmentFiles(session, attachments, pathBas
     const prepared = [];
     for (let i = 0; i < attachments.length; i++) {
         const a = attachments[i];
-        const abs = isAbsolute(a.path) ? a.path : resolve(pathBase, a.path);
-        const buf = await readFile(abs);
-        const bytes = buf;
-        const filename = a.filename ?? basename(abs);
+        const { bytes, filename } = await readAttachment(a, pathBase);
         const contentType = a.contentType ?? guessMimeTypeFromFilename(filename);
         prepared.push({ bytes, filename, contentType });
     }

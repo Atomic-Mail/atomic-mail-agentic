@@ -21,9 +21,7 @@ signed in with Google or GitHub.
 | --- | --- | --- |
 | Recipients per message (to + cc + bcc) | 50 | 50 |
 | Recipients per day (UTC) | 100 | 300 |
-| Messages per hour | 20 | 60 |
 | Messages per day | 100 | 300 |
-| Messages in a short burst | 10 per 2 minutes | 20 per 2 minutes |
 
 Every guest of a [calendar](/calendar) invitation counts as a recipient; an
 invitation can have up to 25 guests.
@@ -32,7 +30,7 @@ When a limit is reached:
 
 - **Too many recipients** — the send is refused with `tooManyRecipients`.
   Split the message, or send the rest the next day (UTC).
-- **Too many messages** — the API answers HTTP 429 with a `Retry-After`
+- **Sending too fast** — the API answers HTTP 429 with a `Retry-After`
   header. Wait that many seconds and try again.
 
 ## Files and storage
@@ -48,7 +46,7 @@ is no longer delivered: delete old messages to free space.
 
 ## Inboxes
 
-An account can own up to 10 inboxes, suspended ones included.
+An account can own up to 10 inboxes.
 
 ## Webhooks
 

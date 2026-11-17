@@ -223,7 +223,9 @@ interface JmapEmail {
   keywords?: Record<string, boolean> | null;
   textBody?: JmapPart[] | null;
   htmlBody?: JmapPart[] | null;
-  bodyValues?: Record<string, { value?: string }> | null;
+  bodyValues?:
+    | Record<string, { value?: string; isTruncated?: boolean }>
+    | null;
   attachments?: JmapPart[] | null;
 }
 
@@ -419,19 +421,30 @@ export function extractBodyText(
   const values = email.bodyValues ?? {};
   const parts = email.textBody?.length ? email.textBody : email.htmlBody ?? [];
   const chunks: string[] = [];
+  let scanned = 0;
+  let cut = false;
   for (const part of parts) {
-    const value = part.partId ? values[part.partId]?.value : undefined;
-    if (!value) continue;
+    const body = part.partId ? values[part.partId] : undefined;
+    if (!body?.value) continue;
+    // The fetch caps each part, not how many parts a message has.
+    if (scanned >= MAX_BODY_VALUE_BYTES) {
+      cut = true;
+      break;
+    }
+    scanned += body.value.length;
+    // The server cut this part at maxBodyValueBytes.
+    if (body.isTruncated) cut = true;
     chunks.push(
       part.type?.toLowerCase() === "text/html"
-        ? htmlToPlainText(value)
-        : value.replace(/\r\n?/g, "\n"),
+        ? htmlToPlainText(body.value)
+        : body.value.replace(/\r\n?/g, "\n"),
     );
   }
   const text = (chunks.length > 0 ? chunks.join("\n") : email.preview ?? "")
     .trim();
-  const truncated = text.length > maxLen;
-  return { text: truncated ? text.slice(0, maxLen) : text, truncated };
+  return text.length > maxLen
+    ? { text: text.slice(0, maxLen), truncated: true }
+    : { text, truncated: cut };
 }
 
 export interface MessageSummary {

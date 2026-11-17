@@ -378,6 +378,28 @@ Deno.test("extractBodyText: caps the length and says so", () => {
   assertEquals(extractBodyText(email, 50).truncated, false);
 });
 
+Deno.test("extractBodyText: reports a part the server cut", () => {
+  const email = {
+    textBody: [{ partId: "1", type: "text/plain" }],
+    bodyValues: { "1": { value: "short", isTruncated: true } },
+  };
+  assertEquals(extractBodyText(email), { text: "short", truncated: true });
+});
+
+Deno.test("extractBodyText: stops after 1 MiB across parts", () => {
+  const big = "y".repeat(1_048_576);
+  const email = {
+    textBody: [
+      { partId: "1", type: "text/plain" },
+      { partId: "2", type: "text/plain" },
+    ],
+    bodyValues: { "1": { value: big }, "2": { value: "second part" } },
+  };
+  const { text, truncated } = extractBodyText(email, 2_000_000);
+  assertEquals(truncated, true);
+  assertEquals(text.includes("second part"), false);
+});
+
 Deno.test("toMessageDocument: wrapped body, attachments with blobId, Reply-To", () => {
   const doc = toMessageDocument(
     getResponse({

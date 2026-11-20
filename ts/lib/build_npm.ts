@@ -17,7 +17,7 @@ type NpmEntryPoint =
     path: string;
   };
 
-export type NpmProduct = "mcp" | "skill" | "langchain" | "core";
+export type NpmProduct = "mcp" | "skill" | "langchain" | "core" | "ai-sdk";
 interface ExtraFile {
   path: string;
   targetPath: string;
@@ -31,6 +31,10 @@ interface ProductConfigEntry {
   readme: { path: string; targetPath: string };
   extraFiles: readonly ExtraFile[];
   packageExtras?: Record<string, unknown>;
+  /** Packages named here become peer dependencies of the built package. */
+  peerDependencies?: Record<string, string>;
+  /** Set to false for a package that does not read `shared/` or presets. */
+  bundleShared?: boolean;
 }
 export interface NpmChannelMcpbConfig {
   artifactBaseName?: string;
@@ -154,7 +158,44 @@ const PRODUCT_CONFIG: Record<NpmProduct, ProductConfigEntry> = {
     readme: { path: "../docs/core.md", targetPath: "README.md" },
     extraFiles: [],
   },
+  "ai-sdk": {
+    baseName: "@atomicmail/ai-sdk",
+    entryPoint: {
+      kind: "module",
+      path: "./src/ai-sdk/mod.ts",
+    } satisfies NpmEntryPoint,
+    description:
+      "Atomic Mail tools for the Vercel AI SDK — give an agent an email inbox: read, search, send and reply.",
+    keywords: [
+      "atomic-mail",
+      "atomicmail",
+      "ai-sdk",
+      "vercel",
+      "ai",
+      "tools",
+      "agent",
+      "email",
+      "inbox",
+    ],
+    readme: { path: "../docs/ai-sdk.md", targetPath: "README.md" },
+    extraFiles: [],
+    packageExtras: {
+      dependencies: {
+        "zod": "^4.4.3",
+      },
+    },
+    peerDependencies: {
+      "ai": "^7.0.0",
+    },
+    bundleShared: false,
+  },
 };
+
+const MODULE_ONLY_PRODUCTS: readonly NpmProduct[] = [
+  "langchain",
+  "core",
+  "ai-sdk",
+];
 
 const GITHUB_PACKAGES = {
   mcp: {
@@ -172,6 +213,10 @@ const GITHUB_PACKAGES = {
   core: {
     packageName: "@atomic-mail/agentic-core",
     outDir: "core_npm_gpr",
+  },
+  "ai-sdk": {
+    packageName: "@atomic-mail/ai-sdk",
+    outDir: "ai_sdk_npm_gpr",
   },
 } as const;
 
@@ -217,7 +262,7 @@ export function assertChannelSupported(
   channel?: string,
 ): void {
   if (!channel) return;
-  if (product === "langchain" || product === "core") {
+  if (MODULE_ONLY_PRODUCTS.includes(product)) {
     throw new Error(`Unsupported npm channel for ${product}`);
   }
 
@@ -239,6 +284,8 @@ export function getOutputDir(product: NpmProduct, channel?: string): string {
     ? "skill_npm"
     : product === "core"
     ? "core_npm"
+    : product === "ai-sdk"
+    ? "ai_sdk_npm"
     : "langchain_npm";
   return channel ? `${prefix}_${channel}` : prefix;
 }
@@ -249,6 +296,9 @@ export function getPackageName(product: NpmProduct, channel?: string): string {
   }
   if (product === "core" && channel) {
     throw new Error("Unsupported npm channel for core");
+  }
+  if (product === "ai-sdk" && channel) {
+    throw new Error("Unsupported npm channel for ai-sdk");
   }
   const { baseName } = PRODUCT_CONFIG[product];
   return channel ? `${baseName}-${channel}` : baseName;
@@ -268,6 +318,7 @@ export function listConfiguredPackageTargets(
     { product: "skill" },
     { product: "langchain" },
     { product: "core" },
+    { product: "ai-sdk" },
   ];
 
   for (const channel of loadChannels()) {
@@ -362,6 +413,20 @@ async function prependChannelReadme(
   await Deno.writeTextFile(readmePath, note + existing);
 }
 
+/** Turn the named dependencies of a built package into peer dependencies. */
+async function movePeerDependencies(
+  dir: string,
+  peers: Record<string, string>,
+): Promise<void> {
+  const path = `${dir}/package.json`;
+  const pkg = JSON.parse(await Deno.readTextFile(path));
+  for (const name of Object.keys(peers)) {
+    delete pkg.dependencies?.[name];
+  }
+  pkg.peerDependencies = { ...(pkg.peerDependencies ?? {}), ...peers };
+  await Deno.writeTextFile(path, JSON.stringify(pkg, null, 2) + "\n");
+}
+
 export interface BuildNpmPackageOverrides {
   packageName?: string;
   outDir?: string;
@@ -449,6 +514,11 @@ export async function buildNpmPackage(
         await prependChannelReadme(dir, channel, config.baseName);
       }
 
+      if (config.peerDependencies) {
+        await movePeerDependencies(dir, config.peerDependencies);
+      }
+      if (config.bundleShared === false) return;
+
       await copyDirRecursive(SHARED_ROOT_DIR, `${dir}/shared`);
 
       await Deno.mkdir(`${dir}/presets`, { recursive: true });
@@ -468,7 +538,9 @@ export async function buildGithubPackagesNpm(
   version: string,
 ): Promise<string[]> {
   const dirs: string[] = [];
-  for (const product of ["mcp", "skill", "langchain", "core"] as const) {
+  for (
+    const product of ["mcp", "skill", "langchain", "core", "ai-sdk"] as const
+  ) {
     const gpr = GITHUB_PACKAGES[product];
     const config = PRODUCT_CONFIG[product];
     const dir = await buildNpmPackage({
@@ -488,7 +560,13 @@ export async function buildGithubPackagesNpm(
 }
 
 export function listGithubPackagesDirs(): string[] {
-  return ["langchain_npm_gpr", "mcp_npm_gpr", "skill_npm_gpr", "core_npm_gpr"];
+  return [
+    "ai_sdk_npm_gpr",
+    "langchain_npm_gpr",
+    "mcp_npm_gpr",
+    "skill_npm_gpr",
+    "core_npm_gpr",
+  ];
 }
 
 export interface ParsedBuildArgs {

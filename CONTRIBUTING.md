@@ -93,6 +93,7 @@ cd ts && deno test --allow-read --allow-env --allow-write --allow-sys
 cd ts
 deno run -A build_mcp_npm.ts <version>    # -> ts/mcp_npm/
 deno run -A build_skill_npm.ts <version>  # -> ts/skill_npm/
+deno run -A build_ai_sdk_npm.ts <version> # -> ts/ai_sdk_npm/
 deno run -A build_all_npm.ts <version>    # default + npm channel variants
 deno run -A build_skill.ts <version>      # -> dist/skill/atomicmail/
 ```

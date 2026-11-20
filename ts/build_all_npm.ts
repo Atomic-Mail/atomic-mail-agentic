@@ -1,4 +1,4 @@
-// Build all npm products (mcp + agent-skill + langchain).
+// Build all npm products (mcp + agent-skill + langchain + core + ai-sdk).
 //
 // Usage:
 //   deno run -A build_all_npm.ts <version>   # CI / release (semver required)

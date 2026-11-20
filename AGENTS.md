@@ -64,6 +64,7 @@ precondition. It is enforced by the MCP tool and CLI schemas and never reaches
 | `ts/src/lib/` | Shared runtime: auth, session, JMAP, help, presets |
 | `ts/src/mcp/` | MCP stdio server and tools |
 | `ts/src/skill/` | AgentSkill CLI |
+| `ts/src/ai-sdk/` | Vercel AI SDK tools (`@atomicmail/ai-sdk`). The one package here that does not use `ts/src/lib`: each tool is an HTTPS call to the hosted endpoint with an inbox API key, so it has no `register` and no credential files |
 | `shared/` | Cross-language source of truth: presets, help topics, errors, consts |
 | `docs/` | VitePress user docs |
 | `py/` | Python library and tests |

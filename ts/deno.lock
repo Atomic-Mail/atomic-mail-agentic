@@ -14,6 +14,7 @@
     "npm:@langchain/core@1.1.49": "1.1.49",
     "npm:@modelcontextprotocol/sdk@^1.29.0": "1.29.0_zod@4.4.3",
     "npm:@noble/hashes@1.7.1": "1.7.1",
+    "npm:ai@7": "7.0.177_zod@4.4.3",
     "npm:esbuild@0.25.0": "0.25.0",
     "npm:posthog-node@^5.36.13": "5.36.17",
     "npm:zod@^4.4.3": "4.4.3"
@@ -72,6 +73,31 @@
     }
   },
   "npm": {
+    "@ai-sdk/gateway@4.0.150_zod@4.4.3": {
+      "integrity": "sha512-39jDj4UIN2M5kI/wW0IVMsD1PpjmZHSMFUU/yZSQerE4mg0Oo9AKPOSwn6Vu0MJ31aK+Mi9rUiUgl88Q2lkorg==",
+      "dependencies": [
+        "@ai-sdk/provider",
+        "@ai-sdk/provider-utils",
+        "@vercel/oidc",
+        "zod"
+      ]
+    },
+    "@ai-sdk/provider-utils@5.0.82_zod@4.4.3": {
+      "integrity": "sha512-9s3Le9LsTR0exy14H8SERw4uMgFhiP0yJVoLefzfQCnnptj71noYh1AoVEsjfJjmMH1y16+1OqBVTDpTpU6M3Q==",
+      "dependencies": [
+        "@ai-sdk/provider",
+        "@standard-schema/spec",
+        "@workflow/serde",
+        "eventsource-parser",
+        "zod"
+      ]
+    },
+    "@ai-sdk/provider@4.0.39": {
+      "integrity": "sha512-jRvAhvW23+TeMGVCME2WGejP/TjzyDg7TplUep3t8HcEYnC2/8zqhCy9RRrjjVs1ljcygABZ8pQ21MbCRdF01w==",
+      "dependencies": [
+        "json-schema"
+      ]
+    },
     "@cfworker/json-schema@4.1.1": {
       "integrity": "sha512-gAmrUZSGtKc3AiBL71iNWxDsyUC5uMaKKGdvzYsBoTW/xi42JQHl7eKV2OYzCUqvc+D2RCcf7EXY2iCyFIk6og=="
     },
@@ -255,11 +281,26 @@
     "@standard-schema/spec@1.1.0": {
       "integrity": "sha512-l2aFy5jALhniG5HgqrD6jXLi/rUWrKvqN/qJx6yoJsgKhblVd+iqqU4RCXavm/jPityDo5TCvKMnpjKnOriy0w=="
     },
+    "@vercel/oidc@3.2.0": {
+      "integrity": "sha512-UycprH3T6n3jH0k44NHMa7pnFHGu/N05MjojYr+Mc6I7obkoLIJujSWwin1pCvdy/eOxrI/l3uDLQsmcrOb4ug=="
+    },
+    "@workflow/serde@4.1.0": {
+      "integrity": "sha512-pav4F2BoirECWR7Nf1TKt+2eETcBj7jj4cBefQ8VXQCA6NPkaKeLfj/zMgi+3zYV5ZIBT4GuUiphsj0/b9hPQQ=="
+    },
     "accepts@2.0.0": {
       "integrity": "sha512-5cvg6CtKwfgdmVqY1WIiXKc3Q1bkRqGLi+2W/6ao+6Y7gu/RCwRuAhGEzh5B4KlszSuTLgZYuqFqo5bImjNKng==",
       "dependencies": [
         "mime-types",
         "negotiator"
+      ]
+    },
+    "ai@7.0.177_zod@4.4.3": {
+      "integrity": "sha512-DQNKH2lL4h+5Rxe34AxTdxXtNu3EnsDHpxIE6p4ETsi+r7sM187nP6JKrbASoSNEbR355H3FCGlSP7mj+m6Pzw==",
+      "dependencies": [
+        "@ai-sdk/gateway",
+        "@ai-sdk/provider",
+        "@ai-sdk/provider-utils",
+        "zod"
       ]
     },
     "ajv-formats@3.0.1_ajv@8.20.0": {
@@ -575,6 +616,9 @@
     "json-schema-typed@8.0.2": {
       "integrity": "sha512-fQhoXdcvc3V28x7C7BMs4P5+kNlgUURe2jmUT1T//oBRMDrqy1QPelJimwZGo7Hg9VPV3EQV5Bnq4hbFy2vetA=="
     },
+    "json-schema@0.4.0": {
+      "integrity": "sha512-es94M3nTIfsEPisRafak+HDLfHXnKBhV3vU5eqPcS3flIWqcxJWgXHXiey3YrpaNsanY5ei1VoYEbOzijuq9BA=="
+    },
     "langsmith@0.7.10": {
       "integrity": "sha512-3EjJx9zGMzqF60eT9JADHF+Hn/T5ayTgEVp4d3M5yvJIJi3q6seX0p5jT8ecBCWBi1kIvvssWrcDxfwgSier7Q==",
       "dependencies": [
@@ -821,6 +865,7 @@
       "jsr:@std/assert@1",
       "npm:@langchain/core@1.1.49",
       "npm:@modelcontextprotocol/sdk@^1.29.0",
+      "npm:ai@7",
       "npm:langchain@1.4.5",
       "npm:posthog-node@^5.36.13",
       "npm:zod@^4.4.3"

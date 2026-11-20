@@ -14,6 +14,7 @@
   "imports": {
     "@std/assert": "jsr:@std/assert@1",
     "@deno/dnt": "jsr:@deno/dnt@^0.42.3",
+    "ai": "npm:ai@^7.0.0",
     "@langchain/core/": "npm:/@langchain/core@1.1.49/",
     "langchain": "npm:langchain@1.4.5",
     "@modelcontextprotocol/sdk/": "npm:/@modelcontextprotocol/sdk@^1.29.0/",

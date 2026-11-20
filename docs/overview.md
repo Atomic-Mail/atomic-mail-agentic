@@ -25,7 +25,7 @@ The CLI and both MCP servers also do [Calendar](/calendar).
 | [AgentSkill](/skill-install) | Shell agents: Claude Code, Codex, Hermes, OpenClaw. One `npx` command, no dependencies. |
 | [MCP](/mcp) | Chat hosts: Claude, Cursor, ChatGPT. Local stdio server or the [hosted one](/mcp-remote). |
 | [REST + JMAP](/rest-auth) | Any language. Proof-of-work login, then RFC 8620 requests. |
-| [Integrations](/zapier) | Zapier, n8n, Dify, LangChain. A person or a workflow owns the inbox. |
+| [Integrations](/zapier) | Zapier, n8n, Dify, LangChain, Vercel AI SDK. A person or a workflow owns the inbox. |
 
 ## Who owns the inbox
 

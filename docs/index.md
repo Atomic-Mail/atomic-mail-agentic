@@ -155,6 +155,7 @@ Credentials are in `~/.atomicmail`. Read the inbox with
   { title: 'n8n', desc: 'Community node with a polling trigger', link: '/n8n' },
   { title: 'Dify', desc: 'Marketplace plugin, proof-of-work path', link: '/dify' },
   { title: 'LangChain', desc: 'Tools for JS and Python agents', link: '/langchain' },
+  { title: 'Vercel AI SDK', desc: 'Mail tools for generateText and agents', link: '/ai-sdk' },
   { title: 'Hosted MCP server', desc: 'One URL for hosts that cannot run npx', link: '/mcp-remote' },
   { title: 'Raw JMAP requests', desc: 'Any language, one endpoint, RFC 8620', link: '/jmap' },
 ]" />

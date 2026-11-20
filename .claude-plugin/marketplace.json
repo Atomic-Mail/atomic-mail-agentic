@@ -1,0 +1,16 @@
+{
+  "name": "atomic-mail",
+  "description": "Atomic Mail for Claude: an email inbox Claude can read, search, send from and reply through.",
+  "owner": {
+    "name": "Atomic Mail",
+    "url": "https://atomicmail.ai"
+  },
+  "plugins": [
+    {
+      "name": "atomic-mail",
+      "source": "./integrations/claude-plugin",
+      "description": "Give Claude an Atomic Mail inbox: read, search, send and reply to email over JMAP.",
+      "homepage": "https://docs.atomicmail.ai/mcp-remote"
+    }
+  ]
+}
